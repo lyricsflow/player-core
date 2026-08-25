@@ -146,8 +146,8 @@
 /* ── Line Base Properties ── */
 #SpicyLyricsPage .LyricsContainer .LyricsContent .line {
   --BlurAmount: 0px;
-  --DefaultLyricsScale: 0.95;
-  --DefaultEmphasisLyricsScale: 0.95;
+  --DefaultLyricsScale: 1.0;
+  --DefaultEmphasisLyricsScale: 1.0;
   --line-scale: 0.98;
   --Vocal-NotSung-opacity: 0.51;
   --Vocal-Active-opacity: 1;

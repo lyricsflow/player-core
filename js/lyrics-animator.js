@@ -613,6 +613,160 @@ function getAMLProgress(key, position, startTime, endTime) {
   return Math.max(0, Math.min(1, (position - startTime) / duration));
 }
 
+function ensureEmphasisAnims(word, wi, leadLength) {
+  if (word._empInit) return;
+  word._empInit = true;
+  const wStart = word.WordStartTime !== undefined ? word.WordStartTime : word.StartTime;
+  const wEnd = word.WordEndTime !== undefined ? word.WordEndTime : word.EndTime;
+  const wordDur = Math.max(1000, wEnd - wStart);
+
+  let amount = wordDur / 2000;
+  amount = (amount > 1 ? Math.sqrt(amount) : amount ** 3) * 0.6;
+  amount = Math.min(1.2, amount);
+  let blur = wordDur / 3000;
+  blur = (blur > 1 ? Math.sqrt(blur) : blur ** 3) * 0.5;
+  blur = Math.min(0.8, blur);
+  const isLastWord = wi === leadLength - 1;
+  if (isLastWord) {
+    amount = Math.min(1.2, amount * 1.6);
+    blur = Math.min(0.8, blur * 1.5);
+  }
+
+  word.Letters.forEach((letter, li) => {
+    if (!letter.Emphasis) return;
+
+    const letterIndex = letter.WordLetterIndex !== undefined ? letter.WordLetterIndex : li;
+    const letterCount = letter.WordLetterCount !== undefined ? letter.WordLetterCount : word.Letters.length;
+    const anchorCount = Math.max(1, letterCount);
+
+    const de = letter.WordLetterIndex !== undefined ? 0 : Math.max(0, letter.StartTime - wStart);
+    const du = letter.WordLetterIndex !== undefined ? wordDur : Math.max(1000, letter.EndTime - letter.StartTime);
+    const delay = de + (du / 2.5 / anchorCount) * letterIndex;
+
+    const frames = [];
+    for (let j = 0; j < 32; j++) {
+      const x = (j + 1) / 32;
+      const ef = _empEasing(x);
+      const glowLevel = ef * blur;
+      const offX = -ef * 0.03 * amount * (letterCount / 2 - letterIndex);
+      const offY = -ef * 0.025 * amount;
+      frames.push({
+        offset: x,
+        transform: `scale(${1 + ef * 0.1 * amount}) translate(${offX}em, ${offY}em)`,
+        textShadow: `0 0 ${Math.min(0.3, blur * 0.3)}em rgba(255, 255, 255, ${glowLevel})`,
+      });
+    }
+
+    const anim = letter.HTMLElement.animate(frames, {
+      duration: wordDur,
+      delay,
+      fill: "both",
+      composite: "add",
+    });
+    anim.pause();
+    _empAnims.push(anim);
+    letter._empAnim = anim;
+
+    const floatFrames = [
+      { offset: 0, transform: "translateY(0em)" },
+    ];
+    for (let j = 0; j < 32; j++) {
+      const x = (j + 1) / 32;
+      const y = Math.sin(x * Math.PI);
+      floatFrames.push({
+        offset: x,
+        transform: `translateY(${-y * 0.05}em)`,
+      });
+    }
+    const floatAnim = letter.HTMLElement.animate(floatFrames, {
+      duration: wordDur * 1.4,
+      delay: delay - 400,
+      fill: "both",
+      composite: "add",
+    });
+    floatAnim.pause();
+    _empAnims.push(floatAnim);
+    letter._empFloatAnim = floatAnim;
+    letter._empFloatEnd = (delay - 400) + wordDur * 1.4;
+  });
+}
+
+function driveEmphasisAnims(word, position) {
+  const wStart = word.WordStartTime !== undefined ? word.WordStartTime : word.StartTime;
+  const wEnd = word.WordEndTime !== undefined ? word.WordEndTime : word.EndTime;
+
+  word.Letters.forEach(letter => {
+    const t = Math.max(0, position - wStart);
+    if (letter._empAnim) {
+      letter._empAnim.currentTime = t;
+      if (t > 0 && t < wEnd - wStart) letter._empAnim.play();
+      else letter._empAnim.pause();
+    }
+    if (letter._empFloatAnim) {
+      letter._empFloatAnim.currentTime = t;
+      if (t > 0 && t < letter._empFloatEnd) letter._empFloatAnim.play();
+      else letter._empFloatAnim.pause();
+    }
+  });
+}
+
+function updateEmphasis(word, wi, leadLength, position) {
+  if (!word.Emphasis || !word.Letters) return;
+  ensureEmphasisAnims(word, wi, leadLength);
+  driveEmphasisAnims(word, position);
+}
+
+// Measures word boxes once per line width so the karaoke fill can run as one
+// continuous frontier across the whole line instead of isolated per-word fills.
+// For RTL lines, coordinates are mirrored into effective space up front.
+function ensureLineFillGeometry(line) {
+  const lineEl = line.HTMLElement;
+  const lead = line.Syllables?.Lead;
+  if (!lineEl || !lead || !lead.length) return null;
+  const lineW = lineEl.offsetWidth;
+  let geo = line._fillGeo;
+  if (geo && geo.lineW === lineW && geo.count === lead.length) return geo;
+
+  const lineRect = lineEl.getBoundingClientRect();
+  const raw = [];
+  let minX = Infinity, maxX = 0;
+  for (let i = 0; i < lead.length; i++) {
+    const we = lead[i].HTMLElement;
+    if (!we) return null;
+    const r = we.getBoundingClientRect();
+    const left = r.left - lineRect.left;
+    raw.push({ left, width: Math.max(1, r.width) });
+    if (left < minX) minX = left;
+    maxX = Math.max(maxX, left + r.width);
+  }
+  const rtl = lineEl.classList.contains("rtl");
+  if (rtl) {
+    for (const it of raw) it.left = minX + maxX - (it.left + it.width);
+  }
+  geo = { lineW, count: lead.length, items: raw, rtl };
+  line._fillGeo = geo;
+  return geo;
+}
+
+function computeLineFillFrontier(line, geo, position) {
+  const lead = line.Syllables.Lead;
+  let fx = geo.items[0].left;
+  for (let i = 0; i < lead.length; i++) {
+    const w = lead[i];
+    const it = geo.items[i];
+    if (position >= w.EndTime) {
+      fx = it.left + it.width;
+    } else if (position >= w.StartTime) {
+      const p = getProgressPercentage(position, w.StartTime, w.EndTime);
+      fx = it.left + it.width * p;
+      break;
+    } else {
+      break;
+    }
+  }
+  return fx;
+}
+
 /**
  * Main animation function — called every frame.
  * @param {number} position - Current audio position in milliseconds
@@ -768,14 +922,10 @@ function animateSyllable(position, deltaTime) {
           const word = line.Syllables.Lead[wi];
           if (lineActive) {
             setStyleIfChanged(word.HTMLElement, "--gradient-position", "100%");
-            setStyleIfChanged(word.HTMLElement, "scale", "1");
-            setStyleIfChanged(word.HTMLElement, "transform", "none");
             setStyleIfChanged(word.HTMLElement, "--text-shadow-opacity", "0%");
             setStyleIfChanged(word.HTMLElement, "opacity", "1");
           } else {
             setStyleIfChanged(word.HTMLElement, "--gradient-position", "-20%");
-            setStyleIfChanged(word.HTMLElement, "scale", "0.95");
-            setStyleIfChanged(word.HTMLElement, "transform", "translateY(calc(var(--DefaultLyricsSize) * 0.01))");
             setStyleIfChanged(word.HTMLElement, "--text-shadow-opacity", "0%");
             setStyleIfChanged(word.HTMLElement, "opacity", "1");
           }
@@ -792,6 +942,15 @@ function animateSyllable(position, deltaTime) {
     }
 
     if (!line.Syllables?.Lead) continue;
+
+    // Continuous Apple-style karaoke fill for the active line: a single
+    // frontier (px) travels across word boxes, driven by each word's timing.
+    let fillGeo = null;
+    let fillX = null;
+    if (!isSimpleMode && !isAML_lyrics && lineActive && !line.BGLine) {
+      fillGeo = ensureLineFillGeometry(line);
+      if (fillGeo) fillX = computeLineFillFrontier(line, fillGeo, position);
+    }
 
     for (let wi = 0; wi < line.Syllables.Lead.length; wi++) {
       const word = line.Syllables.Lead[wi];
@@ -896,96 +1055,7 @@ function animateSyllable(position, deltaTime) {
         }
 
         if (word.Emphasis && word.Letters) {
-          const wStart = word.WordStartTime !== undefined ? word.WordStartTime : word.StartTime;
-          const wEnd = word.WordEndTime !== undefined ? word.WordEndTime : word.EndTime;
-          const wordDur = Math.max(1000, wEnd - wStart);
-
-          if (!word._empInit) {
-            word._empInit = true;
-            let amount = wordDur / 2000;
-            amount = (amount > 1 ? Math.sqrt(amount) : amount ** 3) * 0.6;
-            amount = Math.min(1.2, amount);
-            let blur = wordDur / 3000;
-            blur = (blur > 1 ? Math.sqrt(blur) : blur ** 3) * 0.5;
-            blur = Math.min(0.8, blur);
-            const isLastWord = wi === line.Syllables.Lead.length - 1;
-            if (isLastWord) {
-              amount = Math.min(1.2, amount * 1.6);
-              blur = Math.min(0.8, blur * 1.5);
-            }
-
-            word.Letters.forEach((letter, li) => {
-              if (!letter.Emphasis) return;
-
-              const letterIndex = letter.WordLetterIndex !== undefined ? letter.WordLetterIndex : li;
-              const letterCount = letter.WordLetterCount !== undefined ? letter.WordLetterCount : word.Letters.length;
-              const anchorCount = Math.max(1, letterCount);
-
-              const de = letter.WordLetterIndex !== undefined ? 0 : Math.max(0, letter.StartTime - wStart);
-              const du = letter.WordLetterIndex !== undefined ? wordDur : Math.max(1000, letter.EndTime - letter.StartTime);
-              const delay = de + (du / 2.5 / anchorCount) * letterIndex;
-
-              const frames = [];
-              for (let j = 0; j < 32; j++) {
-                const x = (j + 1) / 32;
-                const ef = _empEasing(x);
-                const glowLevel = ef * blur;
-                const offX = -ef * 0.03 * amount * (letterCount / 2 - letterIndex);
-                const offY = -ef * 0.025 * amount;
-                frames.push({
-                  offset: x,
-                  transform: `scale(${1 + ef * 0.1 * amount}) translate(${offX}em, ${offY}em)`,
-                  textShadow: `0 0 ${Math.min(0.3, blur * 0.3)}em rgba(255, 255, 255, ${glowLevel})`,
-                });
-              }
-
-              const anim = letter.HTMLElement.animate(frames, {
-                duration: wordDur,
-                delay,
-                fill: "both",
-                composite: "add",
-              });
-              anim.pause();
-              _empAnims.push(anim);
-              letter._empAnim = anim;
-
-              const floatFrames = [
-                { offset: 0, transform: "translateY(0em)" },
-              ];
-              for (let j = 0; j < 32; j++) {
-                const x = (j + 1) / 32;
-                const y = Math.sin(x * Math.PI);
-                floatFrames.push({
-                  offset: x,
-                  transform: `translateY(${-y * 0.05}em)`,
-                });
-              }
-              const floatAnim = letter.HTMLElement.animate(floatFrames, {
-                duration: wordDur * 1.4,
-                delay: delay - 400,
-                fill: "both",
-                composite: "add",
-              });
-              floatAnim.pause();
-              _empAnims.push(floatAnim);
-              letter._empFloatAnim = floatAnim;
-              letter._empFloatEnd = (delay - 400) + wordDur * 1.4;
-            });
-          }
-
-          word.Letters.forEach(letter => {
-            const t = Math.max(0, position - wStart);
-            if (letter._empAnim) {
-              letter._empAnim.currentTime = t;
-              if (t > 0 && t < wEnd - wStart) letter._empAnim.play();
-              else letter._empAnim.pause();
-            }
-            if (letter._empFloatAnim) {
-              letter._empFloatAnim.currentTime = t;
-              if (t > 0 && t < letter._empFloatEnd) letter._empFloatAnim.play();
-              else letter._empFloatAnim.pause();
-            }
-          });
+          updateEmphasis(word, wi, line.Syllables.Lead.length, position);
         }
 
         continue;
@@ -1159,7 +1229,13 @@ function animateSyllable(position, deltaTime) {
         `translate3d(0, calc(var(--DefaultLyricsSize) * ${curYOffset.toFixed(4)}), 0)`);
 
       if (!word.LetterGroup) {
-        setStyleIfChanged(word.HTMLElement, "--gradient-position", `${targetGradientPos.toFixed(2)}%`);
+        if (fillX !== null && fillGeo) {
+          const it = fillGeo.items[wi];
+          const gp = Math.max(-20, Math.min(120, ((fillX - it.left) / it.width) * 100));
+          setStyleIfChanged(word.HTMLElement, "--gradient-position", `${gp.toFixed(2)}%`);
+        } else {
+          setStyleIfChanged(word.HTMLElement, "--gradient-position", `${targetGradientPos.toFixed(2)}%`);
+        }
         setStyleIfChanged(word.HTMLElement, "--text-shadow-blur-radius",
           `${(4.8 + 2.4 * curGlow).toFixed(2)}px`);
         setStyleIfChanged(word.HTMLElement, "--text-shadow-opacity",

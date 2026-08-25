@@ -10,7 +10,6 @@ import { gibberishify, weebify, uppercase, lowercase } from './text-transformers
 
 const LYRICS_BETWEEN_SHOW = 3;
 const INTERLUDE_EARLIER_BY = 0;
-const IDLE_LYRICS_SCALE = 0.95;
 
 function transformText(text) {
   const format = settingsManager.get("memeFormat");
@@ -187,8 +186,6 @@ function applyEmphasis(letters, wordElem, lead, isBgWord = false) {
 
     if (!settingsManager.get("simpleLyricsMode") && !settingsManager.get("amlLyricsAnimations")) {
       letterElem.style.setProperty("--gradient-position", "-20%");
-      letterElem.style.scale = IDLE_LYRICS_SCALE.toString();
-      letterElem.style.transform = `translateY(calc(var(--DefaultLyricsSize) * 0.02))`;
     }
 
     letterDataArr.push({
@@ -366,7 +363,7 @@ export function applySyllableLyrics(data, lyricsContentEl) {
       const rawText = ((!showTranslation && showRomanized && lead.RomanizedText !== undefined) ? lead.RomanizedText : lead.Text) ?? "";
       const displayText = settingsManager.get("trimSyllableSpaces") ? rawText.trim() : rawText;
       const totalDuration = convertTime(lead.EndTime) - convertTime(lead.StartTime);
-      const isEmphasized = wordEmphasisMask[iL];
+      const isEmphasized = data.IsConvertedLine ? false : wordEmphasisMask[iL];
 
       let word;
       let lettersData = null;
@@ -440,8 +437,6 @@ export function applySyllableLyrics(data, lyricsContentEl) {
           word.style.setProperty("--gradient-position", "-20%");
           word.style.setProperty("--text-shadow-opacity", "0%");
           word.style.setProperty("--text-shadow-blur-radius", "4px");
-          word.style.scale = IDLE_LYRICS_SCALE.toString();
-          word.style.transform = "translateY(calc(var(--DefaultLyricsSize) * 0.01))";
         } else {
           // Clear any stale inline styles from a previous non-simple render
           word.style.removeProperty("--gradient-position");
@@ -589,7 +584,7 @@ export function applySyllableLyrics(data, lyricsContentEl) {
         bgSyllablesToRender.forEach((bw, bI, bA) => {
           const rawBgText = ((showRomanized && bw.RomanizedText !== undefined) ? bw.RomanizedText : bw.Text) ?? "";
           const displayBgText = settingsManager.get("trimSyllableSpaces") ? rawBgText.trim() : rawBgText;
-          const isEmphasized = bgWordEmphasisMask[bI];
+          const isEmphasized = data.IsConvertedLine ? false : bgWordEmphasisMask[bI];
           const info = bgSyllableWordInfo[bI];
           const totalDuration = convertTime(bw.EndTime) - convertTime(bw.StartTime);
 
@@ -661,8 +656,6 @@ export function applySyllableLyrics(data, lyricsContentEl) {
               bwE.style.setProperty("--gradient-position", "0%");
               bwE.style.setProperty("--text-shadow-opacity", "0%");
               bwE.style.setProperty("--text-shadow-blur-radius", "4px");
-              bwE.style.scale = IDLE_LYRICS_SCALE.toString();
-              bwE.style.transform = "translateY(calc(var(--font-size) * 0.01))";
             } else {
               bwE.style.removeProperty("--gradient-position");
               bwE.style.removeProperty("--text-shadow-opacity");

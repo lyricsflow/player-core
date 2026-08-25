@@ -61,7 +61,7 @@ document.addEventListener('error', function (e) {
 }, true);
 import { previewPlayer } from './preview-player.js';
 
-const API_BASE = "https://spicyamllplayer-api.hf.space";
+const API_BASE = "https://api.spicyamll.online";
 
 function cleanArtworkUrl(url, w = 300, h = 300) {
   if (!url || typeof url !== 'string') return '';

@@ -4,7 +4,7 @@
  * and 90 curated recommendations based on listening history.
  */
 
-const API_BASE = "https://spicyamllplayer-api.hf.space";
+const API_BASE = "https://api.spicyamll.online";
 
 export function getListeningHistory() {
   try {

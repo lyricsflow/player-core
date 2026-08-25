@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player — Network Utilities
+ * Lyricsflow — Network Utilities
  * Provides a robust fetch implementation with proxy rotation and error handling.
  */
 

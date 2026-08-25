@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player — Equalizer Presets
+ * Lyricsflow — Equalizer Presets
  * Standard gain values for 10-band EQ.
  */
 

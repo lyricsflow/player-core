@@ -1,3 +1,4 @@
+import { showToast } from './toast.js';
 import { GetExpireStore } from './stores.js';
 
 export const LyricsStore = GetExpireStore("SL:lyrics", 1, { Duration: 3, Unit: "Days" });
@@ -12,13 +13,13 @@ export const RemoveCurrentLyrics_AllCaches = async (ui = false) => {
   try {
     await LyricsStore.RemoveItem(cacheKey);
     if (ui) {
-      alert(`Lyrics for "${songName}" removed from persistent caches.`);
+      showToast({ message: `Lyrics for "${songName}" removed from persistent caches.` });
     }
   } catch (error) {
     if (ui) {
-      alert(`Failed to remove lyrics cache.`);
+      showToast({ message: `Failed to remove lyrics cache.` });
     }
-    console.error("SpicyLyrics Cache:", error);
+    console.error("Lyricsflow Cache:", error);
   }
 };
 
@@ -26,22 +27,22 @@ export const RemoveLyricsCache = async (ui = false) => {
   try {
     await LyricsStore.Destroy();
     if (ui) {
-      alert("Lyrics cache destroyed successfully.");
+      showToast({ message: "Lyrics cache destroyed successfully." });
     }
   } catch (error) {
     if (ui) {
-      alert(`Failed to destroy Lyrics Cache.`);
+      showToast({ message: `Failed to destroy Lyrics Cache.` });
     }
-    console.error("SpicyLyrics Cache:", error);
+    console.error("Lyricsflow Cache:", error);
   }
 };
 
 export const RemoveCurrentLyrics_StateCache = (ui = false) => {
   try {
     if (ui) {
-      alert("Lyrics cleared from internal state.");
+      showToast({ message: "Lyrics cleared from internal state." });
     }
   } catch (error) {
-    console.error("SpicyLyrics State:", error);
+    console.error("Lyricsflow State:", error);
   }
 };

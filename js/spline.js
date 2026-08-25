@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player WEB — Cubic Spline Interpolation
+ * Lyricsflow — Cubic Spline Interpolation
  * Port of the cubic-spline npm package for smooth animation curves.
  */
 

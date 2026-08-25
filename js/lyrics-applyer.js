@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player — Lyrics Applyer
+ * Lyricsflow — Lyrics Applyer
  * Builds DOM elements from parsed TTML data.
  * Port of Applyer/Synced/Syllable.ts + Line.ts
  */
@@ -252,7 +252,7 @@ export function applySyllableLyrics(data, lyricsContentEl) {
   clearLyricsArrays();
 
   const container = document.createElement("div");
-  container.classList.add("SpicyLyricsScrollContainer");
+  container.classList.add("LyricsflowScrollContainer");
   container.setAttribute("data-lyrics-type", "Syllable");
   if (data.IsConvertedLine) {
     container.classList.add("is-converted-line");
@@ -875,7 +875,7 @@ export function convertToSyllable(data) {
     };
     return syllableData;
   } catch (err) {
-    console.error("[SpicyPlayer] convertToSyllable failed:", err);
+    console.error("[LyricsflowPlayer] convertToSyllable failed:", err);
     return data;
   }
 }
@@ -898,7 +898,7 @@ export function applyStaticLyrics(data, lyricsContentEl) {
   clearLyricsArrays();
 
   const container = document.createElement("div");
-  container.classList.add("SpicyLyricsScrollContainer");
+  container.classList.add("LyricsflowScrollContainer");
   container.setAttribute("data-lyrics-type", "Static");
 
   data.Lines.forEach(line => {
@@ -987,7 +987,7 @@ function renderCredits(data, container) {
     makerCredits.appendChild(label);
 
     const badgeContainer = document.createElement("a");
-    badgeContainer.href = `https://spicyamllplayer-api.hf.space/user/@${data.makerHandle}`;
+    badgeContainer.href = `https://api.spicyamll.online/user/@${data.makerHandle}`;
     badgeContainer.target = "_blank";
     badgeContainer.classList.add("maker-link");
     badgeContainer.style.cssText = `
@@ -1075,11 +1075,11 @@ function renderCredits(data, container) {
 }
 
 function showUserProfileIframe(username) {
-  let existingModal = document.getElementById("spicy-profile-modal");
+  let existingModal = document.getElementById("lyricsflow-profile-modal");
   if (existingModal) existingModal.remove();
 
   const modal = document.createElement("div");
-  modal.id = "spicy-profile-modal";
+  modal.id = "lyricsflow-profile-modal";
   modal.style.cssText = `
     position: fixed;
     top: 0;
@@ -1145,7 +1145,7 @@ function showUserProfileIframe(username) {
   });
 
   const iframe = document.createElement("iframe");
-  iframe.src = `https://spicyamllplayer-api.hf.space/user/@${username}`;
+  iframe.src = `https://api.spicyamll.online/user/@${username}`;
   iframe.style.cssText = `
     width: 100%;
     height: 100%;

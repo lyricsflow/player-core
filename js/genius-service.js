@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player — Genius Service
+ * Lyricsflow — Genius Service
  * Handles fetching songwriter credits, legal names, and plain-text lyrics from the Genius API.
  */
 

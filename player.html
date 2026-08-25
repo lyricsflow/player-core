@@ -5,9 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Spicy AMLL Player — Web Lyrics Player</title>
+  <title>Lyricsflow — Web Lyrics Player</title>
   <meta name="description"
-    content="Play and experience synchronized Apple Music lyrics with beautiful animations and high-fidelity graphics on Spicy AMLL Player.">
+    content="Play and experience synchronized Apple Music lyrics with beautiful animations and high-fidelity graphics on Lyricsflow.">
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="css/global.css">
@@ -57,12 +57,12 @@
 
         const style = document.createElement('style');
         style.textContent = `
-          @keyframes spicyFadeIn { from { opacity: 0; } to { opacity: 1; } }
-          @keyframes spicyScaleUp {
+          @keyframes lyricsflowFadeIn { from { opacity: 0; } to { opacity: 1; } }
+          @keyframes lyricsflowScaleUp {
             from { transform: scale(0.95); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
           }
-          .spicy-update-modal {
+          .lyricsflow-update-modal {
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
@@ -73,9 +73,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: spicyFadeIn 0.3s ease forwards;
+            animation: lyricsflowFadeIn 0.3s ease forwards;
           }
-          .spicy-update-box {
+          .lyricsflow-update-box {
             background: rgba(30, 30, 30, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 40px 30px;
@@ -86,55 +86,55 @@
             box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
             color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-            animation: spicyScaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: lyricsflowScaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           }
-          .spicy-update-logo { font-size: 56px; margin-bottom: 20px; }
-          .spicy-update-title {
+          .lyricsflow-update-logo { font-size: 56px; margin-bottom: 20px; }
+          .lyricsflow-update-title {
             font-size: 1.6rem; font-weight: 700; margin: 0 0 12px 0;
             background: linear-gradient(180deg, #ffffff 0%, #a0a0a0 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
           }
-          .spicy-update-desc {
+          .lyricsflow-update-desc {
             font-size: 0.95rem; color: rgba(255, 255, 255, 0.65);
             line-height: 1.5; margin: 0 0 25px 0;
           }
-          .spicy-update-btn {
-            background: linear-gradient(135deg, #fa243c 0%, #ff2d55 100%);
+          .lyricsflow-update-btn {
+            background: linear-gradient(135deg, #3a3a3c 0%, #1c1c1e 100%);
             color: white; border: none;
             padding: 14px 28px; border-radius: 14px;
             font-weight: 600; font-size: 0.95rem;
             cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;
             width: 100%;
-            box-shadow: 0 4px 20px rgba(250, 36, 60, 0.4);
+            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.15);
           }
-          .spicy-update-btn:hover {
+          .lyricsflow-update-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 24px rgba(250, 36, 60, 0.55);
+            box-shadow: 0 6px 24px rgba(255, 255, 255, 0.25);
           }
-          .spicy-update-dismiss {
+          .lyricsflow-update-dismiss {
             background: transparent; color: rgba(255, 255, 255, 0.45);
             border: none; padding: 10px; margin-top: 10px;
             font-size: 0.85rem; cursor: pointer;
             text-decoration: underline; width: 100%;
             transition: color 0.2s;
           }
-          .spicy-update-dismiss:hover { color: #ffffff; }
+          .lyricsflow-update-dismiss:hover { color: #ffffff; }
         `;
         document.head.appendChild(style);
 
         const modal = document.createElement('div');
-        modal.className = 'spicy-update-modal';
-        modal.id = 'spicy-cache-detector-modal';
+        modal.className = 'lyricsflow-update-modal';
+        modal.id = 'lyricsflow-cache-detector-modal';
         modal.innerHTML = `
-          <div class="spicy-update-box">
-            <div class="spicy-update-logo">🌶️</div>
-            <h2 class="spicy-update-title">${title}</h2>
-            <p class="spicy-update-desc">
+          <div class="lyricsflow-update-box">
+            <div class="lyricsflow-update-logo"></div>
+            <h2 class="lyricsflow-update-title">${title}</h2>
+            <p class="lyricsflow-update-desc">
               ${desc}
             </p>
-            <button class="spicy-update-btn" onclick="window.location.reload(true)">${reloadBtn}</button>
-            <button class="spicy-update-dismiss" onclick="document.getElementById('spicy-cache-detector-modal').remove()">${dismissBtn}</button>
+            <button class="lyricsflow-update-btn" onclick="window.location.reload(true)">${reloadBtn}</button>
+            <button class="lyricsflow-update-dismiss" onclick="document.getElementById('lyricsflow-cache-detector-modal').remove()">${dismissBtn}</button>
           </div>
         `;
         document.body.appendChild(modal);
@@ -142,9 +142,9 @@
     })();
   </script>
 
-  <div id="SpicyLyricsPage">
+  <div id="LyricsflowPage">
     <!-- Dynamic Background -->
-    <div class="spicy-dynamic-bg" id="dynamic-bg"></div>
+    <div class="lyricsflow-dynamic-bg" id="dynamic-bg"></div>
 
 
 
@@ -341,7 +341,7 @@
     document.documentElement.dir = 'ltr';
     document.documentElement.setAttribute('dir', 'ltr');
     if (document.body) document.body.setAttribute('dir', 'ltr');
-    window.addEventListener('spicy-lang-changed', () => {
+    window.addEventListener('lyricsflow-lang-changed', () => {
       document.documentElement.dir = 'ltr';
       document.documentElement.setAttribute('dir', 'ltr');
       if (document.body) document.body.setAttribute('dir', 'ltr');
@@ -349,11 +349,11 @@
 
     let songMetadata = { title: '', artist: '', album: '', artUrl: null };
     const player = new AudioPlayer();
-    window.spicyPlayer = player;
-    window.spicySettingsManager = settingsManager;
-    window._spicyCurrentLyrics = null;
-    window._spicySongMetadata = songMetadata;
-    window._spicyGenerateTTML = generateTTML;
+    window.lyricsflowPlayer = player;
+    window.lyricsflowSettingsManager = settingsManager;
+    window._lyricsflowCurrentLyrics = null;
+    window._lyricsflowSongMetadata = songMetadata;
+    window._lyricsflowGenerateTTML = generateTTML;
     settingsManager.apply();
 
     const mediaSessionManager = new MediaSessionManager(
@@ -370,7 +370,7 @@
     let previousLyricsSourceOrder = JSON.stringify(settingsManager.get("lyricsSourceOrder"));
 
     const videoExporter = new VideoExporter(player);
-    window.addEventListener('spicy-export-video', () => {
+    window.addEventListener('lyricsflow-export-video', () => {
       videoExporter.startExport(songMetadata);
     });
 
@@ -391,12 +391,12 @@
     }
 
     // ── TTML Test Listener ──
-    window.addEventListener('spicy_ttml_test_loaded', (e) => {
+    window.addEventListener('lyricsflow_ttml_test_loaded', (e) => {
       const lyrics = e.detail;
       if (lyrics) {
         console.log('[TTML Tester] Applying test lyrics:', lyrics);
         parsedLyrics = lyrics;
-        window._spicyCurrentLyrics = lyrics;
+        window._lyricsflowCurrentLyrics = lyrics;
         applyLyricsToUI(lyrics);
       }
     });
@@ -404,16 +404,16 @@
     // ── Init ──
     async function init() {
       // Check for test TTML in localStorage!
-      const testDataStr = localStorage.getItem('spicy_ttml_test');
+      const testDataStr = localStorage.getItem('lyricsflow_ttml_test');
       if (testDataStr) {
         try {
           const testData = JSON.parse(testDataStr);
           if (Date.now() - testData.timestamp < 30000) { // 30 sec expiry
             console.log('[TTML Tester] Loading test lyrics from localStorage');
             parsedLyrics = testData.lyrics;
-            window._spicyCurrentLyrics = testData.lyrics;
+            window._lyricsflowCurrentLyrics = testData.lyrics;
           }
-          localStorage.removeItem('spicy_ttml_test');
+          localStorage.removeItem('lyricsflow_ttml_test');
         } catch (e) {
           console.error('[TTML Tester] Error loading test data:', e);
         }
@@ -428,7 +428,7 @@
       extensionManager.loadAllExtensions();
       
       applyDOMTranslations();
-      window.addEventListener('spicy-lang-changed', (e) => {
+      window.addEventListener('lyricsflow-lang-changed', (e) => {
         applyDOMTranslations();
         document.documentElement.lang = e.detail.lang;
         document.documentElement.dir = e.detail.dir;
@@ -543,7 +543,7 @@
     function showTrackLoader() {
       if (_currentLoader) return;
       const loader = document.createElement('div');
-      loader.className = 'SpicyLoader active';
+      loader.className = 'LyricsflowLoader active';
       loader.innerHTML = '<div class="SlBounceLoader"></div>';
       document.body.appendChild(loader);
       _currentLoader = loader;
@@ -602,7 +602,7 @@
       if (!track.buffer && track.amTrackId) {
         showNotice(`⬇️ ${t('loading_download')}`);
         try {
-          const audioUrl = `https://spicyamllplayer-api.hf.space/download?song=${track.amTrackId}&l=${getCurrentLang()}`;
+          const audioUrl = `https://api.spicyamll.online/download?song=${track.amTrackId}&l=${getCurrentLang()}`;
           const response = await fetch(audioUrl);
           if (!response.ok) throw new Error("HTTP " + response.status);
           const buf = await response.arrayBuffer();
@@ -617,7 +617,7 @@
 
           // Open DB and save the buffer to cache it
           const db = await new Promise((res, rej) => {
-            const req = indexedDB.open('SpicyLyricsDB');
+            const req = indexedDB.open('LyricsflowDB');
             req.onsuccess = (e) => res(e.target.result);
             req.onerror = (e) => rej(e.target.error);
           });
@@ -652,7 +652,7 @@
 
       // Reset UI
       parsedLyrics = null;
-      window._spicyCurrentLyrics = null;
+      window._lyricsflowCurrentLyrics = null;
       lyricsContent.innerHTML = '';
       lyricsType = 'None';
       if (sourceBadge) sourceBadge.textContent = '';
@@ -663,7 +663,7 @@
       albumArt.style.backgroundImage = 'none';
 
       dynamicBg.innerHTML = '';
-      dynamicBg.className = 'spicy-dynamic-bg';
+      dynamicBg.className = 'lyricsflow-dynamic-bg';
 
       const blob = new Blob([track.buffer], { type: track.type });
       const url = URL.createObjectURL(blob);
@@ -671,7 +671,7 @@
       const processMetadata = async (duration) => {
         timeTotal.textContent = AudioPlayer.formatTime(duration, true);
         songMetadata = await parseAudioMetadata(track.buffer, track.name);
-        window._spicySongMetadata = songMetadata;
+        window._lyricsflowSongMetadata = songMetadata;
 
         if (!songMetadata.album && track.album) {
           songMetadata.album = track.album;
@@ -691,7 +691,7 @@
             showNotice(t('player_loading_lyrics'));
             await new Promise(r => setTimeout(r, 300));
             parsedLyrics = parseTTMLToLyrics(track.ttml);
-            window._spicyCurrentLyrics = parsedLyrics;
+            window._lyricsflowCurrentLyrics = parsedLyrics;
             applyLyricsToUI(parsedLyrics);
             if (sourceBadge) sourceBadge.textContent = "LYRICS: TTML";
           } catch (e) {
@@ -712,7 +712,7 @@
                 if (creditsEl) {
                   creditsEl.textContent = `${t('player_written_by')}: ${writers.join(', ')}`;
                 } else {
-                  const scrollContainer = lyricsContent.querySelector('.SpicyLyricsScrollContainer');
+                  const scrollContainer = lyricsContent.querySelector('.LyricsflowScrollContainer');
                   if (scrollContainer) {
                     const newCredits = document.createElement('div');
                     newCredits.className = 'Credits';
@@ -798,13 +798,13 @@
 
         if (!nextTrack.buffer && nextTrack.amTrackId) {
           console.log(`[Preloader] Preloading next track in queue: ${nextTrack.name}`);
-          const audioUrl = `https://spicyamllplayer-api.hf.space/download?song=${nextTrack.amTrackId}&l=${getCurrentLang()}`;
+          const audioUrl = `https://api.spicyamll.online/download?song=${nextTrack.amTrackId}&l=${getCurrentLang()}`;
           const response = await fetch(audioUrl);
           if (!response.ok) throw new Error("HTTP " + response.status);
           const buf = await response.arrayBuffer();
 
           const db = await new Promise((res, rej) => {
-            const req = indexedDB.open('SpicyLyricsDB');
+            const req = indexedDB.open('LyricsflowDB');
             req.onsuccess = (e) => res(e.target.result);
             req.onerror = (e) => rej(e.target.error);
           });
@@ -824,7 +824,7 @@
     function updateMetadataUI(metadata) {
       if (metadata.title) {
         songNameEl.querySelector('span').textContent = metadata.title;
-        document.title = `Spicy AMLL Player — ${metadata.title}`;
+        document.title = `Lyricsflow — ${metadata.title}`;
         songNameEl.classList.remove('rtl');
       }
       if (metadata.artist) {
@@ -840,7 +840,7 @@
         albumArt.style.backgroundImage = `url(${metadata.artUrl})`;
         extractColors(metadata.artUrl).then(async colors => {
           dynamicBg.innerHTML = '';
-          dynamicBg.className = 'spicy-dynamic-bg';
+          dynamicBg.className = 'lyricsflow-dynamic-bg';
           await applyLegacyBackground(dynamicBg, metadata.artUrl);
           setKawarpPlaybackState(!lyricsContainer.classList.contains('hidden'));
           if (colors.vibrant) document.documentElement.style.setProperty('--ArtworkGlowColor', colors.vibrant.join(', '));
@@ -875,7 +875,7 @@
           result.lyricsData.makerAvatar = result.makerAvatar;
 
           parsedLyrics = cleanLyricsData(result.lyricsData);
-          window._spicyCurrentLyrics = parsedLyrics;
+          window._lyricsflowCurrentLyrics = parsedLyrics;
           applyLyricsToUI(parsedLyrics);
           if (sourceBadge) {
             sourceBadge.textContent = `Lyrics: ${result.sourceDisplayName || 'Auto-fetched'}`;
@@ -1053,7 +1053,7 @@
     }
 
     // Listen for settings changes to remove animated art in real-time when toggled off
-    window.addEventListener('spicy-settings-changed', (e) => {
+    window.addEventListener('lyricsflow-settings-changed', (e) => {
       if (!e.detail.coverArtAnimation) {
         const existingVideo = albumArt?.querySelector('.animated-art-video');
         if (existingVideo) existingVideo.remove();
@@ -1061,7 +1061,7 @@
         const bgVideo = dynamicBg?.querySelector('video');
         if (bgVideo) {
           bgVideo.remove();
-          dynamicBg.className = 'spicy-dynamic-bg';
+          dynamicBg.className = 'lyricsflow-dynamic-bg';
         }
       }
 
@@ -1302,7 +1302,7 @@
 
     if (btnAirplay) {
       btnAirplay.onclick = async () => {
-        const activeAudio = window.spicyPlayer?.audio;
+        const activeAudio = window.lyricsflowPlayer?.audio;
 
         // Check if headphones icon is currently displayed (indicating active headphones/AirPods)
         const airplayIcon = document.getElementById('airplay-icon');
@@ -1335,8 +1335,8 @@
         if (navigator.mediaDevices && typeof navigator.mediaDevices.selectAudioOutput === 'function') {
           try {
             const device = await navigator.mediaDevices.selectAudioOutput();
-            if (device && window.spicyPlayer) {
-              const player = window.spicyPlayer;
+            if (device && window.lyricsflowPlayer) {
+              const player = window.lyricsflowPlayer;
               if (player.audioContext && typeof player.audioContext.setSinkId === 'function') {
                 await player.audioContext.setSinkId(device.deviceId);
               }
@@ -1417,8 +1417,8 @@
       // 1. Measure First State (First)
       let firstRect = null;
       let firstMetaRect = null;
-      const mediaBox = document.querySelector('#SpicyLyricsPage .ContentBox .NowBar .Header .MediaBox');
-      const metadataRow = document.querySelector('#SpicyLyricsPage .ContentBox .NowBar .Header .NowBarBottomWrapper .MetadataRow');
+      const mediaBox = document.querySelector('#LyricsflowPage .ContentBox .NowBar .Header .MediaBox');
+      const metadataRow = document.querySelector('#LyricsflowPage .ContentBox .NowBar .Header .NowBarBottomWrapper .MetadataRow');
 
       if (isMobile && mediaBox) {
         firstRect = mediaBox.getBoundingClientRect();
@@ -1539,24 +1539,24 @@
     };
 
     // Apple Music Immersive Gestures Engine
-    let spicyLastScrollTop = 0;
-    const spicyLyricsContent = lyricsContainer ? lyricsContainer.querySelector('.LyricsContent') : null;
+    let lyricsflowLastScrollTop = 0;
+    const lyricsflowLyricsContent = lyricsContainer ? lyricsContainer.querySelector('.LyricsContent') : null;
 
-    if (lyricsContainer && spicyLyricsContent) {
+    if (lyricsContainer && lyricsflowLyricsContent) {
       // Scroll listener to toggle immersive state based on swipe direction
-      spicyLyricsContent.addEventListener('scroll', () => {
+      lyricsflowLyricsContent.addEventListener('scroll', () => {
         if (window.innerWidth > 768) return; // Mobile-only immersive view
 
         // Guard: Do not trigger immersive gestures if lyrics mode is closed/hidden
         if (lyricsContainer.classList.contains('hidden')) return;
 
         // Guard: Do not trigger immersive gestures from programmatic scrolling (auto-scroll to active line)
-        if (spicyLyricsContent._isInternalScroll) return;
+        if (lyricsflowLyricsContent._isInternalScroll) return;
 
-        const scrollTop = spicyLyricsContent.scrollTop;
-        const delta = scrollTop - spicyLastScrollTop;
+        const scrollTop = lyricsflowLyricsContent.scrollTop;
+        const delta = scrollTop - lyricsflowLastScrollTop;
 
-        spicyLastScrollTop = Math.max(0, scrollTop); // Bind positive for rubber-banding safe bounds
+        lyricsflowLastScrollTop = Math.max(0, scrollTop); // Bind positive for rubber-banding safe bounds
 
         if (delta < -8) {
           // Scrolling UP -> show controls
@@ -1577,25 +1577,25 @@
 
         if (lyricsContainer.classList.contains('lyrics-immersive')) {
           lyricsContainer.classList.remove('lyrics-immersive');
-          spicyLastScrollTop = spicyLyricsContent.scrollTop; // Sync scroll boundary to prevent instant re-fade
+          lyricsflowLastScrollTop = lyricsflowLyricsContent.scrollTop; // Sync scroll boundary to prevent instant re-fade
         }
       });
     }
 
     // Apple Music Immersive Gestures Engine for Queue List
-    const spicyQueueContent = queuePanel ? queuePanel.querySelector('.QueueList') : null;
+    const lyricsflowQueueContent = queuePanel ? queuePanel.querySelector('.QueueList') : null;
 
-    if (queuePanel && spicyQueueContent) {
-      spicyQueueContent.addEventListener('scroll', () => {
+    if (queuePanel && lyricsflowQueueContent) {
+      lyricsflowQueueContent.addEventListener('scroll', () => {
         if (window.innerWidth > 768) return; // Mobile-only immersive view
 
         // Guard: Do not trigger if queue is closed
         if (!queuePanel.classList.contains('active')) return;
 
-        const scrollTop = spicyQueueContent.scrollTop;
-        const delta = scrollTop - spicyLastScrollTop;
+        const scrollTop = lyricsflowQueueContent.scrollTop;
+        const delta = scrollTop - lyricsflowLastScrollTop;
 
-        spicyLastScrollTop = Math.max(0, scrollTop);
+        lyricsflowLastScrollTop = Math.max(0, scrollTop);
 
         if (delta < -8) {
           // Scrolling UP -> show controls
@@ -1618,7 +1618,7 @@
 
         if (queuePanel.classList.contains('queue-immersive')) {
           queuePanel.classList.remove('queue-immersive');
-          spicyLastScrollTop = spicyQueueContent.scrollTop;
+          lyricsflowLastScrollTop = lyricsflowQueueContent.scrollTop;
         }
       });
     }
@@ -1677,7 +1677,7 @@
             btnFavorite.classList.remove('active');
             if (favoriteIcon) favoriteIcon.src = 'icons/favorite.png';
 
-            const toast = document.getElementById('spicy-toast');
+            const toast = document.getElementById('lyricsflow-toast');
             if (toast) {
               toast.querySelector('.toast-text').textContent = 'Removed from Favorites';
               toast.classList.add('show');
@@ -1700,7 +1700,7 @@
             btnFavorite.classList.add('active');
             if (favoriteIcon) favoriteIcon.src = 'icons/favorited.png';
 
-            const toast = document.getElementById('spicy-toast');
+            const toast = document.getElementById('lyricsflow-toast');
             if (toast) {
               toast.querySelector('.toast-text').textContent = 'Added to Favorites!';
               toast.classList.add('show');
@@ -1852,7 +1852,7 @@
     }
 
     function startAnimationLoop() {
-      // FPS probe: window.__spicyFps shows the real rAF rate on this page.
+      // FPS probe: window.__lyricsflowFps shows the real rAF rate on this page.
       let fpsCount = 0, fpsStamp = performance.now();
 
       // Progress bar / time text don't need 144 updates/s; 10 Hz is visually
@@ -1864,7 +1864,7 @@
         const nowMs = performance.now();
         fpsCount++;
         if (nowMs - fpsStamp >= 1000) {
-          window.__spicyFps = fpsCount;
+          window.__lyricsflowFps = fpsCount;
           fpsCount = 0;
           fpsStamp = nowMs;
         }
@@ -1916,13 +1916,14 @@
       setTimeout(() => settingsUI.show(), 100);
     }
     window.addEventListener('message', (e) => {
+      if (e.origin !== window.location.origin) return;
       if (e.data === 'openSettings' || e.data?.action === 'openSettings') {
         settingsUI.show();
       }
     });
 
     // ── Live Settings Refresh ──
-    window.addEventListener('spicy-settings-changed', () => {
+    window.addEventListener('lyricsflow-settings-changed', () => {
       // Refresh Metadata Bar (Year position might have changed)
       if (songMetadata) updateMetadataUI(songMetadata);
       // Refresh Lyrics (Alignment, Simple Mode, Force Word Sync)
@@ -1966,7 +1967,7 @@
     });
 
     // Apply settings on load
-    window.dispatchEvent(new CustomEvent('spicy-settings-changed', { detail: settingsManager.settings }));
+    window.dispatchEvent(new CustomEvent('lyricsflow-settings-changed', { detail: settingsManager.settings }));
 
     // ── Keyboard Shortcuts ──
     window.addEventListener('keydown', (e) => {
@@ -2035,7 +2036,7 @@
 
 
   <!-- Apple Style Dynamic Toast -->
-  <div class="SpicyToast" id="spicy-toast">
+  <div class="LyricsflowToast" id="lyricsflow-toast">
     <span class="toast-text"></span>
   </div>
 </body>

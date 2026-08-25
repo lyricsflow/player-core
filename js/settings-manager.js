@@ -1,13 +1,13 @@
 /**
- * Spicy AMLL Player — Settings Manager
+ * Lyricsflow — Settings Manager
  * Manages the application settings state and persistence.
  */
 
 export const LYRICS_SOURCE_PROVIDER_DEFINITIONS = {
-  spicy: {
-    label: "Spicy Lyrics API (currently unavailable due to the original developer not giving us access)",
-    description: "Our high-quality TTML repository.",
-    id: "spicy"
+  lfcommunity: {
+    label: "Lyricsflow Community",
+    description: "Lyrics contributed and synced by our Discord community.",
+    id: "lfcommunity"
   },
   lyricsplus: {
     label: "LyricsPlus",
@@ -18,11 +18,6 @@ export const LYRICS_SOURCE_PROVIDER_DEFINITIONS = {
     label: "Apple Music",
     description: "Premium animated and time-synced lyrics.",
     id: "apple"
-  },
-  custom: {
-    label: "Spicy Community",
-    description: "Lyrics contributed and synced by our Discord community.",
-    id: "custom"
   },
   musixmatch: {
     label: "Musixmatch",
@@ -56,7 +51,7 @@ class SettingsManager {
       viewControlsPosition: "Top",
       lockedMediaBox: false,
       settingsOnTop: true,
-      lyricsRenderer: "Spicy",
+      lyricsRenderer: "Lyricsflow",
       simpleLyricsMode: false,
       amlAnimation: true,
       minimalLyricsMode: false,
@@ -101,7 +96,7 @@ class SettingsManager {
   }
 
   load() {
-    const saved = localStorage.getItem("spicy_settings");
+    const saved = localStorage.getItem("lyricsflow_settings");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -142,7 +137,7 @@ class SettingsManager {
 
         // Persist the migration so new defaults are saved for next time
         if (migrated) {
-          localStorage.setItem("spicy_settings", JSON.stringify(this.settings));
+          localStorage.setItem("lyricsflow_settings", JSON.stringify(this.settings));
         }
       } catch (e) {
         console.error("Failed to parse settings", e);
@@ -151,7 +146,7 @@ class SettingsManager {
   }
 
   save() {
-    localStorage.setItem("spicy_settings", JSON.stringify(this.settings));
+    localStorage.setItem("lyricsflow_settings", JSON.stringify(this.settings));
     this.apply();
   }
 
@@ -169,14 +164,14 @@ class SettingsManager {
     const body = document.body;
 
     // Custom Font handling
-    const existingLink = document.getElementById("spicy-custom-font-link");
+    const existingLink = document.getElementById("lyricsflow-custom-font-link");
     if (this.settings.customFontEnabled && this.settings.customFont) {
       if (this.settings.customFont.startsWith("http")) {
         // It's a URL (Google Fonts, etc.)
         if (!existingLink || existingLink.href !== this.settings.customFont) {
           if (existingLink) existingLink.remove();
           const link = document.createElement("link");
-          link.id = "spicy-custom-font-link";
+          link.id = "lyricsflow-custom-font-link";
           link.rel = "stylesheet";
           link.href = this.settings.customFont;
           document.head.appendChild(link);
@@ -190,17 +185,17 @@ class SettingsManager {
           if (f) family = f.split(":")[0].replace(/\+/g, " ");
         } catch (e) { }
 
-        root.style.setProperty("--spicy-custom-font", `"${family}"`);
-        body.style.fontFamily = `var(--spicy-custom-font), 'Inter', sans-serif`;
+        root.style.setProperty("--lyricsflow-custom-font", `"${family}"`);
+        body.style.fontFamily = `var(--lyricsflow-custom-font), 'Inter', sans-serif`;
       } else {
         // It's a local font name
         if (existingLink) existingLink.remove();
-        root.style.setProperty("--spicy-custom-font", `"${this.settings.customFont}"`);
-        body.style.fontFamily = `var(--spicy-custom-font), 'Inter', sans-serif`;
+        root.style.setProperty("--lyricsflow-custom-font", `"${this.settings.customFont}"`);
+        body.style.fontFamily = `var(--lyricsflow-custom-font), 'Inter', sans-serif`;
       }
     } else {
       if (existingLink) existingLink.remove();
-      root.style.removeProperty("--spicy-custom-font");
+      root.style.removeProperty("--lyricsflow-custom-font");
       body.style.fontFamily = "";
     }
 
@@ -232,16 +227,16 @@ class SettingsManager {
     }
 
     // Audio Engine Settings
-    if (window.spicyPlayer) {
-      const p = window.spicyPlayer;
+    if (window.lyricsflowPlayer) {
+      const p = window.lyricsflowPlayer;
       this.settings.eqGains.forEach((g, i) => p.setEQGain(i, g));
       p.crossfadeDuration = this.settings.crossfadeDuration ?? 0;
     }
 
     // Dispatch event for other modules (e.g., animated-art.js)
-    window.dispatchEvent(new CustomEvent("spicy-settings-changed", { detail: this.settings }));
+    window.dispatchEvent(new CustomEvent("lyricsflow-settings-changed", { detail: this.settings }));
   }
 }
 
 export const settingsManager = new SettingsManager();
-window.spicySettings = settingsManager; // Global access for debugging
+window.lyricsflowSettings = settingsManager; // Global access for debugging

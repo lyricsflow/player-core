@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player — Spring Physics Solver
+ * Lyricsflow — Spring Physics Solver
  * Direct port of AMLL (amll-dev/applemusic-like-lyrics) utils/spring.ts
  * Uses pushkine/spring analytical harmonic oscillator solver with delay queue & derivative velocity tracking.
  */

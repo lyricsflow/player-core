@@ -1,11 +1,42 @@
 /**
- * Spicy AMLL Player — Album Preview Audio Player
+ * Lyricsflow — Album Preview Audio Player
  * Plays 30s audio previews from Apple Music album data JSON with a sleek mini player
  * at the bottom, MediaSession OS controls, and native AMLL icons.
  */
 
+import { showToast } from './toast.js';
 import { escapeHTML } from './security-utils.js';
 import { t } from './i18n.js';
+
+function generateArtistInitial(name) {
+  const letter = (name || '?').trim().charAt(0).toUpperCase();
+  const canvas = document.createElement('canvas');
+  canvas.width = 300;
+  canvas.height = 300;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 300, 300);
+  grad.addColorStop(0, '#3a3a3c');
+  grad.addColorStop(1, '#1c1c1e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 300, 300);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '600 140px "SF Pro Rounded", "SF Pro Display", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(letter, 150, 158);
+  return canvas.toDataURL();
+}
+
+document.addEventListener('error', function (e) {
+  const img = e.target;
+  if (img.tagName !== 'IMG') return;
+  if (img.dataset.initialFallback) return;
+  const sub = img.closest('.am-preview-info-col')?.querySelector('.am-preview-sub');
+  const name = sub ? sub.textContent.split('•')[0].trim() : '';
+  if (!name) return;
+  img.dataset.initialFallback = '1';
+  img.src = generateArtistInitial(name);
+}, true);
 
 export class PreviewPlayer {
   constructor() {
@@ -42,7 +73,7 @@ export class PreviewPlayer {
         <div class="am-preview-inner">
           <!-- Left: Artwork & Info -->
           <div class="am-preview-info-col">
-            <img src="favicon.svg" class="am-preview-art" id="am-preview-art" alt="Cover" onerror="this.src='favicon.svg'">
+            <img src="" class="am-preview-art" id="am-preview-art" alt="Cover">
             <div class="am-preview-text">
               <div class="am-preview-title" id="am-preview-title">Track Title</div>
               <div class="am-preview-sub" id="am-preview-sub">Artist • Album</div>
@@ -320,7 +351,7 @@ export class PreviewPlayer {
     }
 
     if (queue.length === 0) {
-      alert(t('error') || 'No preview tracks found for this album.');
+      showToast({ message: t('error') || 'No preview tracks found for this album.' });
       return;
     }
 
@@ -352,7 +383,7 @@ export class PreviewPlayer {
     if (!this.container) this._initDOM();
 
     // Update UI elements
-    if (this.artEl) this.artEl.src = track.artUrl || 'favicon.svg';
+    if (this.artEl) this.artEl.src = track.artUrl || '';
     if (this.titleEl) this.titleEl.textContent = track.title || 'Track';
     if (this.subEl) this.subEl.textContent = `${track.artist || ''}${track.album ? ' • ' + track.album : ''}`;
 
@@ -385,7 +416,7 @@ export class PreviewPlayer {
 
   async _fetchAndPlayPreview(songId, autoPlay = true) {
     try {
-      const res = await fetch(`https://spicyamllplayer-api.hf.space/song?song=${songId}`);
+      const res = await fetch(`https://api.spicyamll.online/song?song=${songId}`);
       if (res.ok) {
         const d = await res.json();
         const sObj = d.data?.[0] || d.results?.songs?.data?.[0];

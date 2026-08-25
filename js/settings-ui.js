@@ -1,3 +1,4 @@
+import { showToast } from './toast.js';
 import { settingsManager, LYRICS_SOURCE_PROVIDER_DEFINITIONS } from "./settings-manager.js";
 import { EQ_BANDS, EQ_PRESETS } from "./equalizer-presets.js";
 import { generateTTML } from "./ttml-parser.js";
@@ -54,46 +55,46 @@ class SettingsUI {
   }
 
   async show() {
-    if (document.querySelector(".SpicyLyricsSettingsOverlay")) return;
+    if (document.querySelector(".LyricsflowSettingsOverlay")) return;
 
     this.overlay = document.createElement("div");
-    this.overlay.className = "SpicyLyricsSettingsOverlay";
+    this.overlay.className = "LyricsflowSettingsOverlay";
     this.overlay.onclick = () => this.hide();
 
     this.modal = document.createElement("div");
-    this.modal.className = "SpicyLyricsSettingsContainer";
+    this.modal.className = "LyricsflowSettingsContainer";
     this.modal.onclick = (e) => e.stopPropagation();
 
     // Header
     const header = document.createElement("div");
-    header.className = "SpicyLyricsSettingsHeader";
+    header.className = "LyricsflowSettingsHeader";
     header.innerHTML = `
       <span>${t('player_settings')}</span>
-      <button class="SpicyLyricsSettingsHeaderClose">
+      <button class="LyricsflowSettingsHeaderClose">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     `;
-    header.querySelector(".SpicyLyricsSettingsHeaderClose").onclick = () => this.hide();
+    header.querySelector(".LyricsflowSettingsHeaderClose").onclick = () => this.hide();
     this.modal.appendChild(header);
 
     // Tabbed Layout Container
     const mainBody = document.createElement("div");
-    mainBody.className = "SpicyLyricsSettingsMainBody";
+    mainBody.className = "LyricsflowSettingsMainBody";
 
     // Sidebar
     const sidebar = document.createElement("div");
-    sidebar.className = "SpicyLyricsSettingsSidebar";
+    sidebar.className = "LyricsflowSettingsSidebar";
 
     // Content Scroll Area
     const content = document.createElement("div");
-    content.className = "SpicyLyricsSettingsContent";
+    content.className = "LyricsflowSettingsContent";
 
     const panels = {};
     TABS.forEach(tab => {
       const panel = document.createElement("div");
-      panel.className = `SpicyLyricsSettingsPanel panel-${tab.id}`;
+      panel.className = `LyricsflowSettingsPanel panel-${tab.id}`;
       panel.style.display = tab.id === this.activeTab ? "block" : "none";
       content.appendChild(panel);
       panels[tab.id] = panel;
@@ -422,44 +423,44 @@ class SettingsUI {
 
   showExtensionGuide() {
     const guideOverlay = document.createElement('div');
-    guideOverlay.className = 'SpicyLyricsSettingsOverlay';
+    guideOverlay.className = 'LyricsflowSettingsOverlay';
     guideOverlay.onclick = () => guideOverlay.remove();
 
     const guideModal = document.createElement('div');
-    guideModal.className = 'SpicyLyricsSettingsContainer';
+    guideModal.className = 'LyricsflowSettingsContainer';
     guideModal.style.maxWidth = '900px';
     guideModal.style.width = '100%';
     guideModal.onclick = (e) => e.stopPropagation();
 
     const header = document.createElement('div');
-    header.className = 'SpicyLyricsSettingsHeader';
+    header.className = 'LyricsflowSettingsHeader';
     header.innerHTML = `
       <span>Extension Guide</span>
-      <button class="SpicyLyricsSettingsHeaderClose">
+      <button class="LyricsflowSettingsHeaderClose">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
           <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
     `;
-    header.querySelector('.SpicyLyricsSettingsHeaderClose').onclick = () => guideOverlay.remove();
+    header.querySelector('.LyricsflowSettingsHeaderClose').onclick = () => guideOverlay.remove();
     guideModal.appendChild(header);
 
     const contentScroll = document.createElement('div');
-    contentScroll.className = 'SpicyLyricsSettingsContent'; // Use the existing content class that already scrolls!
+    contentScroll.className = 'LyricsflowSettingsContent'; // Use the existing content class that already scrolls!
     contentScroll.style.padding = '24px 28px';
 
     contentScroll.innerHTML = `
       <div style="color: white; line-height: 1.7;">
-        <h1 style="color: white; margin-top: 0;">Spicy AMLL Player Extension Guide</h1>
+        <h1 style="color: white; margin-top: 0;">Lyricsflow Extension Guide</h1>
         
-        <h2 style="color: #ff69b4;">Extension Structure</h2>
+        <h2 style="color: #ffffff;">Extension Structure</h2>
         <p>Every extension is a zip file with at least two files:</p>
         <pre style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; overflow-x: auto;">
 my-extension.zip/
 ├── config.json
 └── script.js</pre>
 
-        <h3 style="color: #ff69b4;">config.json</h3>
+        <h3 style="color: #ffffff;">config.json</h3>
         <p>Describes your extension:</p>
         <pre style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px;">
 {
@@ -471,7 +472,7 @@ my-extension.zip/
   "tags": ["utility", "lyrics"]
 }</pre>
 
-        <h3 style="color: #ff69b4;">script.js</h3>
+        <h3 style="color: #ffffff;">script.js</h3>
         <p>Your extension's code! It has access to:</p>
         <ul style="margin-left: 20px;">
           <li><code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">player</code>: The audio player object</li>
@@ -480,7 +481,7 @@ my-extension.zip/
           <li><code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">downloadFile()</code>: Helper to download files</li>
         </ul>
 
-        <h2 style="color: #ff69b4; margin-top: 24px;">Examples</h2>
+        <h2 style="color: #ffffff; margin-top: 24px;">Examples</h2>
         <p>Check out the <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">extensions-examples/</code> folder for 7 ready-to-use examples:</p>
         <ul style="margin-left: 20px;">
           <li>Hello World (simple example)</li>
@@ -493,7 +494,7 @@ my-extension.zip/
           <li>Playlist Exporter</li>
         </ul>
 
-        <h2 style="color: #ff69b4; margin-top: 24px;">Packing Your Extension</h2>
+        <h2 style="color: #ffffff; margin-top: 24px;">Packing Your Extension</h2>
         <p>Zip your <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">config.json</code> and <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">script.js</code> together (make sure they're in the root of the zip, not a subfolder)!</p>
 
         <p style="margin-top: 24px; opacity: 0.8;">For the full guide, see <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">EXTENSION_GUIDE.md</code> in the project folder!</p>
@@ -571,7 +572,7 @@ my-extension.zip/
       this.renderExtensionsList(listContainer);
     } catch (err) {
       console.error(err);
-      alert('Failed to install extension: ' + err.message);
+      showToast({ message: 'Failed to install extension: ' + err.message });
     }
   }
 
@@ -652,7 +653,7 @@ my-extension.zip/
     exportBtn.textContent = "Start Video Render";
     exportBtn.onclick = () => {
       this.hide();
-      window.dispatchEvent(new CustomEvent("spicy-export-video"));
+      window.dispatchEvent(new CustomEvent("lyricsflow-export-video"));
     };
     this.addRow(exportCard, "Export Video Movie", "Beta utility to export full synchronized song videos.", exportBtn);
 
@@ -674,7 +675,7 @@ my-extension.zip/
     try {
       const data = LyricsObject.RawData;
       if (!data) {
-        alert("No lyrics loaded to export.");
+        showToast({ message: "No lyrics loaded to export." });
         return;
       }
 
@@ -722,7 +723,7 @@ my-extension.zip/
 
     } catch (err) {
       console.error("[Export] Failed:", err);
-      alert("Export failed: " + err.message);
+      showToast({ message: "Export failed: " + err.message });
       btn.textContent = "Error";
       setTimeout(() => {
         btn.textContent = originalText;
@@ -733,18 +734,18 @@ my-extension.zip/
 
   showProviderManager() {
     const pmOverlay = document.createElement("div");
-    pmOverlay.className = "SpicyLyricsSettingsOverlay active";
+    pmOverlay.className = "LyricsflowSettingsOverlay active";
     pmOverlay.style.zIndex = "10001";
     pmOverlay.onclick = () => pmOverlay.remove();
 
     const pmModal = document.createElement("div");
-    pmModal.className = "SpicyLyricsSettingsContainer active";
+    pmModal.className = "LyricsflowSettingsContainer active";
     pmModal.style.width = "90%";
     pmModal.style.maxWidth = "500px";
     pmModal.onclick = (e) => e.stopPropagation();
 
     const header = document.createElement("div");
-    header.className = "SpicyLyricsSettingsHeader";
+    header.className = "LyricsflowSettingsHeader";
     header.innerHTML = `
       <span>Manage Providers</span>
       <div style="display:flex; gap:8px;">
@@ -761,7 +762,7 @@ my-extension.zip/
     pmModal.appendChild(header);
 
     const scroll = document.createElement("div");
-    scroll.className = "SpicyLyricsSettingsScroll";
+    scroll.className = "LyricsflowSettingsScroll";
     pmModal.appendChild(scroll);
 
     const renderList = () => {
@@ -850,18 +851,18 @@ my-extension.zip/
 
   showTTMLTester() {
     const testerOverlay = document.createElement("div");
-    testerOverlay.className = "SpicyLyricsSettingsOverlay active";
+    testerOverlay.className = "LyricsflowSettingsOverlay active";
     testerOverlay.style.zIndex = "999999";
     testerOverlay.style.background = "rgba(0,0,0,0.95)";
 
     const testerModal = document.createElement("div");
-    testerModal.className = "SpicyLyricsSettingsContainer active";
+    testerModal.className = "LyricsflowSettingsContainer active";
     testerModal.style.width = "800px";
     testerModal.style.maxWidth = "95%";
     testerModal.onclick = (e) => e.stopPropagation();
 
     const header = document.createElement("div");
-    header.className = "SpicyLyricsSettingsHeader";
+    header.className = "LyricsflowSettingsHeader";
     header.innerHTML = `
       <span>TTML Tester</span>
       <button class="tester-close" style="background:none; border:none; color:inherit; cursor:pointer; font-size:20px;">✕</button>
@@ -870,7 +871,7 @@ my-extension.zip/
     testerModal.appendChild(header);
 
     const content = document.createElement("div");
-    content.className = "SpicyLyricsSettingsScroll";
+    content.className = "LyricsflowSettingsScroll";
     content.style.padding = "20px";
     content.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:16px;">
@@ -946,22 +947,22 @@ my-extension.zip/
 
         // Now we need to pass this to player.html's applyLyricsToUI! Since we can't directly call it, let's open player.html and pass data via URL, or store in localStorage!
         // Let's store in localStorage and redirect to player.html in demo mode!
-        localStorage.setItem("spicy_ttml_test", JSON.stringify({
+        localStorage.setItem("lyricsflow_ttml_test", JSON.stringify({
           lyrics: parsedLyrics,
           timestamp: Date.now()
         }));
 
         // Create a dummy audio track to play
         // First check if we are already on player.html! If yes, use existing player!
-        if (window.location.pathname.endsWith("player.html") && window.spicyPlayer) {
+        if (window.location.pathname.endsWith("player.html") && window.lyricsflowPlayer) {
           // If already on player, use existing player and set lyrics!
-          alert("TTML loaded! Please wait while we apply it...");
+          showToast({ message: "TTML loaded! Please wait while we apply it..." });
           // We need to inject the lyrics! Let's dispatch an event!
-          window.dispatchEvent(new CustomEvent("spicy_ttml_test_loaded", { detail: parsedLyrics }));
+          window.dispatchEvent(new CustomEvent("lyricsflow_ttml_test_loaded", { detail: parsedLyrics }));
           testerOverlay.remove();
         } else {
           // Redirect to player.html with dummy data!
-          alert("Opening player with test TTML! Please upload an audio file to play along!");
+          showToast({ message: "Opening player with test TTML! Please upload an audio file to play along!" });
           // For now, just store in localStorage!
           window.location.href = "player.html?test=true";
         }
@@ -1065,7 +1066,7 @@ my-extension.zip/
     btnClearState.onclick = async () => {
       const { RemoveCurrentLyrics_StateCache } = await import("./lyrics-cache-tools.js");
       RemoveCurrentLyrics_StateCache(true);
-      window.dispatchEvent(new CustomEvent("spicy-settings-changed"));
+      window.dispatchEvent(new CustomEvent("lyricsflow-settings-changed"));
     };
     this.addRow(cacheCard, "Clear Memory State", "Reset internal loaded lyrics state for the current song.", btnClearState);
   }

@@ -1,8 +1,9 @@
 /**
- * Spicy AMLL Player WEB — Video Exporter (DOM Capture Version)
+ * Lyricsflow — Video Exporter (DOM Capture Version)
  * Captures the actual page DOM for picture-perfect lyric videos.
  */
 
+import { showToast } from './toast.js';
 import { settingsManager } from './settings-manager.js';
 
 export default class VideoExporter {
@@ -98,7 +99,7 @@ export default class VideoExporter {
       console.error("Export failed:", err);
       this.stopExport();
       document.body.classList.remove('is-rendering');
-      alert("Capture was cancelled or failed.");
+      showToast({ message: "Capture was cancelled or failed." });
     }
   }
 
@@ -137,7 +138,7 @@ export default class VideoExporter {
     ctx.roundRect(margin, pillY, w - margin * 2, pillH, 20);
     ctx.fill();
 
-    ctx.fillStyle = '#ff3b30';
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.roundRect(margin, pillY, (w - margin * 2) * (pct / 100), pillH, 20);
     ctx.fill();
@@ -176,7 +177,7 @@ export default class VideoExporter {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${title || 'lyrics'}_spicy_render.webm`;
+    a.download = `${title || 'lyrics'}_lyricsflow_render.webm`;
     a.click();
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player — User Profile & Setup Wizard
+ * Lyricsflow — User Profile & Setup Wizard
  * Manages user profile, macOS styled Setup Assistant modal,
  * and Index.html Profile Settings modal with Player Settings iframe.
  */
@@ -7,8 +7,8 @@
 import { SUPPORTED_LANGUAGES, getCurrentLang, setLanguage, t, detectBrowserLanguage } from './i18n.js';
 import { settingsUI } from './settings-ui.js';
 
-const PROFILE_KEY = 'spicy_user_profile';
-const SETUP_KEY = 'spicy_user_setup_done';
+const PROFILE_KEY = 'lyricsflow_user_profile';
+const SETUP_KEY = 'lyricsflow_user_setup_done';
 
 const DEFAULT_PFP = 'icons/account_avatar.png';
 const DEFAULT_NAME = 'Listener';
@@ -49,7 +49,7 @@ export function saveUserProfile(profile) {
       setLanguage(profile.lang);
     }
     updateProfileUI();
-    window.dispatchEvent(new CustomEvent('spicy-profile-updated', { detail: merged }));
+    window.dispatchEvent(new CustomEvent('lyricsflow-profile-updated', { detail: merged }));
   } catch (e) {
     console.error('[Profile] Failed to save profile:', e);
   }
@@ -97,7 +97,7 @@ export function checkFirstTimeSetup() {
  */
 export function showSetupAssistant() {
   // Check if existing modal is open
-  const existing = document.getElementById('spicy-setup-modal');
+  const existing = document.getElementById('lyricsflow-setup-modal');
   if (existing) existing.remove();
 
   const detectedLang = detectBrowserLanguage();
@@ -110,7 +110,7 @@ export function showSetupAssistant() {
 
   const overlay = document.createElement('div');
   overlay.className = 'am-macos-modal-overlay';
-  overlay.id = 'spicy-setup-modal';
+  overlay.id = 'lyricsflow-setup-modal';
 
   const windowBox = document.createElement('div');
   windowBox.className = 'am-macos-window';
@@ -318,7 +318,7 @@ export function showSetupAssistant() {
  * Profile & Preferences Modal (for index.html)
  */
 export function openProfileSettingsModal() {
-  const existing = document.getElementById('spicy-profile-modal');
+  const existing = document.getElementById('lyricsflow-profile-modal');
   if (existing) existing.remove();
 
   const profile = getUserProfile();
@@ -328,7 +328,7 @@ export function openProfileSettingsModal() {
 
   const overlay = document.createElement('div');
   overlay.className = 'am-macos-modal-overlay';
-  overlay.id = 'spicy-profile-modal';
+  overlay.id = 'lyricsflow-profile-modal';
 
   const modalBox = document.createElement('div');
   modalBox.className = 'am-macos-window am-profile-settings-window';

@@ -1,6 +1,6 @@
-# Spicy AMLL Player Extension Guide
+# Lyricsflow Extension Guide
 
-Welcome to the Spicy AMLL Player extension guide! This guide will teach you how to create your own extensions to enhance the player.
+Welcome to the Lyricsflow extension guide! This guide will teach you how to create your own extensions to enhance the player.
 
 ## Table of Contents
 1. [Extension Structure](#extension-structure)
@@ -160,7 +160,7 @@ function addCustomLyricsButton() {
 }
 
 async function fetchCustomLyrics() {
-  const metadata = window._spicySongMetadata;
+  const metadata = window._lyricsflowSongMetadata;
   if (!metadata || !metadata.title || !metadata.artist) {
     alert('Please load a song first!');
     return;
@@ -204,7 +204,7 @@ Changes the background based on the current song's metadata.
 let lastSongId = null;
 
 function checkSongChange() {
-  const metadata = window._spicySongMetadata;
+  const metadata = window._lyricsflowSongMetadata;
   if (!metadata) return;
 
   const currentSongId = `${metadata.title}-${metadata.artist}`;

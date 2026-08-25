@@ -1,8 +1,8 @@
 /* ══════════════════════════════════════════════════
-   Spicy AMLL Player - Settings UI Styles
+   Lyricsflow - Settings UI Styles
    ══════════════════════════════════════════════════ */
 
-.SpicyLyricsSettingsOverlay {
+.LyricsflowSettingsOverlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -20,12 +20,12 @@
   transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.SpicyLyricsSettingsOverlay.active {
+.LyricsflowSettingsOverlay.active {
   opacity: 1;
   pointer-events: auto;
 }
 
-.SpicyLyricsSettingsContainer {
+.LyricsflowSettingsContainer {
   background: rgba(24, 24, 26, 0.92);
   backdrop-filter: blur(35px);
   -webkit-backdrop-filter: blur(35px);
@@ -44,11 +44,11 @@
   will-change: transform;
 }
 
-.SpicyLyricsSettingsContainer.active {
+.LyricsflowSettingsContainer.active {
   transform: scale(1) translateY(0);
 }
 
-.SpicyLyricsSettingsHeader {
+.LyricsflowSettingsHeader {
   padding: 18px 24px;
   display: flex;
   justify-content: space-between;
@@ -57,14 +57,14 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
-.SpicyLyricsSettingsHeader span {
+.LyricsflowSettingsHeader span {
   font-size: 1.15rem;
   font-weight: 700;
   color: #fff;
   letter-spacing: -0.01em;
 }
 
-.SpicyLyricsSettingsHeaderClose {
+.LyricsflowSettingsHeaderClose {
   background: rgba(255, 255, 255, 0.08);
   border: none;
   width: 32px;
@@ -78,13 +78,13 @@
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.SpicyLyricsSettingsHeaderClose:hover {
+.LyricsflowSettingsHeaderClose:hover {
   background: rgba(255, 255, 255, 0.16);
   color: #fff;
   transform: scale(1.05);
 }
 
-.SpicyLyricsSettingsMainBody {
+.LyricsflowSettingsMainBody {
   display: flex;
   flex: 1;
   min-height: 0;
@@ -92,7 +92,7 @@
 }
 
 /* Sidebar Styling */
-.SpicyLyricsSettingsSidebar {
+.LyricsflowSettingsSidebar {
   width: 210px;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   padding: 16px 10px;
@@ -104,7 +104,7 @@
   scrollbar-width: none;
 }
 
-.SpicyLyricsSettingsSidebar::-webkit-scrollbar {
+.LyricsflowSettingsSidebar::-webkit-scrollbar {
   display: none;
 }
 
@@ -147,18 +147,18 @@
 }
 
 /* Content Area Styling */
-.SpicyLyricsSettingsContent {
+.LyricsflowSettingsContent {
   flex: 1;
   padding: 24px 28px;
   overflow-y: auto;
   scrollbar-width: none;
 }
 
-.SpicyLyricsSettingsContent::-webkit-scrollbar {
+.LyricsflowSettingsContent::-webkit-scrollbar {
   display: none;
 }
 
-.SpicyLyricsSettingsPanel {
+.LyricsflowSettingsPanel {
   animation: slFadeIn 0.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
@@ -268,7 +268,11 @@
 }
 
 .sl-toggle input:checked + span {
-  background-color: #30d158;
+  background-color: #ffffff;
+}
+
+.sl-toggle input:checked + span:before {
+  background-color: #1c1c1e;
 }
 
 .sl-toggle input:checked + span:before {
@@ -402,14 +406,14 @@
 }
 
 .sl-btn-accent {
-  background: rgba(48, 209, 88, 0.12);
-  border-color: rgba(48, 209, 88, 0.2);
-  color: #30d158;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .sl-btn-accent:hover {
-  background: rgba(48, 209, 88, 0.2);
-  border-color: rgba(48, 209, 88, 0.35);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 /* Inline Equalizer Styling */

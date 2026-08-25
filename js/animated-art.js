@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player WEB — Animated Artwork
+ * Lyricsflow — Animated Artwork
  * Fetches animated (video) album art from Apple Music via iTunes search + Dodson proxy.
  * Based on the animated-art-test implementation.
  */
@@ -18,8 +18,8 @@ function getAspect() {
 async function searchiTunes(query) {
   try {
     const encoded = encodeURIComponent(query);
-    // Use Spicy AMLL Server as a proxy for iTunes search to avoid CORS issues on Netlify
-    const res = await fetch(`https://spicyamllplayer-api.hf.space/search?term=${encoded}&types=albums&limit=5`);
+    // Use Lyricsflow Server as a proxy for iTunes search to avoid CORS issues on Netlify
+    const res = await fetch(`https://api.spicyamll.online/search?term=${encoded}&types=albums&limit=5`);
     if (!res.ok) return null;
 
     const data = await res.json();
@@ -58,7 +58,7 @@ export async function getAnimatedArtwork(artist, album, title) {
     console.log(`[AnimatedArt] Searching: "${artist} ${album}"`);
     const albumId = await searchiTunes(`${artist} ${album}`);
     if (albumId) {
-      const url = `https://spicyamllplayer-api.hf.space/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
+      const url = `https://api.spicyamll.online/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
       _artworkCache.set(cacheKey, url);
       return url;
     }
@@ -69,7 +69,7 @@ export async function getAnimatedArtwork(artist, album, title) {
     console.log(`[AnimatedArt] Album search failed, trying: "${artist} ${title}"`);
     const albumId = await searchiTunes(`${artist} ${title}`);
     if (albumId) {
-      const url = `https://spicyamllplayer-api.hf.space/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
+      const url = `https://api.spicyamll.online/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
       _artworkCache.set(cacheKey, url);
       return url;
     }
@@ -79,7 +79,7 @@ export async function getAnimatedArtwork(artist, album, title) {
   console.log(`[AnimatedArt] Trying artist-only search: "${artist}"`);
   const albumId = await searchiTunes(artist);
   if (albumId) {
-    const url = `https://spicyamllplayer-api.hf.space/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
+    const url = `https://api.spicyamll.online/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
     _artworkCache.set(cacheKey, url);
     return url;
   }

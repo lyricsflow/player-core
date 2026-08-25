@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   Spicy AMLL Player — Apple Music "Listen/Search" Page
+   Lyricsflow — Apple Music "Listen/Search" Page
    Styles for elements that previously had no CSS.
    Matches the Apple Music dark, glassy aesthetic already
    established in upload.css / global.css.
@@ -48,8 +48,8 @@
 
 .am-apple-search-input-wrapper #catalog-search:focus {
   background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(250, 36, 60, 0.45);
-  box-shadow: 0 0 0 4px rgba(250, 36, 60, 0.12);
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
 }
 
 .am-search-clear-btn {
@@ -72,7 +72,7 @@
 }
 
 .am-search-clear-btn:hover {
-  background: rgba(250, 36, 60, 0.25);
+  background: rgba(255, 255, 255, 0.25);
   color: #fff;
 }
 
@@ -129,8 +129,8 @@
 }
 
 .am-text-action-btn:hover {
-  color: #fa243c;
-  background: rgba(250, 36, 60, 0.1);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .am-empty-msg,
@@ -242,10 +242,10 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.am-category-card:nth-child(4n+1) { background: linear-gradient(135deg, #fa243c 0%, #7b1fa2 100%); }
-.am-category-card:nth-child(4n+2) { background: linear-gradient(135deg, #2979ff 0%, #00b0ff 100%); }
-.am-category-card:nth-child(4n+3) { background: linear-gradient(135deg, #ff6d00 0%, #ffab00 100%); }
-.am-category-card:nth-child(4n+4) { background: linear-gradient(135deg, #00c853 0%, #64dd17 100%); }
+.am-category-card:nth-child(4n+1) { background: linear-gradient(135deg, #3a3a3c 0%, #1c1c1e 100%); }
+.am-category-card:nth-child(4n+2) { background: linear-gradient(135deg, #48484a 0%, #2c2c2e 100%); }
+.am-category-card:nth-child(4n+3) { background: linear-gradient(135deg, #2c2c2e 0%, #000000 100%); }
+.am-category-card:nth-child(4n+4) { background: linear-gradient(135deg, #58585a 0%, #3a3a3c 100%); }
 
 .am-category-card:hover {
   transform: translateY(-4px) scale(1.02);
@@ -562,7 +562,7 @@
 .am-show-more-btn {
   background: none;
   border: none;
-  color: #fa2d48;
+  color: #e5e5e5;
   font-weight: 600;
   cursor: pointer;
   margin-top: 8px;
@@ -703,8 +703,8 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #fa243c;
-  background: rgba(250, 36, 60, 0.12);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
   padding: 2px 8px;
   border-radius: 100px;
   width: fit-content;
@@ -849,8 +849,8 @@
 }
 
 .am-card-3dots-btn:hover {
-  background: rgba(250, 36, 60, 0.9);
-  border-color: rgba(250, 36, 60, 1);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 /* ── Badge Tag on Media Cards ── */
@@ -858,7 +858,7 @@
   position: absolute;
   top: 8px;
   left: 8px;
-  background: rgba(250, 36, 60, 0.9);
+  background: #ffffff;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   padding: 3px 8px;
@@ -867,7 +867,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #fff;
+  color: #000;
   pointer-events: none;
   z-index: 5;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
@@ -998,18 +998,22 @@
   height: 48px;
   min-width: 48px;
   border-radius: 50%;
-  background: #fa243c;
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(250, 36, 60, 0.45);
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.45);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.am-artist-play-btn svg {
+  fill: #000;
 }
 
 .am-artist-play-btn:hover {
   transform: scale(1.06);
-  box-shadow: 0 10px 30px rgba(250, 36, 60, 0.6);
+  box-shadow: 0 10px 30px rgba(255, 255, 255, 0.6);
 }
 
 /* Common detail header (album + playlist) */
@@ -1036,7 +1040,7 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #fa243c;
+  color: #ffffff;
   margin-bottom: 6px;
 }
 
@@ -1051,7 +1055,7 @@
 .am-detail-artist {
   font-size: 1.15rem;
   font-weight: 600;
-  color: #fa243c;
+  color: #ffffff;
   margin: 0 0 8px 0;
 }
 
@@ -1077,8 +1081,8 @@
   font-size: 0.78rem;
   font-weight: 600;
   color: #fff;
-  background: rgba(250, 36, 60, 0.16);
-  border: 1px solid rgba(250, 36, 60, 0.35);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   padding: 6px 12px;
   border-radius: 100px;
   width: fit-content;
@@ -1133,8 +1137,8 @@
 }
 
 .am-preview-btn:hover:not(:disabled) {
-  background: rgba(250, 36, 60, 0.25);
-  border-color: rgba(250, 36, 60, 0.5);
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .am-preview-btn:disabled {
@@ -1252,8 +1256,8 @@
 
 .am-profile-btn:hover {
   transform: scale(1.06);
-  border-color: rgba(250, 36, 60, 0.5);
-  box-shadow: 0 4px 16px rgba(250, 36, 60, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3);
 }
 
 .user-profile-avatar-img {
@@ -1464,7 +1468,7 @@
 .am-macos-input:focus,
 .am-macos-select:focus {
   background: rgba(255, 255, 255, 0.12);
-  border-color: #fa243c;
+  border-color: #ffffff;
 }
 
 .am-macos-actions {
@@ -1486,14 +1490,14 @@
 }
 
 .am-macos-btn.primary {
-  background: linear-gradient(135deg, #fa243c 0%, #ff2d55 100%);
+  background: linear-gradient(135deg, #3a3a3c 0%, #1c1c1e 100%);
   color: #fff;
-  box-shadow: 0 4px 18px rgba(250, 36, 60, 0.4);
+  box-shadow: 0 4px 18px rgba(255, 255, 255, 0.12);
 }
 
 .am-macos-btn.primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(250, 36, 60, 0.55);
+  box-shadow: 0 6px 22px rgba(255, 255, 255, 0.55);
 }
 
 .am-macos-btn.secondary {
@@ -1512,7 +1516,7 @@
   height: 90px;
   border-radius: 50%;
   padding: 4px;
-  border: 2px solid #fa243c;
+  border: 2px solid #ffffff;
   margin-bottom: 16px;
 }
 
@@ -1545,7 +1549,7 @@
 }
 
 .am-avatar-choice.active {
-  border-color: #fa243c;
+  border-color: #ffffff;
 }
 
 .am-avatar-choice img {
@@ -1684,7 +1688,7 @@
 }
 
 .am-mob-modal-close-btn:hover {
-  background: rgba(250, 36, 60, 0.3);
+  background: rgba(255, 255, 255, 0.3);
   color: #fff;
 }
 
@@ -1710,7 +1714,7 @@
 .am-mob-modal-item:hover,
 .am-mob-modal-item:active {
   background: rgba(255, 255, 255, 0.09);
-  color: #fa243c;
+  color: #ffffff;
 }
 
 .am-mob-modal-item svg {
@@ -1771,7 +1775,7 @@
   }
 
   .am-mob-nav-btn.am-mob-active {
-    color: #fa243c;
+    color: #ffffff;
   }
 
   /* Padding at bottom of main content on mobile for the fixed nav */
@@ -1907,9 +1911,10 @@
 
 .am-hub-pill-btn:hover,
 .am-hub-pill-btn:active {
-  background: #fa243c;
-  border-color: #fa243c;
-  box-shadow: 0 4px 16px rgba(250, 36, 60, 0.35);
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.25);
 }
 
 /* ══════════════════════════════════════════════════
@@ -2108,7 +2113,7 @@
 .am-preview-progress-bar {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #fa243c, #ff2d55);
+  background: linear-gradient(90deg, #ffffff, #d1d1d6);
   border-radius: 0 2px 2px 0;
   transition: width 0.1s linear;
 }
@@ -2214,7 +2219,7 @@
 }
 
 .am-preview-play-btn:hover {
-  background: #fa243c;
+  background: rgba(255, 255, 255, 0.2);
   transform: scale(1.08);
 }
 
@@ -2271,9 +2276,9 @@
   letter-spacing: 0.05em;
   padding: 3px 8px;
   border-radius: 6px;
-  background: rgba(250, 36, 60, 0.2);
-  color: #ff3b56;
-  border: 1px solid rgba(250, 36, 60, 0.35);
+  background: rgba(255, 255, 255, 0.2);
+  color: #e5e5e5;
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .am-preview-close-btn {
@@ -2302,18 +2307,18 @@
 
 .am-preview-close-btn:hover {
   color: #ffffff;
-  background: rgba(250, 36, 60, 0.4);
+  background: rgba(255, 255, 255, 0.4);
   transform: scale(1.1);
 }
 
 .am-preview-close-btn:active {
   transform: scale(0.95);
-  background: rgba(250, 36, 60, 0.6);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .am-track-row.preview-active {
-  background: rgba(250, 36, 60, 0.15) !important;
-  border-left: 3px solid #fa243c;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-left: 3px solid #ffffff;
 }
 
 @media (max-width: 900px) {

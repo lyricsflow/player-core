@@ -1,3 +1,4 @@
+import { showToast } from './toast.js';
 import { addTrackToQueue, clearQueue, setCurrentIndex, getPlaylists, createPlaylist, addTrackToPlaylist, getPlaylistTracks, deletePlaylist, updatePlaylistTrack, findTrackInPlaylist } from './router.js';
 import { parseAudioMetadata } from './metadata-parser.js';
 import { robustFetch } from './network-utils.js';
@@ -22,17 +23,61 @@ import {
   getLibraryArtists,
   getRecentlyAdded
 } from './library-manager.js';
+
+function generateArtistInitial(name) {
+  const letter = (name || '?').trim().charAt(0).toUpperCase();
+  const canvas = document.createElement('canvas');
+  canvas.width = 300;
+  canvas.height = 300;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 300, 300);
+  grad.addColorStop(0, '#3a3a3c');
+  grad.addColorStop(1, '#1c1c1e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 300, 300);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '600 140px "SF Pro Rounded", "SF Pro Display", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(letter, 150, 158);
+  return canvas.toDataURL();
+}
+
+function getCardName(img) {
+  if (img.dataset.artistName) return img.dataset.artistName;
+  const card = img.closest('.am-media-card, .am-standard-media-card, .am-artist-card, .am-artist-song-card, .am-top-card, .am-song-row, .am-chip, .playlist-card, .am-album-art-container, .am-artist-view');
+  if (!card) return '';
+  const titleEl = card.querySelector('.am-media-card-title, .am-media-card-sub, .am-artist-name, .am-song-row-artist, .am-category-title, h2, h3, h4, p');
+  return titleEl ? titleEl.textContent.trim() : '';
+}
+
+document.addEventListener('error', function (e) {
+  const img = e.target;
+  if (img.tagName !== 'IMG') return;
+  if (img.dataset.initialFallback) return;
+  img.dataset.initialFallback = '1';
+  const name = getCardName(img);
+  if (name) img.src = generateArtistInitial(name);
+}, true);
 import { previewPlayer } from './preview-player.js';
 
 const API_BASE = "https://spicyamllplayer-api.hf.space";
 
 function cleanArtworkUrl(url, w = 300, h = 300) {
-  if (!url) return 'favicon.svg';
-  return url
+  if (!url || typeof url !== 'string') return '';
+  const cleaned = url
     .replace('{w}', String(w))
     .replace('{h}', String(h))
     .replace('{c}', '')
     .replace('{f}', 'jpg');
+  if (!/^https?:\/\//i.test(cleaned)) return '';
+  return cleaned.replace(/["'<>\s]/g, c => encodeURIComponent(c));
+}
+
+function cleanMediaUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  if (!/^(https?:|blob:)/i.test(url)) return '';
+  return url.replace(/["'<>\s]/g, c => encodeURIComponent(c));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -46,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (userProfileBtn) userProfileBtn.addEventListener('click', openProfileSettingsModal);
   if (mobileUserProfileBtn) mobileUserProfileBtn.addEventListener('click', openProfileSettingsModal);
 
-  window.addEventListener('spicy-profile-updated', () => {
+  window.addEventListener('lyricsflow-profile-updated', () => {
     updateProfileUI();
     const profile = getUserProfile();
     const homeGreetingHeading = document.getElementById('home-greeting-heading');
@@ -59,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  window.addEventListener('spicy-lang-changed', () => {
+  window.addEventListener('lyricsflow-lang-changed', () => {
     applyDOMTranslations();
     updateSidebarPlaylists();
     updateProfileUI();
@@ -482,7 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const homeGreetingHeading = document.getElementById('home-greeting-heading');
     if (homeGreetingHeading) {
-      homeGreetingHeading.textContent = `${t('home_welcome', { name: profile.name })} 👋`;
+      homeGreetingHeading.textContent = `${t('home_welcome', { name: profile.name })}`;
     }
 
     const homeGreetingTitle = document.getElementById('home-recommended-title');
@@ -501,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
           topPicksContainer.innerHTML = picks.map((item, i) => `
             <div class="am-standard-media-card animate-fade" data-type="${item.type}" data-id="${item.id}" data-idx="${i}">
               <div style="position: relative;">
-                <img src="${cleanArtworkUrl(item.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art ${item.type === 'artist' ? 'artist-circle' : ''}" onerror="this.src='favicon.svg'">
+                <img src="${cleanArtworkUrl(item.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art ${item.type === 'artist' ? 'artist-circle' : ''}">
                 ${item.isLatest ? `<span class="am-media-badge-tag">${t('home_latest_played')}</span>` : ''}
               </div>
               <div class="am-media-card-title">${escapeHTML(item.title)}</div>
@@ -546,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         recentContainer.innerHTML = recent10.map((song, i) => `
           <div class="am-standard-media-card animate-fade" data-id="${song.id}" data-idx="${i}">
-            <img src="${cleanArtworkUrl(song.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+            <img src="${cleanArtworkUrl(song.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
             <div class="am-media-card-title">${escapeHTML(song.title)}</div>
             <div class="am-media-card-sub">${escapeHTML(song.artist)}</div>
           </div>
@@ -588,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
           recommendedGrid.innerHTML = rec90.map((item, i) => `
             <div class="am-standard-media-card animate-fade" data-type="${item.type}" data-id="${item.id}" data-idx="${i}">
               <div style="position: relative;">
-                <img src="${cleanArtworkUrl(item.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art ${item.type === 'artist' ? 'artist-circle' : ''}" onerror="this.src='favicon.svg'">
+                <img src="${cleanArtworkUrl(item.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art ${item.type === 'artist' ? 'artist-circle' : ''}">
                 <button class="am-card-3dots-btn" data-id="${item.id}" data-idx="${i}">•••</button>
               </div>
               <div class="am-media-card-title">${escapeHTML(item.title)}</div>
@@ -661,7 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return `
             <div class="am-standard-media-card animate-fade" data-type="${item.itemType}" data-id="${item.id}" data-idx="${i}">
               <div style="position: relative;">
-                <img src="${cleanArtworkUrl(item.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art ${item.itemType === 'artist' ? 'artist-circle' : ''}" onerror="this.src='favicon.svg'">
+                <img src="${cleanArtworkUrl(item.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art ${item.itemType === 'artist' ? 'artist-circle' : ''}">
                 <span class="am-media-badge-tag">${itemTypeLabel}</span>
               </div>
               <div class="am-media-card-title">${escapeHTML(item.name)}</div>
@@ -707,7 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
         songsGrid.innerHTML = songs.map((s, i) => `
           <div class="am-song-row-item animate-fade" data-id="${s.id}" data-idx="${i}">
             <div class="am-song-row-num">${i + 1}</div>
-            <img src="${cleanArtworkUrl(s.artUrl, 100, 100)}" loading="lazy" referrerpolicy="no-referrer" class="am-song-row-art" onerror="this.src='favicon.svg'">
+            <img src="${cleanArtworkUrl(s.artUrl, 100, 100)}" loading="lazy" referrerpolicy="no-referrer" class="am-song-row-art">
             <div class="am-song-row-info">
               <div class="am-song-row-title">${escapeHTML(s.name)}</div>
               <div class="am-song-row-artist">${escapeHTML(s.artist)}</div>
@@ -755,7 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         albumsGrid.innerHTML = albums.map((a, i) => `
           <div class="am-standard-media-card animate-fade" data-id="${a.id}" data-idx="${i}">
-            <img src="${cleanArtworkUrl(a.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+            <img src="${cleanArtworkUrl(a.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
             <div class="am-media-card-title">${escapeHTML(a.name)}</div>
             <div class="am-media-card-sub">${escapeHTML(a.artist)}</div>
           </div>
@@ -781,7 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         artistsGrid.innerHTML = artists.map((art, i) => `
           <div class="am-standard-media-card animate-fade" data-id="${art.id}" data-idx="${i}">
-            <img src="${cleanArtworkUrl(art.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art artist-circle" onerror="this.src='favicon.svg'">
+            <img src="${cleanArtworkUrl(art.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art artist-circle">
             <div class="am-media-card-title">${escapeHTML(art.name)}</div>
             <div class="am-media-card-sub">${escapeHTML(art.genre || t('badge_artist'))}</div>
           </div>
@@ -813,7 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         recentAddedRow.innerHTML = items.map((item, i) => `
           <div class="am-standard-media-card animate-fade" data-type="${item.itemType}" data-id="${item.id}" data-idx="${i}">
-            <img src="${cleanArtworkUrl(item.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art ${item.itemType === 'artist' ? 'artist-circle' : ''}" onerror="this.src='favicon.svg'">
+            <img src="${cleanArtworkUrl(item.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art ${item.itemType === 'artist' ? 'artist-circle' : ''}">
             <div class="am-media-card-title">${escapeHTML(item.name)}</div>
             <div class="am-media-card-sub">${escapeHTML(item.artist || '')}</div>
           </div>
@@ -845,7 +890,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const firstArt = pTracks[0]?.artUrl || 'favicon.svg';
           return `
             <div class="am-standard-media-card animate-fade" data-id="${p.id}" data-idx="${i}">
-              <img src="${cleanArtworkUrl(firstArt, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+              <img src="${cleanArtworkUrl(firstArt, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
               <div class="am-media-card-title">${escapeHTML(p.name)}</div>
               <div class="am-media-card-sub">${t('lib_tracks_count', { count: pTracks.length })}</div>
             </div>
@@ -869,7 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         recentListenedRow.innerHTML = recent10.map((song, i) => `
           <div class="am-standard-media-card animate-fade" data-id="${song.id}" data-idx="${i}">
-            <img src="${cleanArtworkUrl(song.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+            <img src="${cleanArtworkUrl(song.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
             <div class="am-media-card-title">${escapeHTML(song.title)}</div>
             <div class="am-media-card-sub">${escapeHTML(song.artist)}</div>
           </div>
@@ -908,7 +953,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       grid.innerHTML = artists.map((art, i) => `
         <div class="am-standard-media-card animate-fade" data-id="${art.id}" data-idx="${i}">
-          <img src="${cleanArtworkUrl(art.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art artist-circle" onerror="this.src='favicon.svg'">
+          <img src="${cleanArtworkUrl(art.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art artist-circle">
           <div class="am-media-card-title">${escapeHTML(art.name)}</div>
           <div class="am-media-card-sub">${escapeHTML(art.genre || t('badge_artist'))}</div>
         </div>
@@ -935,7 +980,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       grid.innerHTML = albums.map((alb, i) => `
         <div class="am-standard-media-card animate-fade" data-id="${alb.id}" data-idx="${i}">
-          <img src="${cleanArtworkUrl(alb.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+          <img src="${cleanArtworkUrl(alb.artUrl, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
           <div class="am-media-card-title">${escapeHTML(alb.name)}</div>
           <div class="am-media-card-sub">${escapeHTML(alb.artist)}</div>
         </div>
@@ -972,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const firstArt = tracks[0]?.artUrl || 'favicon.svg';
         return `
           <div class="am-sidebar-playlist-item" data-id="${p.id}">
-            <img src="${cleanArtworkUrl(firstArt, 60, 60)}" loading="lazy" referrerpolicy="no-referrer" class="am-sidebar-playlist-cover" alt="" onerror="this.src='favicon.svg'">
+            <img src="${cleanArtworkUrl(firstArt, 60, 60)}" loading="lazy" referrerpolicy="no-referrer" class="am-sidebar-playlist-cover" alt="">
             <span class="am-sidebar-playlist-name">${escapeHTML(p.name)}</span>
           </div>
         `;
@@ -1022,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return `
           <div class="am-category-card animate-fade" data-curator="${cat.id}">
-            ${artUrl ? `<img src="${artUrl}" class="am-category-bg" loading="lazy" referrerpolicy="no-referrer" alt="" onerror="this.style.display='none'">` : ''}
+            ${artUrl ? `<img src="${cleanArtworkUrl(artUrl)}" class="am-category-bg" loading="lazy" referrerpolicy="no-referrer" alt="" onerror="this.style.display='none'">` : ''}
             <div class="am-category-title">${escapeHTML(attr.name || t('nav_search'))}</div>
           </div>
         `;
@@ -1045,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Recent Searches ──
   function renderRecentlySearched() {
     if (!recentlySearchedGrid || !recentlySearchedSection) return;
-    const recents = JSON.parse(localStorage.getItem('spicy_recent_searches') || '[]');
+    const recents = JSON.parse(localStorage.getItem('lyricsflow_recent_searches') || '[]');
     if (recents.length === 0) {
       recentlySearchedSection.classList.add('hidden');
       return;
@@ -1054,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     recentlySearchedGrid.innerHTML = recents.map(item => `
       <div class="am-recent-search-chip" data-query="${escapeHTML(item.query)}">
-        <img src="${cleanArtworkUrl(item.artUrl, 60, 60)}" class="am-chip-art" loading="lazy" referrerpolicy="no-referrer" alt="" onerror="this.src='favicon.svg'">
+        <img src="${cleanArtworkUrl(item.artUrl, 60, 60)}" class="am-chip-art" loading="lazy" referrerpolicy="no-referrer" alt="">
         <div class="am-chip-info">
           <span class="am-chip-title">${escapeHTML(item.title || item.query)}</span>
           <span class="am-chip-sub">${escapeHTML(item.type || t('nav_search'))}</span>
@@ -1073,17 +1118,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (clearRecentSearchesBtn) {
     clearRecentSearchesBtn.onclick = () => {
-      localStorage.removeItem('spicy_recent_searches');
+      localStorage.removeItem('lyricsflow_recent_searches');
       renderRecentlySearched();
     };
   }
 
   function addRecentSearch(query, title, type, artUrl) {
-    let recents = JSON.parse(localStorage.getItem('spicy_recent_searches') || '[]');
+    let recents = JSON.parse(localStorage.getItem('lyricsflow_recent_searches') || '[]');
     recents = recents.filter(r => r.query !== query);
     recents.unshift({ query, title, type, artUrl });
     if (recents.length > 8) recents.pop();
-    localStorage.setItem('spicy_recent_searches', JSON.stringify(recents));
+    localStorage.setItem('lyricsflow_recent_searches', JSON.stringify(recents));
   }
 
   // ── Search Handling ──
@@ -1201,7 +1246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       return `
         <div class="am-top-card animate-fade" data-type="${item.type}" data-id="${item.id}" data-idx="${i}">
-          <img src="${artUrl}" loading="lazy" referrerpolicy="no-referrer" class="am-top-card-art ${isArtist ? 'artist-circle' : ''}" onerror="this.src='favicon.svg'">
+          <img src="${cleanArtworkUrl(artUrl)}" loading="lazy" referrerpolicy="no-referrer" class="am-top-card-art ${isArtist ? 'artist-circle' : ''}">
           <div class="am-top-card-info">
             <h3 class="am-top-card-title">${escapeHTML(attr.name || '')}</h3>
             <p class="am-top-card-subtitle">${escapeHTML(attr.artistName || (isArtist ? t('badge_artist') : ''))}</p>
@@ -1257,7 +1302,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       return `
         <div class="am-artist-card animate-fade" data-id="${art.id}">
-          <img src="${artUrl}" loading="lazy" referrerpolicy="no-referrer" class="am-artist-art" alt="" onerror="this.src='favicon.svg'">
+          <img src="${cleanArtworkUrl(artUrl)}" loading="lazy" referrerpolicy="no-referrer" class="am-artist-art" alt="">
           <div class="am-artist-name">${escapeHTML(attr.name || '')}</div>
           <div class="am-artist-sub">${t('badge_artist')}</div>
         </div>
@@ -1287,7 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return `
         <div class="am-song-row-item animate-fade" data-id="${s.id}" data-idx="${i}">
           <div class="am-song-row-num">${i + 1}</div>
-          <img src="${artUrl}" loading="lazy" referrerpolicy="no-referrer" class="am-song-row-art" onerror="this.src='favicon.svg'">
+          <img src="${cleanArtworkUrl(artUrl)}" loading="lazy" referrerpolicy="no-referrer" class="am-song-row-art">
           <div class="am-song-row-info">
             <div class="am-song-row-title">${escapeHTML(attr.name || '')}</div>
             <div class="am-song-row-artist">${escapeHTML(attr.artistName || '')}</div>
@@ -1346,7 +1391,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       return `
         <div class="am-standard-media-card animate-fade" data-id="${alb.id}">
-          <img src="${artUrl}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+          <img src="${cleanArtworkUrl(artUrl)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
           <div class="am-media-card-title">${escapeHTML(attr.name || '')}</div>
           <div class="am-media-card-sub">${escapeHTML(attr.artistName || '')}</div>
         </div>
@@ -1372,7 +1417,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       return `
         <div class="am-standard-media-card animate-fade" data-id="${pl.id}">
-          <img src="${artUrl}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+          <img src="${cleanArtworkUrl(artUrl)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
           <div class="am-media-card-title">${escapeHTML(attr.name || '')}</div>
           <div class="am-media-card-sub">${escapeHTML(attr.curatorName || 'Apple Music')}</div>
         </div>
@@ -1401,7 +1446,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       return `
         <div class="am-standard-media-card animate-fade" data-id="${vid.id}">
-          <img src="${artUrl}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" style="aspect-ratio: 16/9;" onerror="this.src='favicon.svg'">
+          <img src="${cleanArtworkUrl(artUrl)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" style="aspect-ratio: 16/9;">
           <div class="am-media-card-title">${escapeHTML(attr.name || '')}</div>
           <div class="am-media-card-sub">${escapeHTML(attr.artistName || '')}</div>
         </div>
@@ -1490,7 +1535,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error("Music video load failed:", err);
       prepOverlay.classList.remove('active');
-      alert(`Could not load music video: ${err.message}`);
+      showToast({ message: `Could not load music video: ${err.message}` });
     }
   }
 
@@ -1535,7 +1580,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Render Album Header
       albumHeader.innerHTML = `
         <div class="am-album-art-container">
-          ${videoUrl ? `<video src="${videoUrl}" autoplay loop muted playsinline class="am-album-cover"></video>` : `<img src="${artUrl}" referrerpolicy="no-referrer" class="am-album-cover" onerror="this.src='favicon.svg'">`}
+          ${videoUrl ? `<video src="${cleanMediaUrl(videoUrl)}" autoplay loop muted playsinline class="am-album-cover"></video>` : `<img src="${cleanArtworkUrl(artUrl)}" referrerpolicy="no-referrer" class="am-album-cover">`}
         </div>
         <div class="am-album-details">
           <h2 class="am-album-title">${escapeHTML(attr.name || 'Album')}</h2>
@@ -1645,7 +1690,7 @@ document.addEventListener('DOMContentLoaded', () => {
       footerContainer.innerHTML = `
         ${editorialReview ? `
           <div class="am-album-editorial-card" style="margin-bottom: 24px; padding: 18px 20px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
-            <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #fa243c; margin-bottom: 8px;">${t('editors_notes')}</div>
+            <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; margin-bottom: 8px;">${t('editors_notes')}</div>
             <div style="font-size: 0.92rem; line-height: 1.6; color: #d1d1d6;">${escapeHTML(editorialReview.replace(/<[^>]*>/g, ''))}</div>
           </div>
         ` : ''}
@@ -1727,7 +1772,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const y = attr.releaseDate ? new Date(attr.releaseDate).getFullYear() : '';
         return `
           <div class="am-standard-media-card animate-fade" data-id="${alb.id}">
-            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
             <div class="am-media-card-title">${escapeHTML(attr.name || '')}</div>
             <div class="am-media-card-sub">${escapeHTML(y || t('badge_album'))}</div>
           </div>
@@ -1835,7 +1880,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateStr = sAttr.releaseDate ? new Date(sAttr.releaseDate).getFullYear() : '';
         return `
           <div class="am-artist-song-card" data-id="${s.id}" data-idx="${i}">
-            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-artist-card-art" alt="" onerror="this.src='favicon.svg'">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-artist-card-art" alt="">
             <div class="am-artist-card-meta">
               <div class="am-artist-card-title">${escapeHTML(sAttr.name || '')}</div>
               <div class="am-artist-card-subline">
@@ -1854,7 +1899,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const y = aAttr.releaseDate ? new Date(aAttr.releaseDate).getFullYear() : '';
         return `
           <div class="am-standard-media-card" data-id="${a.id}">
-            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
             <div class="am-media-card-title">${escapeHTML(aAttr.name || '')}</div>
             <div class="am-media-card-sub">${escapeHTML(y || t('badge_album'))}</div>
           </div>
@@ -1867,7 +1912,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const y = sAttr.releaseDate ? new Date(sAttr.releaseDate).getFullYear() : '';
         return `
           <div class="am-standard-media-card" data-id="${s.id}">
-            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
             <div class="am-media-card-title">${escapeHTML(sAttr.name || '')}</div>
             <div class="am-media-card-sub">${escapeHTML(y || t('artist_singles'))}</div>
           </div>
@@ -1875,11 +1920,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }).join('') || `<p class="am-empty-msg">${t('empty_library')}</p>`;
 
       artistViewContent.innerHTML = `
-        <div class="am-artist-header am-artist-hero" style="background-image: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(18,18,18,0.95) 100%), url('${artistPhoto}');">
+        <div class="am-artist-header am-artist-hero" style="background-image: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(18,18,18,0.95) 100%), url('${cleanArtworkUrl(artistPhoto)}');">
           <div class="am-artist-name-row">
             <h1 class="am-artist-name">${escapeHTML(displayName)}</h1>
             <div style="display: flex; gap: 10px; align-items: center;">
-              <div class="am-artist-play-btn" data-i18n-title="artist_play_top" title="${t('artist_play_top')}"><svg viewBox="0 0 24 24" fill="#fff" width="22" height="22"><path d="M8 5v14l11-7z"/></svg></div>
+              <div class="am-artist-play-btn" data-i18n-title="artist_play_top" title="${t('artist_play_top')}"><svg viewBox="0 0 24 24" fill="#000" width="22" height="22"><path d="M8 5v14l11-7z"/></svg></div>
               <button class="premium-btn secondary" id="artist-add-lib-btn" style="border-radius: 100px; padding: 0 20px; height: 42px; display: inline-flex; align-items: center; gap: 6px;">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 <span id="artist-lib-label">${inLib ? t('ctx_in_library') : t('ctx_add_library')}</span>
@@ -2059,7 +2104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error("Remote load failed:", err);
       prepOverlay.classList.remove('active');
-      alert(`Error loading track: ${err.message}`);
+      showToast({ message: `Error loading track: ${err.message}` });
     }
   }
 
@@ -2097,7 +2142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error("[ID Loader] Failed:", err);
       prepOverlay.classList.remove('active');
-      alert(`Could not load track ${id}: ${err.message}`);
+      showToast({ message: `Could not load track ${id}: ${err.message}` });
     }
   }
 
@@ -2196,10 +2241,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const songId = contextMenuTrack.trackId || contextMenuTrack.id;
     if (isSongInLibrary(songId)) {
       removeSongFromLibrary(songId);
-      alert(t('ctx_removed_from_lib'));
+      showToast({ message: t('ctx_removed_from_lib') });
     } else {
       addSongToLibrary(contextMenuTrack);
-      alert(t('ctx_added_to_lib'));
+      showToast({ message: t('ctx_added_to_lib') });
     }
     hideContextMenu();
   };
@@ -2307,7 +2352,7 @@ document.addEventListener('DOMContentLoaded', () => {
       artUrl: cleanArtworkUrl(contextMenuTrack.artworkUrl100 || contextMenuTrack.artUrl, 600, 600),
       amTrackId: contextMenuTrack.trackId || contextMenuTrack.id
     }, null);
-    alert(t('favorites_added'));
+    showToast({ message: t('favorites_added') });
   };
 
   const handleCtxCopyId = () => {
@@ -2316,7 +2361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = contextMenuTrack.trackId || contextMenuTrack.id || '';
     if (id) {
       navigator.clipboard.writeText(String(id));
-      alert(t('ctx_id_copied'));
+      showToast({ message: t('ctx_id_copied') });
     }
   };
 
@@ -2371,7 +2416,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }, null);
           playlistModal.classList.add('hidden');
           updateSidebarPlaylists();
-          alert(t('playlist_added_track'));
+          showToast({ message: t('playlist_added_track') });
         };
       });
     }
@@ -2397,7 +2442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             artUrl: cleanArtworkUrl(contextMenuTrack.artworkUrl100 || contextMenuTrack.artUrl, 600, 600),
             amTrackId: contextMenuTrack.trackId || contextMenuTrack.id
           }, null);
-          alert(t('playlist_added_track'));
+          showToast({ message: t('playlist_added_track') });
         }
         playlistModal.classList.add('hidden');
       }
@@ -2424,7 +2469,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const firstArt = tracks[0]?.artUrl || 'favicon.svg';
       return `
         <div class="playlist-card animate-fade" data-id="${p.id}">
-           <img src="${cleanArtworkUrl(firstArt, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="playlist-card-art" alt="${escapeHTML(p.name)}" onerror="this.src='favicon.svg'">
+           <img src="${cleanArtworkUrl(firstArt, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="playlist-card-art" alt="${escapeHTML(p.name)}">
            <div class="playlist-card-info">
              <h4>${escapeHTML(p.name)}</h4>
              <p>${t('lib_tracks_count', { count: tracks.length })}</p>
@@ -2512,7 +2557,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function renderRecentPage() {
     const recentGrid = document.getElementById('recent-tracks-grid');
     if (!recentGrid) return;
-    const recentTracks = JSON.parse(localStorage.getItem('spicy_recent_tracks') || '[]');
+    const recentTracks = JSON.parse(localStorage.getItem('lyricsflow_recent_tracks') || '[]');
     if (!recentTracks.length) {
       recentGrid.innerHTML = `<div class="am-error-msg">${t('recent_empty')}</div>`;
     } else {
@@ -2530,7 +2575,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return `
         <div class="trending-card animate-fade" data-index="${i}" data-id="${t.id || t.trackId || ''}">
           <div class="trending-art">
-            <img src="${artUrl}" loading="lazy" referrerpolicy="no-referrer" alt="${safeName}" onerror="this.src='favicon.svg'">
+            <img src="${cleanArtworkUrl(artUrl)}" loading="lazy" referrerpolicy="no-referrer" alt="${safeName}">
           </div>
           <div class="trending-info">
             <h4>${safeName}</h4>
@@ -2592,7 +2637,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
           console.error("Failed to load track grid:", err);
           if (prepOverlay) prepOverlay.classList.remove('active');
-          alert('Error loading tracks: ' + err.message);
+          showToast({ message: 'Error loading tracks: ' + err.message });
         }
       };
     });
@@ -2623,7 +2668,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const tracksHTML = tracks.map((t, i) => `
         <div class="am-track-row" data-id="${t.id}" data-idx="${i}">
           <div class="am-track-num">${i + 1}</div>
-          ${t.artwork_url ? `<img src="${cleanArtworkUrl(t.artwork_url, 60, 60)}" class="am-song-row-art" loading="lazy" referrerpolicy="no-referrer" alt="" onerror="this.src='favicon.svg'">` : ''}
+          ${t.artwork_url ? `<img src="${cleanArtworkUrl(t.artwork_url, 60, 60)}" class="am-song-row-art" loading="lazy" referrerpolicy="no-referrer" alt="">` : ''}
           <div class="am-track-info">
             <div class="am-track-title">${escapeHTML(t.title || '')}</div>
             <div class="am-track-sub">${escapeHTML(t.artist || '')}${t.album ? ' • ' + escapeHTML(t.album) : ''}</div>
@@ -2636,7 +2681,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       playlistViewContent.innerHTML = `
         <div class="am-album-header am-detail-header am-playlist-header">
-          <img src="${art}" class="am-album-art" loading="lazy" referrerpolicy="no-referrer" alt="" onerror="this.src='favicon.svg'">
+          <img src="${art}" class="am-album-art" loading="lazy" referrerpolicy="no-referrer" alt="">
           <div class="am-album-meta am-detail-meta">
             <div class="am-detail-kicker">${t('badge_playlist')}</div>
             <h1 class="am-detail-title">${escapeHTML(name)}</h1>
@@ -2774,11 +2819,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function addToRecent(track) {
-    let recent = JSON.parse(localStorage.getItem('spicy_recent_tracks') || '[]');
+    let recent = JSON.parse(localStorage.getItem('lyricsflow_recent_tracks') || '[]');
     recent = recent.filter(t => (t.trackId || t.id) !== (track.trackId || track.id));
     recent.unshift(track);
     if (recent.length > 50) recent.pop();
-    localStorage.setItem('spicy_recent_tracks', JSON.stringify(recent));
+    localStorage.setItem('lyricsflow_recent_tracks', JSON.stringify(recent));
     syncHomeNavVisibility();
   }
 

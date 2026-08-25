@@ -1,11 +1,11 @@
 /**
- * Spicy AMLL Player WEB — Router & Queue Manager
+ * Lyricsflow — Router & Queue Manager
  * Manages state transfer and queue persistence.
  * Uses IndexedDB for audio files and session storage for queue metadata.
  */
 
 // ── IndexedDB Configuration ──
-const DB_NAME = 'SpicyLyricsDB';
+const DB_NAME = 'LyricsflowDB';
 const DB_VERSION = 6; // Must exceed browser's existing version
 
 function openDB() {
@@ -181,7 +181,7 @@ export async function clearQueue() {
     tx.objectStore('tracks').clear();
     tx.objectStore('buffers').clear();
     tx.oncomplete = () => {
-      sessionStorage.removeItem('spicy_current_index');
+      sessionStorage.removeItem('lyricsflow_current_index');
       resolve();
     };
     tx.onerror = (e) => reject(e.target.error);
@@ -191,11 +191,11 @@ export async function clearQueue() {
 // ── Legacy Compatibility / Current State Helpers ──
 
 export function getCurrentIndex() {
-  return parseInt(sessionStorage.getItem('spicy_current_index') || '0', 10);
+  return parseInt(sessionStorage.getItem('lyricsflow_current_index') || '0', 10);
 }
 
 export function setCurrentIndex(index) {
-  sessionStorage.setItem('spicy_current_index', index.toString());
+  sessionStorage.setItem('lyricsflow_current_index', index.toString());
 }
 
 export async function hasPlayerData() {

@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Extension System
+ * Lyricsflow Extension System
  * Handles loading and managing user extensions (zip files containing script.js and config.json)
  */
 
@@ -136,11 +136,11 @@ class ExtensionManager {
     try {
       // Create a context object to expose to the extension
       const context = {
-        player: window.spicyPlayer,
-        settingsManager: window.spicySettingsManager,
+        player: window.lyricsflowPlayer,
+        settingsManager: window.lyricsflowSettingsManager,
         getCurrentLyrics: () => {
           // Helper to get current lyrics
-          return window._spicyCurrentLyrics || null;
+          return window._lyricsflowCurrentLyrics || null;
         },
         downloadFile: (content, filename, mimeType) => {
           // Helper to download files
@@ -171,7 +171,7 @@ class ExtensionManager {
    */
   _openDB() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('SpicyLyricsExtensionsDB', 1);
+      const request = indexedDB.open('LyricsflowExtensionsDB', 1);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
       request.onupgradeneeded = (event) => {
@@ -232,6 +232,6 @@ class ExtensionManager {
 
 // Export the extension manager
 const extensionManager = new ExtensionManager();
-window.spicyExtensionManager = extensionManager;
+window.lyricsflowExtensionManager = extensionManager;
 
 export default extensionManager;

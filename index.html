@@ -4,8 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Spicy AMLL Player — Synchronized Lyrics & Player</title>
-  <meta name="description" content="Spicy AMLL Player — Stream, upload, and experience high-fidelity synchronized lyrics and music.">
+  <title>Lyricsflow</title>
+  <meta name="description" content="Lyricsflow — Stream, upload, and experience high-fidelity synchronized lyrics and music.">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,6 +15,8 @@
     rel="stylesheet">
 
   <!-- Stylesheets -->
+  <link rel="stylesheet" href="https://nurislamaibekuly.github.io/aeroui/src/aeroui.css">
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/spinner/spinner.js"></script>
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/upload.css">
@@ -45,7 +47,7 @@
         });
 
       window.clearCacheAndReload = async function() {
-        const btn = document.querySelector('.spicy-update-btn');
+        const btn = document.querySelector('.lyricsflow-update-btn');
         if (btn) {
           btn.disabled = true;
           btn.textContent = 'Clearing Cache...';
@@ -77,12 +79,12 @@
       function showCacheModal() {
         const style = document.createElement('style');
         style.textContent = `
-          @keyframes spicyFadeIn { from { opacity: 0; } to { opacity: 1; } }
-          @keyframes spicyScaleUp {
+          @keyframes lyricsflowFadeIn { from { opacity: 0; } to { opacity: 1; } }
+          @keyframes lyricsflowScaleUp {
             from { transform: scale(0.95); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
           }
-          .spicy-update-modal {
+          .lyricsflow-update-modal {
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
@@ -93,9 +95,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: spicyFadeIn 0.3s ease forwards;
+            animation: lyricsflowFadeIn 0.3s ease forwards;
           }
-          .spicy-update-box {
+          .lyricsflow-update-box {
             background: rgba(30, 30, 30, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 40px 30px;
@@ -106,55 +108,55 @@
             box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
             color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
-            animation: spicyScaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: lyricsflowScaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           }
-          .spicy-update-logo { font-size: 56px; margin-bottom: 20px; }
-          .spicy-update-title {
+          .lyricsflow-update-logo { font-size: 56px; margin-bottom: 20px; }
+          .lyricsflow-update-title {
             font-size: 1.6rem; font-weight: 700; margin: 0 0 12px 0;
             background: linear-gradient(180deg, #ffffff 0%, #a0a0a0 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
           }
-          .spicy-update-desc {
+          .lyricsflow-update-desc {
             font-size: 0.95rem; color: rgba(255, 255, 255, 0.65);
             line-height: 1.5; margin: 0 0 25px 0;
           }
-          .spicy-update-btn {
-            background: linear-gradient(135deg, #fa243c 0%, #ff2d55 100%);
+          .lyricsflow-update-btn {
+            background: linear-gradient(135deg, #3a3a3c 0%, #1c1c1e 100%);
             color: white; border: none;
             padding: 14px 28px; border-radius: 14px;
             font-weight: 600; font-size: 0.95rem;
             cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;
             width: 100%;
-            box-shadow: 0 4px 20px rgba(250, 36, 60, 0.4);
+            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.15);
           }
-          .spicy-update-btn:hover {
+          .lyricsflow-update-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 24px rgba(250, 36, 60, 0.55);
+            box-shadow: 0 6px 24px rgba(255, 255, 255, 0.25);
           }
-          .spicy-update-dismiss {
+          .lyricsflow-update-dismiss {
             background: transparent; color: rgba(255, 255, 255, 0.45);
             border: none; padding: 10px; margin-top: 10px;
             font-size: 0.85rem; cursor: pointer;
             text-decoration: underline; width: 100%;
             transition: color 0.2s;
           }
-          .spicy-update-dismiss:hover { color: #ffffff; }
+          .lyricsflow-update-dismiss:hover { color: #ffffff; }
         `;
         document.head.appendChild(style);
 
         const modal = document.createElement('div');
-        modal.className = 'spicy-update-modal';
-        modal.id = 'spicy-cache-detector-modal';
+        modal.className = 'lyricsflow-update-modal';
+        modal.id = 'lyricsflow-cache-detector-modal';
         modal.innerHTML = `
-          <div class="spicy-update-box">
-            <div class="spicy-update-logo">🌶️</div>
-            <h2 class="spicy-update-title">Application Updated!</h2>
-            <p class="spicy-update-desc">
+          <div class="lyricsflow-update-box">
+            <div class="lyricsflow-update-logo"></div>
+            <h2 class="lyricsflow-update-title">Application Updated!</h2>
+            <p class="lyricsflow-update-desc">
               A new update has been installed! To apply these changes, please clear your browser cache or perform a hard reload.
             </p>
-            <button class="spicy-update-btn" onclick="clearCacheAndReload()">Clear Cache & Reload</button>
-            <button class="spicy-update-dismiss" onclick="document.getElementById('spicy-cache-detector-modal').remove()">Dismiss</button>
+            <button class="lyricsflow-update-btn" onclick="clearCacheAndReload()">Clear Cache & Reload</button>
+            <button class="lyricsflow-update-dismiss" onclick="document.getElementById('lyricsflow-cache-detector-modal').remove()">Dismiss</button>
           </div>
         `;
         document.body.appendChild(modal);
@@ -169,8 +171,7 @@
     <!-- ═══ Compact Apple Music-style Sidebar ═══ -->
     <aside class="am-sidebar" id="app-sidebar">
       <div class="am-sidebar-brand">
-        <img src="favicon.svg" class="am-sidebar-logo" alt="🌶️">
-        <span class="am-sidebar-title">Spicy AMLL</span>
+        <img src="images/logo.png" class="am-sidebar-logo" alt="Lyricsflow">
       </div>
 
       <!-- Main Section -->
@@ -264,7 +265,7 @@
 
       <!-- Footer -->
       <div class="am-sidebar-footer">
-        <p>Spicy AMLL Player Web</p>
+        <p>Lyricsflow</p>
       </div>
     </aside>
 
@@ -281,8 +282,7 @@
       <!-- Mobile Header without toggle button -->
       <header class="am-mobile-header">
         <div class="am-mobile-brand">
-          <img src="favicon.svg" class="am-mobile-logo" alt="🌶️">
-          <span class="am-mobile-title">Spicy AMLL</span>
+          <img src="images/logo.png" class="am-mobile-logo" alt="Lyricsflow">
         </div>
         <button id="mobile-user-profile-btn" class="am-profile-btn" aria-label="Profile">
           <img class="user-profile-avatar-img" src="icons/account_avatar.png" alt="Profile">
@@ -301,7 +301,7 @@
         <div id="page-home" class="am-page">
           <div class="am-hero" style="margin-bottom: 28px;">
             <div class="am-hero-text">
-              <h1 class="am-hero-title" id="home-greeting-heading">Welcome back, Listener 👋</h1>
+              <h1 class="am-hero-title" id="home-greeting-heading">Welcome back, Listener</h1>
               <p class="am-hero-subtitle" data-i18n="home_top_picks_sub">Curated recommendations based on your listening taste.</p>
             </div>
           </div>
@@ -433,7 +433,7 @@
         <!-- ── Recently Added Page (Mix + Songs + Albums + Artists) ── -->
         <div id="page-recently-added" class="am-page">
           <div class="am-hero">
-            <div class="am-hero-icon" style="background: linear-gradient(135deg, #fa243c 0%, #ff5252 100%);">
+            <div class="am-hero-icon" style="background: linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
               </svg>
@@ -510,7 +510,7 @@
         <!-- ── Library Artists Page ── -->
         <div id="page-library-artists" class="am-page">
           <div class="am-hero">
-            <div class="am-hero-icon" style="background: linear-gradient(135deg, #ff9500 0%, #ff5e3a 100%);">
+            <div class="am-hero-icon" style="background: linear-gradient(135deg, #3a3a3c 0%, #2c2c2e 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
               </svg>
@@ -526,7 +526,7 @@
         <!-- ── Library Albums Page ── -->
         <div id="page-library-albums" class="am-page">
           <div class="am-hero">
-            <div class="am-hero-icon" style="background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);">
+            <div class="am-hero-icon" style="background: linear-gradient(135deg, #48484a 0%, #3a3a3c 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5z"/>
               </svg>
@@ -610,7 +610,7 @@
         <!-- ── Recently Listened Page ── -->
         <div id="page-recent" class="am-page">
           <div class="am-hero">
-            <div class="am-hero-icon" style="background: linear-gradient(135deg, #5856d6 0%, #007aff 100%);">
+            <div class="am-hero-icon" style="background: linear-gradient(135deg, #48484a 0%, #3a3a3c 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
               </svg>
@@ -626,7 +626,7 @@
         <!-- ── Favorite Songs Page ── -->
         <div id="page-songs" class="am-page">
           <div class="am-hero">
-            <div class="am-hero-icon" style="background: linear-gradient(135deg, #ff2d55 0%, #ff3b30 100%);">
+            <div class="am-hero-icon" style="background: linear-gradient(135deg, #3a3a3c 0%, #2c2c2e 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
               </svg>
@@ -642,7 +642,7 @@
         <!-- ── Playlists Page ── -->
         <div id="page-playlists" class="am-page">
           <div class="am-hero">
-            <div class="am-hero-icon" style="background: linear-gradient(135deg, #af52de 0%, #d633ff 100%);">
+            <div class="am-hero-icon" style="background: linear-gradient(135deg, #48484a 0%, #3a3a3c 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M4 10h12v2H4v-2zm0-4h12v2H4V6zm0 8h8v2H4v-2zm10 0v6l5-3-5-3z" />
               </svg>
@@ -684,7 +684,7 @@
                   <input type="text" id="ttml-song-id" placeholder="Paste Song ID (e.g. 1738734057)" data-i18n-placeholder="ttml_input_placeholder" autocomplete="off">
                   <button id="fetch-ttml-btn" class="premium-btn primary">
                     <span class="btn-text" data-i18n="ttml_btn_fetch">Fetch Lyrics</span>
-                    <div class="btn-loader hidden"></div>
+                    <div class="aero-spinner btn-loader hidden"></div>
                   </button>
                 </div>
               </div>
@@ -728,7 +728,7 @@
           <div class="premium-downloader-container">
             <div class="glass-card premium-card">
               <div class="downloader-header">
-                <div class="header-icon-wrapper" style="background: linear-gradient(135deg, #FF2D55 0%, #fa243c 100%);">
+                <div class="header-icon-wrapper" style="background: linear-gradient(135deg, #48484a 0%, #2c2c2e 100%);">
                   <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10 10-4.49 10-10S17.51 2 12 2zm-1 14.5v-5h-2.5L12 7.5l3.5 4H13v5h-2z"/>
                   </svg>
@@ -747,7 +747,7 @@
                   </select>
                   <button id="fetch-song-btn" class="premium-btn primary">
                     <span class="btn-text" data-i18n="song_downloader_btn_download">Download</span>
-                    <div class="btn-loader hidden"></div>
+                    <div class="aero-spinner btn-loader hidden"></div>
                   </button>
                 </div>
                 <div id="dl-search-results" class="dl-search-results hidden"></div>
@@ -890,7 +890,7 @@
   <!-- Global Preparation Overlay -->
   <div id="prep-overlay" class="prep-overlay">
     <div class="prep-content">
-      <div class="prep-spinner"></div>
+      <div class="aero-spinner prep-spinner"></div>
       <h2 id="prep-status" data-i18n="prep_title">Preparing Track...</h2>
       <p id="prep-subtext" data-i18n="prep_sub">Fetching audio and metadata from the API</p>
     </div>

@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-The following versions of `spicy-amll-player` are currently supported with security updates.
+The following versions of `lyricsflow-amll-player` are currently supported with security updates.
 
 | Version | Supported |
 | ------- | ---------- |
@@ -14,7 +14,7 @@ The following versions of `spicy-amll-player` are currently supported with secur
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in `spicy-amll-player`, please report it responsibly.
+If you discover a security vulnerability in `lyricsflow-amll-player`, please report it responsibly.
 
 ### How to Report
 
@@ -45,4 +45,4 @@ We aim to:
 
 Please do not publicly disclose vulnerabilities until they have been reviewed and resolved by the development team.
 
-Thank you for helping keep `spicy-amll-player` secure.
+Thank you for helping keep `lyricsflow-amll-player` secure.

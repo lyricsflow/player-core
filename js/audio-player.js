@@ -1,7 +1,7 @@
 import { EQ_BANDS } from './equalizer-presets.js';
 
 /**
- * Spicy AMLL Player — Audio Engine
+ * Lyricsflow — Audio Engine
  * Dual-channel Web Audio graph supporting equalizers and seamless transitions.
  */
 export default class AudioPlayer {

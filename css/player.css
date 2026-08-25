@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   Spicy AMLL Player WEB — Player Page
+   Lyricsflow — Player Page
    Ported from ContentBox.css + default.css
    ═══════════════════════════════════════════════ */
 
@@ -113,7 +113,7 @@
 
 
 /* ── Page Container ── */
-#SpicyLyricsPage {
+#LyricsflowPage {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -128,7 +128,7 @@
   user-select: none;
   -webkit-user-drag: none;
   opacity: 1;
-  font-family: var(--spicy-font-family);
+  font-family: var(--lyricsflow-font-family);
   --ArtworkGlowColor: 255, 255, 255;
 }
 
@@ -136,7 +136,7 @@
 
 
 /* ── Content Box ── */
-#SpicyLyricsPage .ContentBox {
+#LyricsflowPage .ContentBox {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -149,7 +149,7 @@
 }
 
 /* ── NowBar ── */
-#SpicyLyricsPage .ContentBox .NowBar {
+#LyricsflowPage .ContentBox .NowBar {
   scale: 0.8;
   --NowBarVPadding: 4cqh;
   display: flex;
@@ -176,7 +176,7 @@
   flex-shrink: 0;
 }
 
-#SpicyLyricsPage .ContentBox .NowBar .Header {
+#LyricsflowPage .ContentBox .NowBar .Header {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -188,7 +188,7 @@
 
 
 /* ── MediaBox (Album Art) ── */
-#SpicyLyricsPage .ContentBox .NowBar .Header .MediaBox {
+#LyricsflowPage .ContentBox .NowBar .Header .MediaBox {
   --ArtworkBrightness: 1;
   display: flex;
   justify-content: center;
@@ -199,7 +199,7 @@
   margin-bottom: 2.5cqh;
 }
 
-#SpicyLyricsPage .ContentBox .NowBar .Header .MediaBox .MediaImageContainer {
+#LyricsflowPage .ContentBox .NowBar .Header .MediaBox .MediaImageContainer {
   border-radius: 1.5cqh;
   width: 100%;
   height: 100%;
@@ -246,7 +246,7 @@
   gap: 8px;
 }
 
-#SpicyLyricsPage .ContentBox .NowBar .Header .Metadata {
+#LyricsflowPage .ContentBox .NowBar .Header .Metadata {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -255,7 +255,7 @@
   min-width: 0;
 }
 
-#SpicyLyricsPage .ContentBox .NowBar .Header .Metadata .SongName {
+#LyricsflowPage .ContentBox .NowBar .Header .Metadata .SongName {
   font-weight: 700;
   font-size: 1.25rem;
   color: #fff;
@@ -265,18 +265,18 @@
   width: 100%;
 }
 
-#SpicyLyricsPage .ContentBox .NowBar .Header .Metadata .SongName span {
+#LyricsflowPage .ContentBox .NowBar .Header .Metadata .SongName span {
   display: inline-block;
   white-space: nowrap;
   animation: Marquee_SongName 5s linear infinite alternate;
   will-change: transform;
 }
 
-#SpicyLyricsPage .ContentBox .NowBar .Header .Metadata .SongName.rtl {
+#LyricsflowPage .ContentBox .NowBar .Header .Metadata .SongName.rtl {
   font-weight: 1000 !important;
 }
 
-#SpicyLyricsPage .ContentBox .NowBar .Header .Metadata .Artists {
+#LyricsflowPage .ContentBox .NowBar .Header .Metadata .Artists {
   font-weight: 500;
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.5);
@@ -285,7 +285,7 @@
   text-overflow: ellipsis;
 }
 
-#SpicyLyricsPage .ContentBox .NowBar .Header .Metadata .Artists.rtl {
+#LyricsflowPage .ContentBox .NowBar .Header .Metadata .Artists.rtl {
   font-weight: 1000 !important;
 }
 
@@ -372,7 +372,7 @@
 #queue-clear {
   background: transparent;
   border: none;
-  color: #fa243c;
+  color: #ffffff;
   font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
@@ -470,8 +470,8 @@
 .drop-zone-overlay {
   position: fixed;
   inset: 10px;
-  background: rgba(250, 36, 60, 0.1);
-  border: 3px dashed rgba(250, 36, 60, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+  border: 3px dashed rgba(255, 255, 255, 0.5);
   border-radius: 30px;
   z-index: 5000;
   display: flex;
@@ -496,7 +496,7 @@
   width: 64px;
   height: 64px;
   margin-bottom: 20px;
-  fill: #fa243c;
+  fill: #ffffff;
 }
 
 /* ── Mobile Responsive (Queue Bottom Sheet) ── */
@@ -711,7 +711,7 @@
 }
 
 /* ── Loader ── */
-.SpicyLoader {
+.LyricsflowLoader {
   --bg-color: #000;
   width: 100%;
   height: 100%;
@@ -723,13 +723,13 @@
   opacity: 0;
   transition: z-index 0.34s;
   background-color: var(--bg-color);
-  animation: SpicyLoader_FadeOut 0.34s forwards;
+  animation: LyricsflowLoader_FadeOut 0.34s forwards;
   z-index: -1;
 }
 
-.SpicyLoader.active {
+.LyricsflowLoader.active {
   z-index: 105;
-  animation: SpicyLoader_FadeIn 0.34s forwards;
+  animation: LyricsflowLoader_FadeIn 0.34s forwards;
 }
 
 /* ── Back button ── */
@@ -765,7 +765,7 @@
   fill: rgba(255, 255, 255, 0.7);
 }
 
-#SpicyLyricsPage:hover .back-button {
+#LyricsflowPage:hover .back-button {
   opacity: 0.6;
 }
 
@@ -795,7 +795,7 @@
 }
 
 .lyrics-loading-indicator .loading-spinner,
-.SpicyLoader .loading-spinner {
+.LyricsflowLoader .loading-spinner {
   display: none;
   /* Hide old spinner */
 }
@@ -906,7 +906,7 @@ body.is-rendering .NowBar {
 }
 
 /* ── Settings Modal ── */
-.SpicyLyricsSettingsOverlay {
+.LyricsflowSettingsOverlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -924,12 +924,12 @@ body.is-rendering .NowBar {
   transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.SpicyLyricsSettingsOverlay.active {
+.LyricsflowSettingsOverlay.active {
   opacity: 1;
   pointer-events: auto;
 }
 
-.SpicyLyricsSettingsContainer {
+.LyricsflowSettingsContainer {
   background: rgba(24, 24, 26, 0.78);
   width: 90%;
   max-width: 840px;
@@ -946,11 +946,11 @@ body.is-rendering .NowBar {
   will-change: transform;
 }
 
-.SpicyLyricsSettingsContainer.active {
+.LyricsflowSettingsContainer.active {
   transform: scale(1) translateY(0);
 }
 
-.SpicyLyricsSettingsHeader {
+.LyricsflowSettingsHeader {
   padding: 18px 24px;
   display: flex;
   justify-content: space-between;
@@ -959,14 +959,14 @@ body.is-rendering .NowBar {
   background: rgba(255, 255, 255, 0.01);
 }
 
-.SpicyLyricsSettingsHeader span {
+.LyricsflowSettingsHeader span {
   font-size: 1.15rem;
   font-weight: 700;
   color: #fff;
   letter-spacing: -0.01em;
 }
 
-.SpicyLyricsSettingsHeaderClose {
+.LyricsflowSettingsHeaderClose {
   background: rgba(255, 255, 255, 0.06);
   border: none;
   width: 32px;
@@ -980,13 +980,13 @@ body.is-rendering .NowBar {
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.SpicyLyricsSettingsHeaderClose:hover {
+.LyricsflowSettingsHeaderClose:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
   transform: scale(1.05);
 }
 
-.SpicyLyricsSettingsMainBody {
+.LyricsflowSettingsMainBody {
   display: flex;
   flex: 1;
   min-height: 0;
@@ -994,7 +994,7 @@ body.is-rendering .NowBar {
 }
 
 /* Sidebar Styling */
-.SpicyLyricsSettingsSidebar {
+.LyricsflowSettingsSidebar {
   width: 210px;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   padding: 16px 10px;
@@ -1006,7 +1006,7 @@ body.is-rendering .NowBar {
   scrollbar-width: none;
 }
 
-.SpicyLyricsSettingsSidebar::-webkit-scrollbar {
+.LyricsflowSettingsSidebar::-webkit-scrollbar {
   display: none;
 }
 
@@ -1049,18 +1049,18 @@ body.is-rendering .NowBar {
 }
 
 /* Content Area Styling */
-.SpicyLyricsSettingsContent {
+.LyricsflowSettingsContent {
   flex: 1;
   padding: 24px 28px;
   overflow-y: auto;
   scrollbar-width: none;
 }
 
-.SpicyLyricsSettingsContent::-webkit-scrollbar {
+.LyricsflowSettingsContent::-webkit-scrollbar {
   display: none;
 }
 
-.SpicyLyricsSettingsPanel {
+.LyricsflowSettingsPanel {
   animation: slFadeIn 0.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
@@ -1170,7 +1170,11 @@ body.is-rendering .NowBar {
 }
 
 .sl-toggle input:checked + span {
-  background-color: #30d158;
+  background-color: #ffffff;
+}
+
+.sl-toggle input:checked + span:before {
+  background-color: #1c1c1e;
 }
 
 .sl-toggle input:checked + span:before {
@@ -1304,14 +1308,14 @@ body.is-rendering .NowBar {
 }
 
 .sl-btn-accent {
-  background: rgba(48, 209, 88, 0.12);
-  border-color: rgba(48, 209, 88, 0.2);
-  color: #30d158;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .sl-btn-accent:hover {
-  background: rgba(48, 209, 88, 0.2);
-  border-color: rgba(48, 209, 88, 0.35);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 /* Inline Equalizer Styling */
@@ -1553,7 +1557,7 @@ body.is-rendering .NowBar {
 
 @media (max-width: 768px) {
   /* Settings Mobile Revamp Overrides */
-  .SpicyLyricsSettingsContainer {
+  .LyricsflowSettingsContainer {
     width: 100% !important;
     height: 100% !important;
     max-height: 100dvh !important;
@@ -1561,10 +1565,10 @@ body.is-rendering .NowBar {
     border-radius: 0 !important;
     border: none !important;
   }
-  .SpicyLyricsSettingsMainBody {
+  .LyricsflowSettingsMainBody {
     flex-direction: column !important;
   }
-  .SpicyLyricsSettingsSidebar {
+  .LyricsflowSettingsSidebar {
     width: 100% !important;
     border-right: none !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
@@ -1576,7 +1580,7 @@ body.is-rendering .NowBar {
     white-space: nowrap !important;
     scrollbar-width: none !important;
   }
-  .SpicyLyricsSettingsSidebar::-webkit-scrollbar {
+  .LyricsflowSettingsSidebar::-webkit-scrollbar {
     display: none !important;
   }
   .sl-sidebar-tab {
@@ -1585,7 +1589,7 @@ body.is-rendering .NowBar {
     font-size: 0.85rem !important;
     flex-shrink: 0 !important;
   }
-  .SpicyLyricsSettingsContent {
+  .LyricsflowSettingsContent {
     padding: 16px 20px !important;
   }
   .sl-settings-row {
@@ -1610,13 +1614,13 @@ body.is-rendering .NowBar {
     width: auto !important;
   }
 
-  #SpicyLyricsPage {
+  #LyricsflowPage {
     height: 100dvh;
     overflow: hidden;
     position: relative;
   }
 
-  #SpicyLyricsPage .ContentBox {
+  #LyricsflowPage .ContentBox {
     display: block;
     height: 100%;
     width: 100%;
@@ -1641,7 +1645,7 @@ body.is-rendering .NowBar {
     right: 24px !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar {
+  #LyricsflowPage .ContentBox .NowBar {
     position: absolute;
     top: 0;
     left: 0;
@@ -1658,7 +1662,7 @@ body.is-rendering .NowBar {
     display: none !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar .Header {
+  #LyricsflowPage .ContentBox .NowBar .Header {
     position: absolute !important;
     inset: 0 !important;
     height: 100% !important;
@@ -1667,7 +1671,7 @@ body.is-rendering .NowBar {
     pointer-events: none !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar .Header .NowBarBottomWrapper {
+  #LyricsflowPage .ContentBox .NowBar .Header .NowBarBottomWrapper {
     position: absolute !important;
     inset: 0 !important;
     width: 100% !important;
@@ -1678,7 +1682,7 @@ body.is-rendering .NowBar {
   }
 
   /* Album Art in Header */
-  #SpicyLyricsPage .ContentBox .NowBar .Header .MediaBox {
+  #LyricsflowPage .ContentBox .NowBar .Header .MediaBox {
     position: absolute !important;
     top: calc(48px + env(safe-area-inset-top, 12px)) !important;
     left: 24px !important;
@@ -1688,7 +1692,7 @@ body.is-rendering .NowBar {
     pointer-events: auto !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar .Header .MediaBox .MediaImageContainer {
+  #LyricsflowPage .ContentBox .NowBar .Header .MediaBox .MediaImageContainer {
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
   }
@@ -1707,19 +1711,19 @@ body.is-rendering .NowBar {
     pointer-events: auto !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar .Header .Metadata {
+  #LyricsflowPage .ContentBox .NowBar .Header .Metadata {
     align-items: flex-start;
     text-align: left;
     gap: 0px;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar .Header .Metadata .SongName {
+  #LyricsflowPage .ContentBox .NowBar .Header .Metadata .SongName {
     font-size: 1.1rem;
     font-weight: 700;
     line-height: 1.2;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar .Header .Metadata .Artists {
+  #LyricsflowPage .ContentBox .NowBar .Header .Metadata .Artists {
     font-size: 0.9rem;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.65);
@@ -1742,7 +1746,7 @@ body.is-rendering .NowBar {
   }
 
   /* Touch-blocking backdrop: prevents taps from passing through lyrics to player controls behind */
-  #SpicyLyricsPage .LyricsContainer:not(.hidden)::before {
+  #LyricsflowPage .LyricsContainer:not(.hidden)::before {
     content: "";
     position: fixed;
     top: 0;
@@ -1755,7 +1759,7 @@ body.is-rendering .NowBar {
   }
 
   /* 2. Lyrics Container in Middle */
-  #SpicyLyricsPage .LyricsContainer {
+  #LyricsflowPage .LyricsContainer {
     position: absolute !important;
     display: block !important;
     top: calc(112px + env(safe-area-inset-top, 12px)) !important;
@@ -1776,22 +1780,22 @@ body.is-rendering .NowBar {
   }
 
   /* Apple Immersive Lyrics Layout Mode overrides */
-  #SpicyLyricsPage .LyricsContainer.lyrics-immersive {
+  #LyricsflowPage .LyricsContainer.lyrics-immersive {
     bottom: calc(4dvh + env(safe-area-inset-bottom, 12px)) !important;
     height: calc(91dvh - (111px + env(safe-area-inset-top, 12px) + 4dvh + env(safe-area-inset-bottom, 12px))) !important;
   }
 
   /* Immersive Layout: Only fade out progress, quality badge, and playback center controls */
-  #SpicyLyricsPage:has(.LyricsContainer.lyrics-immersive) .NowBarProgress,
-  #SpicyLyricsPage:has(.LyricsContainer.lyrics-immersive) .quality-badge-container,
-  #SpicyLyricsPage:has(.LyricsContainer.lyrics-immersive) .NowBarControls .playback-control.skip-back,
-  #SpicyLyricsPage:has(.LyricsContainer.lyrics-immersive) .NowBarControls .playback-control.play-pause,
-  #SpicyLyricsPage:has(.LyricsContainer.lyrics-immersive) .NowBarControls .playback-control.skip-forward {
+  #LyricsflowPage:has(.LyricsContainer.lyrics-immersive) .NowBarProgress,
+  #LyricsflowPage:has(.LyricsContainer.lyrics-immersive) .quality-badge-container,
+  #LyricsflowPage:has(.LyricsContainer.lyrics-immersive) .NowBarControls .playback-control.skip-back,
+  #LyricsflowPage:has(.LyricsContainer.lyrics-immersive) .NowBarControls .playback-control.play-pause,
+  #LyricsflowPage:has(.LyricsContainer.lyrics-immersive) .NowBarControls .playback-control.skip-forward {
     opacity: 0 !important;
     pointer-events: none !important;
   }
 
-  #SpicyLyricsPage .LyricsContainer .LyricsContent {
+  #LyricsflowPage .LyricsContainer .LyricsContent {
     position: absolute !important;
     display: block !important;
     top: 0 !important;
@@ -1812,14 +1816,14 @@ body.is-rendering .NowBar {
     text-align: left !important;
   }
 
-  #SpicyLyricsPage .LyricsContainer .LyricsContent .SpicyLyricsScrollContainer {
+  #LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer {
     container-type: normal !important;
     margin-top: 0vh !important;
     padding-top: 6dvh !important;
     padding-bottom: 25dvh !important;
   }
 
-  #SpicyLyricsPage .LyricsContainer .LyricsContent .line {
+  #LyricsflowPage .LyricsContainer .LyricsContent .line {
     font-size: 1.85rem !important;
     font-weight: 800 !important;
     letter-spacing: -0.03em !important;
@@ -1829,7 +1833,7 @@ body.is-rendering .NowBar {
     transition: opacity 0.4s ease;
   }
 
-  #SpicyLyricsPage .LyricsContainer .LyricsContent .line.Active {
+  #LyricsflowPage .LyricsContainer .LyricsContent .line.Active {
     opacity: 1 !important;
   }
 
@@ -1922,14 +1926,14 @@ body.is-rendering .NowBar {
   }
 
   /* Mobile Style for Shuffle and Repeat Buttons */
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .MetadataActions {
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .MetadataActions {
     display: flex !important;
     align-items: center !important;
     gap: 12px !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .MetadataActions .playback-control.shuffle,
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .MetadataActions .playback-control.repeat {
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .MetadataActions .playback-control.shuffle,
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .MetadataActions .playback-control.repeat {
     display: flex !important;
     width: 32px !important;
     height: 32px !important;
@@ -1939,14 +1943,14 @@ body.is-rendering .NowBar {
     pointer-events: auto !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .MetadataActions .playback-control.shuffle img,
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .MetadataActions .playback-control.repeat img {
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .MetadataActions .playback-control.shuffle img,
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .MetadataActions .playback-control.repeat img {
     width: 22px !important;
     height: 22px !important;
     opacity: 0.65 !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .NowBarControls {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .NowBarControls {
     display: flex !important;
     justify-content: center !important;
     gap: 28px !important;
@@ -1955,13 +1959,13 @@ body.is-rendering .NowBar {
     top: auto !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .NowBarControls .playback-control.shuffle,
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .NowBarControls .playback-control.repeat {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .NowBarControls .playback-control.shuffle,
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .NowBarControls .playback-control.repeat {
     display: none !important;
   }
 
   /* 5. Volume Slider Row — flows inside flex wrapper */
-  #SpicyLyricsPage .ContentBox .NowBar.centered .VolumeArea {
+  #LyricsflowPage .ContentBox .NowBar.centered .VolumeArea {
     display: flex !important;
     position: relative !important;
     align-items: center !important;
@@ -1971,7 +1975,7 @@ body.is-rendering .NowBar {
     pointer-events: auto !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .VolumeArea {
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .VolumeArea {
     display: none !important;
   }
 
@@ -2106,13 +2110,13 @@ body.is-rendering .NowBar {
   }
 
   /* 7. Symmetrical Transition and Full-Screen Layout when Lyrics are Hidden */
-  #SpicyLyricsPage .ContentBox .NowBar.centered {
+  #LyricsflowPage .ContentBox .NowBar.centered {
     left: 0 !important;
     width: 100% !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar .Header .MediaBox,
-  #SpicyLyricsPage .ContentBox .NowBar .Header .MediaBox .MediaImageContainer,
+  #LyricsflowPage .ContentBox .NowBar .Header .MediaBox,
+  #LyricsflowPage .ContentBox .NowBar .Header .MediaBox .MediaImageContainer,
   .MetadataRow,
   .NowBarProgress,
   .NowBarControls,
@@ -2131,7 +2135,7 @@ body.is-rendering .NowBar {
   }
 
   /* Shield to prevent clicking on lyrics behind the bottom controls area when lyrics are active */
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper::before {
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper::before {
     content: "" !important;
     position: absolute !important;
     bottom: 0 !important;
@@ -2144,15 +2148,15 @@ body.is-rendering .NowBar {
   }
 
   /* Make sure the control elements themselves sit above the shield so they remain clickable */
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper .NowBarProgress,
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper .NowBarControls,
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper .MetadataRow,
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper .quality-badge-container {
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper .NowBarProgress,
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper .NowBarControls,
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper .MetadataRow,
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper .quality-badge-container {
     z-index: 2 !important;
   }
 
   /* ── Centered Mode: Header becomes the master flex column ── */
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header {
     display: flex !important;
     flex-direction: column !important;
     position: absolute !important;
@@ -2165,7 +2169,7 @@ body.is-rendering .NowBar {
   }
 
   /* Cover Art — flex:1.2 fills the top portion, art is centered inside */
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .MediaBox {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox {
     position: relative !important;
     flex: 1.2 1 0 !important;
     min-height: 0 !important;
@@ -2186,7 +2190,7 @@ body.is-rendering .NowBar {
   }
 
   /* Square cover art — uses container query units for a perfect square */
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .MediaBox .MediaImageContainer {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox .MediaImageContainer {
     width: min(100cqw, 100cqh) !important;
     height: min(100cqw, 100cqh) !important;
     max-width: none !important;
@@ -2197,7 +2201,7 @@ body.is-rendering .NowBar {
   }
 
   /* Bottom Wrapper — flex:1, takes the bottom half, distributes items dynamically */
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper {
     position: relative !important;
     flex: 1 1 0 !important;
     min-height: 0 !important;
@@ -2218,7 +2222,7 @@ body.is-rendering .NowBar {
   }
 
   /* Explicit per-element resets — override non-centered absolute positioning */
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper .MetadataRow {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper .MetadataRow {
     position: relative !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -2237,7 +2241,7 @@ body.is-rendering .NowBar {
     margin: 0 !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper .NowBarProgress {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper .NowBarProgress {
     position: relative !important;
     width: 100% !important;
     left: auto !important;
@@ -2249,7 +2253,7 @@ body.is-rendering .NowBar {
     margin: -8px 0 0 0 !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper .quality-badge-container {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper .quality-badge-container {
     position: relative !important;
     width: auto !important;
     left: auto !important;
@@ -2263,7 +2267,7 @@ body.is-rendering .NowBar {
     margin: -8px 0 !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper .NowBarControls {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper .NowBarControls {
     position: relative !important;
     width: 100% !important;
     left: auto !important;
@@ -2279,7 +2283,7 @@ body.is-rendering .NowBar {
     margin: -8px 0 0 0 !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper .VolumeArea {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .NowBarBottomWrapper .VolumeArea {
     position: relative !important;
     width: 100% !important;
     left: auto !important;
@@ -2290,18 +2294,18 @@ body.is-rendering .NowBar {
     margin: -3px 0 0 0 !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .Metadata {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .Metadata {
     align-items: flex-start !important;
     text-align: left !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .Metadata .SongName {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .Metadata .SongName {
     font-size: 1.55rem !important;
     font-weight: 800 !important;
     line-height: 1.25 !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .Metadata .Artists {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .Metadata .Artists {
     font-size: 1.15rem !important;
     font-weight: 500 !important;
     color: rgba(255, 255, 255, 0.6) !important;
@@ -2309,28 +2313,28 @@ body.is-rendering .NowBar {
     max-width: 250px !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .favorite-button {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .favorite-button {
     display: flex !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .NowBarControls .playback-control img {
+  #LyricsflowPage .ContentBox .NowBar.centered .NowBarControls .playback-control img {
     width: 32px !important;
     height: 32px !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .NowBarControls .playback-control.skip-back img,
-  #SpicyLyricsPage .ContentBox .NowBar.centered .NowBarControls .playback-control.skip-forward img {
+  #LyricsflowPage .ContentBox .NowBar.centered .NowBarControls .playback-control.skip-back img,
+  #LyricsflowPage .ContentBox .NowBar.centered .NowBarControls .playback-control.skip-forward img {
     width: 46px !important;
     height: 46px !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .NowBarControls .playback-control.play-pause img {
+  #LyricsflowPage .ContentBox .NowBar.centered .NowBarControls .playback-control.play-pause img {
     width: 43px !important;
     height: 43px !important;
   }
 
   /* Full-Bleed Top-Half Layout with Gradient Fade for Animated Artwork on Mobile */
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .MediaBox:has(.animated-art-video.loaded) {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox:has(.animated-art-video.loaded) {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
@@ -2344,7 +2348,7 @@ body.is-rendering .NowBar {
     z-index: 1 !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .MediaBox:has(.animated-art-video.loaded) .MediaImageContainer {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox:has(.animated-art-video.loaded) .MediaImageContainer {
     width: 100% !important;
     height: 100% !important;
     border-radius: 0 !important;
@@ -2353,7 +2357,7 @@ body.is-rendering .NowBar {
     -webkit-mask-image: linear-gradient(to bottom, black 0%, black 65%, transparent 100%) !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header .MediaBox:has(.animated-art-video.loaded) .animated-art-video {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox:has(.animated-art-video.loaded) .animated-art-video {
     width: 100% !important;
     height: 100% !important;
     border-radius: 0 !important;
@@ -2361,28 +2365,28 @@ body.is-rendering .NowBar {
   }
 
   /* Restrict bottom wrapper height when animated cover art takes up the top half to prevent spacing blowouts */
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header:has(.animated-art-video.loaded) .NowBarBottomWrapper {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header:has(.animated-art-video.loaded) .NowBarBottomWrapper {
     height: 42dvh !important;
     margin-top: auto !important;
     flex: none !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered .Header:has(.animated-art-video.loaded) .NowBarBottomWrapper .MetadataRow {
+  #LyricsflowPage .ContentBox .NowBar.centered .Header:has(.animated-art-video.loaded) .NowBarBottomWrapper .MetadataRow {
     bottom: -26px !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered~.LyricsContainer {
+  #LyricsflowPage .ContentBox .NowBar.centered~.LyricsContainer {
     opacity: 0 !important;
     pointer-events: none !important;
     visibility: hidden !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered~.BottomBar {
+  #LyricsflowPage .ContentBox .NowBar.centered~.BottomBar {
     bottom: calc(0.5dvh + env(safe-area-inset-bottom, 8px)) !important;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered~.BottomBar button img,
-  #SpicyLyricsPage .ContentBox .NowBar.centered~.BottomBar button svg {
+  #LyricsflowPage .ContentBox .NowBar.centered~.BottomBar button img,
+  #LyricsflowPage .ContentBox .NowBar.centered~.BottomBar button svg {
     width: 30px !important;
     height: 30px !important;
   }
@@ -2395,7 +2399,7 @@ body.is-rendering .NowBar {
     -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
   }
 
-  .SpicyToast {
+  .LyricsflowToast {
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
   }
@@ -2410,7 +2414,7 @@ body.is-rendering .NowBar {
   .drop-zone-overlay {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    background: rgba(250, 36, 60, 0.2) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
   }
 
   .popup-overlay {
@@ -2420,7 +2424,7 @@ body.is-rendering .NowBar {
 }
 
 /* ── Apple Style Dynamic Toast ── */
-.SpicyToast {
+.LyricsflowToast {
   position: fixed;
   top: -60px;
   left: 50%;
@@ -2443,7 +2447,7 @@ body.is-rendering .NowBar {
   pointer-events: none;
 }
 
-.SpicyToast.active {
+.LyricsflowToast.active {
   top: 24px;
 }
 
@@ -2560,9 +2564,9 @@ body.is-rendering .NowBar {
 }
 
 .popup-close {
-  background: #fa243c;
+  background: #ffffff;
   border: none;
-  color: #fff;
+  color: #000;
   padding: 10px 20px;
   border-radius: 8px;
   cursor: pointer;
@@ -2571,7 +2575,7 @@ body.is-rendering .NowBar {
 }
 
 .popup-close:hover {
-  background: #d91c32;
+  background: #e5e5e5;
 }
 
 /* ── Lyrics Container Hidden State ── */
@@ -2586,11 +2590,11 @@ body.is-rendering .NowBar {
 }
 
 /* ── NowBar Animations ── */
-#SpicyLyricsPage .ContentBox .NowBar {
+#LyricsflowPage .ContentBox .NowBar {
   transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-#SpicyLyricsPage .ContentBox .NowBar.centered {
+#LyricsflowPage .ContentBox .NowBar.centered {
   left: calc(50% - var(--NowBarWidth) / 2);
 }
 
@@ -2631,26 +2635,26 @@ body.is-rendering .NowBar {
 }
 
 /* ── Cover Art Pause Scale Animation (Lyrics Mode Off) ── */
-#SpicyLyricsPage .ContentBox .NowBar.centered .Header .MediaBox:not(:has(.animated-art-video.loaded)) .MediaImageContainer {
+#LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox:not(:has(.animated-art-video.loaded)) .MediaImageContainer {
   cursor: pointer;
   transition: transform 0.6s cubic-bezier(0.25, 1.1, 0.2, 1.05), box-shadow 0.6s ease !important;
   will-change: transform;
 }
 
-#SpicyLyricsPage .ContentBox .NowBar.centered .Header .MediaBox:not(:has(.animated-art-video.loaded)) .MediaImageContainer.paused {
+#LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox:not(:has(.animated-art-video.loaded)) .MediaImageContainer.paused {
   transform: scale(0.85) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* ── Cover Art Pause Scale Animation (Desktop Lyrics Mode) ── */
 @media (min-width: 769px) {
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .MediaBox .MediaImageContainer {
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .MediaBox .MediaImageContainer {
     cursor: pointer;
     transition: transform 0.6s cubic-bezier(0.25, 1.1, 0.2, 1.05), box-shadow 0.6s ease !important;
     will-change: transform;
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar:not(.centered) .Header .MediaBox .MediaImageContainer.paused {
+  #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .MediaBox .MediaImageContainer.paused {
     transform: scale(0.85) !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
   }
@@ -2659,7 +2663,7 @@ body.is-rendering .NowBar {
 /* ── Queue Panel Layout Integration (Desktop & Mobile) ── */
 
 @media (min-width: 769px) {
-  #SpicyLyricsPage .ContentBox .QueuePanel {
+  #LyricsflowPage .ContentBox .QueuePanel {
     position: absolute;
     left: 0;
     top: 0;
@@ -2682,30 +2686,30 @@ body.is-rendering .NowBar {
       visibility 0.5s;
   }
 
-  #SpicyLyricsPage .ContentBox .QueuePanel.active {
+  #LyricsflowPage .ContentBox .QueuePanel.active {
     opacity: 1;
     pointer-events: auto;
     visibility: visible;
     transform: translateX(0);
   }
 
-  #SpicyLyricsPage .ContentBox .NowBar.centered~.QueuePanel {
+  #LyricsflowPage .ContentBox .NowBar.centered~.QueuePanel {
     opacity: 0 !important;
     pointer-events: none !important;
     visibility: hidden !important;
   }
 
-  #SpicyLyricsPage .ContentBox .QueuePanel .QueueHeader {
+  #LyricsflowPage .ContentBox .QueuePanel .QueueHeader {
     padding: 60px 0 20px 0 !important;
   }
 
-  #SpicyLyricsPage .ContentBox .QueuePanel .QueueList {
+  #LyricsflowPage .ContentBox .QueuePanel .QueueList {
     padding: 0 0 80px 0 !important;
   }
 }
 
 @media (max-width: 768px) {
-  #SpicyLyricsPage .ContentBox .QueuePanel {
+  #LyricsflowPage .ContentBox .QueuePanel {
     position: absolute !important;
     display: flex !important;
     flex-direction: column !important;
@@ -2737,33 +2741,33 @@ body.is-rendering .NowBar {
       visibility 0.5s !important;
   }
 
-  #SpicyLyricsPage .ContentBox .QueuePanel.active {
+  #LyricsflowPage .ContentBox .QueuePanel.active {
     opacity: 1 !important;
     pointer-events: auto !important;
     visibility: visible !important;
     transform: translateY(0) !important;
   }
 
-  #SpicyLyricsPage .ContentBox .QueuePanel.queue-immersive {
+  #LyricsflowPage .ContentBox .QueuePanel.queue-immersive {
     bottom: calc(4dvh + env(safe-area-inset-bottom, 12px)) !important;
     height: calc(100dvh - (112px + env(safe-area-inset-top, 12px) + 4dvh + env(safe-area-inset-bottom, 12px))) !important;
   }
 
-  #SpicyLyricsPage .ContentBox .QueuePanel .QueueHeader {
+  #LyricsflowPage .ContentBox .QueuePanel .QueueHeader {
     padding: 10px 0 !important;
   }
 
-  #SpicyLyricsPage .ContentBox .QueuePanel .QueueList {
+  #LyricsflowPage .ContentBox .QueuePanel .QueueList {
     padding: 0 0 40px 0 !important;
   }
 }
 
 /* Immersive layout support for Queue Panel */
-#SpicyLyricsPage:has(.QueuePanel.queue-immersive) .NowBarProgress,
-#SpicyLyricsPage:has(.QueuePanel.queue-immersive) .quality-badge-container,
-#SpicyLyricsPage:has(.QueuePanel.queue-immersive) .NowBarControls .playback-control.skip-back,
-#SpicyLyricsPage:has(.QueuePanel.queue-immersive) .NowBarControls .playback-control.play-pause,
-#SpicyLyricsPage:has(.QueuePanel.queue-immersive) .NowBarControls .playback-control.skip-forward {
+#LyricsflowPage:has(.QueuePanel.queue-immersive) .NowBarProgress,
+#LyricsflowPage:has(.QueuePanel.queue-immersive) .quality-badge-container,
+#LyricsflowPage:has(.QueuePanel.queue-immersive) .NowBarControls .playback-control.skip-back,
+#LyricsflowPage:has(.QueuePanel.queue-immersive) .NowBarControls .playback-control.play-pause,
+#LyricsflowPage:has(.QueuePanel.queue-immersive) .NowBarControls .playback-control.skip-forward {
   opacity: 0 !important;
   pointer-events: none !important;
 }

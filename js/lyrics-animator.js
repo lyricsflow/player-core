@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player WEB — Lyrics Animator
+ * Lyricsflow — Lyrics Animator
  * Spring-physics animation engine for word-by-word gradient and scale animation.
  * Port of LyricsAnimator.ts
  */
@@ -290,7 +290,7 @@ function setLineAnimTargets(arr, activeIndex) {
     }
 
     // AMLL Blur calculation matching base/index.ts resolveBlurLevel
-    const lineBlurEnabled = window.spicySettingsManager?.get('lineBlur');
+    const lineBlurEnabled = window.lyricsflowSettingsManager?.get('lineBlur');
     let blurPx = 0;
     if (lineBlurEnabled !== false) {
       const isFocused = (i === activeIndex);
@@ -925,7 +925,7 @@ function animateSyllable(position, deltaTime) {
     }
 
     // AMLL interlude dots: breathing + sequential lighting, replaces the
-    // per-dot "spicy dots" spring animation for musical lines
+    // per-dot "lyricsflow dots" spring animation for musical lines
     if (line.DotLine) {
       advanceInterludeDots(line, position);
       continue;
@@ -1087,7 +1087,7 @@ function animateSyllable(position, deltaTime) {
       }
 
       if (isDot) {
-        // very spicy dot
+        // very lyricsflow dot
         if (!word.AnimatorStore) {
           word.AnimatorStore = createDotSprings();
           word.AnimatorStore.Scale.SetGoal(DotScaleSpline.at(0), true);

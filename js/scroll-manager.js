@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player WEB — Scroll Manager
+ * Lyricsflow — Scroll Manager
  * Tracks user-initiated scrolling so auto-positioning (via --ty) can yield.
  */
 

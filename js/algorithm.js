@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player — Smart Recommendation Algorithm
+ * Lyricsflow — Smart Recommendation Algorithm
  * Generates personalized "Top Picks for You", "Recently Played",
  * and 90 curated recommendations based on listening history.
  */
@@ -8,7 +8,7 @@ const API_BASE = "https://spicyamllplayer-api.hf.space";
 
 export function getListeningHistory() {
   try {
-    const raw = localStorage.getItem('spicy_recent_tracks');
+    const raw = localStorage.getItem('lyricsflow_recent_tracks');
     return raw ? JSON.parse(raw) : [];
   } catch (e) {
     console.error('[Algorithm] Failed to parse recent tracks:', e);

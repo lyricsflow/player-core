@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player — Media Session & Wake Lock Integration
+ * Lyricsflow — Media Session & Wake Lock Integration
  * Manages navigator.mediaSession (for native OS media controls)
  * and navigator.wakeLock (to keep the screen on during playback).
  */

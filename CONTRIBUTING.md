@@ -1,4 +1,4 @@
-# Contributing to Spicy AMLL Player 
+# Contributing to Lyricsflow 
 
 To become a member of our team, you should have made over **3+ pull requests and commits**.
 

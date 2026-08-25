@@ -1,9 +1,9 @@
 /* ═══════════════════════════════════════════════
-   Spicy AMLL Player WEB — Dynamic Background
+   Lyricsflow — Dynamic Background
    Enhanced animated backgrounds
    ═══════════════════════════════════════════════ */
 
-.spicy-dynamic-bg {
+.lyricsflow-dynamic-bg {
   height: 100%;
   left: 0;
   overflow: hidden;
@@ -20,13 +20,13 @@
 }
 
 
-.spicy-dynamic-bg.LegacyBackground {
+.lyricsflow-dynamic-bg.LegacyBackground {
   filter: saturate(1.8) brightness(0.55);
 }
 
-.spicy-dynamic-bg.LegacyBackground .Back,
-.spicy-dynamic-bg.LegacyBackground .BackCenter,
-.spicy-dynamic-bg.LegacyBackground .Front {
+.lyricsflow-dynamic-bg.LegacyBackground .Back,
+.lyricsflow-dynamic-bg.LegacyBackground .BackCenter,
+.lyricsflow-dynamic-bg.LegacyBackground .Front {
   --PlaceholderHueShift: 0deg;
   animation: bgAnim 45s linear infinite;
   border-radius: 100em;
@@ -39,26 +39,26 @@
 }
 
 
-.spicy-dynamic-bg.LegacyBackground .Back:not(.NoEffect),
-.spicy-dynamic-bg.LegacyBackground .BackCenter:not(.NoEffect),
-.spicy-dynamic-bg.LegacyBackground .Front:not(.NoEffect) {
+.lyricsflow-dynamic-bg.LegacyBackground .Back:not(.NoEffect),
+.lyricsflow-dynamic-bg.LegacyBackground .BackCenter:not(.NoEffect),
+.lyricsflow-dynamic-bg.LegacyBackground .Front:not(.NoEffect) {
   filter: hue-rotate(var(--PlaceholderHueShift)) blur(40px);
 }
 
-.spicy-dynamic-bg.LegacyBackground .Front {
+.lyricsflow-dynamic-bg.LegacyBackground .Front {
   right: 0;
   top: 0;
   z-index: 2;
 }
 
-.spicy-dynamic-bg.LegacyBackground .Back {
+.lyricsflow-dynamic-bg.LegacyBackground .Back {
   animation-direction: reverse;
   bottom: 0;
   left: 0;
   z-index: 1;
 }
 
-.spicy-dynamic-bg.LegacyBackground .BackCenter {
+.lyricsflow-dynamic-bg.LegacyBackground .BackCenter {
   animation-direction: reverse;
   right: -50%;
   top: -20%;
@@ -67,7 +67,7 @@
 }
 
 /* Static/Image Background */
-#SpicyLyricsPage .spicy-dynamic-bg.StaticBackground {
+#LyricsflowPage .lyricsflow-dynamic-bg.StaticBackground {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -77,18 +77,18 @@
   transition: opacity 0.3s;
 }
 
-#SpicyLyricsPage .spicy-dynamic-bg.StaticBackground.Hidden {
+#LyricsflowPage .lyricsflow-dynamic-bg.StaticBackground.Hidden {
   opacity: 0;
 }
 
 /* Color Background */
-#SpicyLyricsPage .spicy-dynamic-bg.ColorBackground {
+#LyricsflowPage .lyricsflow-dynamic-bg.ColorBackground {
   background-color: rgba(var(--MinContrastColor, 30, 30, 30));
   transition: background-color 1.5s;
   filter: none;
 }
 
-#SpicyLyricsPage .spicy-dynamic-bg.ColorBackground::before {
+#LyricsflowPage .lyricsflow-dynamic-bg.ColorBackground::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -100,7 +100,7 @@
   transition: background-color 1.5s;
 }
 
-#SpicyLyricsPage .spicy-dynamic-bg.ColorBackground::after {
+#LyricsflowPage .lyricsflow-dynamic-bg.ColorBackground::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -112,7 +112,7 @@
 }
 
 /* ── Animated Art Background (blurred behind) ── */
-#SpicyLyricsPage .spicy-dynamic-bg.AnimatedArtBackground {
+#LyricsflowPage .lyricsflow-dynamic-bg.AnimatedArtBackground {
   /* Blur re-rasterizes every animated frame; keep the radius modest so
      high-refresh displays don't blow the GPU frame budget. */
   filter: saturate(1.6) brightness(0.45) blur(18px);
@@ -122,7 +122,7 @@
 }
 
 
-#SpicyLyricsPage .spicy-dynamic-bg.AnimatedArtBackground video {
+#LyricsflowPage .lyricsflow-dynamic-bg.AnimatedArtBackground video {
   position: absolute;
   top: -10%;
   left: -10%;
@@ -131,6 +131,6 @@
   object-fit: cover;
 }
 
-.spicy-dynamic-bg.Hidden {
+.lyricsflow-dynamic-bg.Hidden {
   opacity: 0;
 }

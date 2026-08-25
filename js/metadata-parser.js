@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player WEB — Metadata Parser
+ * Lyricsflow — Metadata Parser
  * Extracts ID3 tags (MP3) and FLAC/Vorbis metadata from audio files.
  * Supports: title, artist, album, album art (cover image).
  */

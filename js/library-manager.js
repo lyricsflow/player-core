@@ -1,12 +1,12 @@
 /**
- * Spicy AMLL Player — Library Manager
+ * Lyricsflow — Library Manager
  * Handles user Library (Songs, Albums, Artists),
  * recently added collection, and playlist helpers.
  */
 
 import { getPlaylists, getPlaylistTracks } from './router.js';
 
-const STORAGE_KEY = 'spicy_user_library';
+const STORAGE_KEY = 'lyricsflow_user_library';
 
 function getRawLibrary() {
   try {
@@ -27,7 +27,7 @@ function getRawLibrary() {
 function saveRawLibrary(lib) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(lib));
-    window.dispatchEvent(new CustomEvent('spicy-library-changed', { detail: lib }));
+    window.dispatchEvent(new CustomEvent('lyricsflow-library-changed', { detail: lib }));
   } catch (e) {
     console.error('[Library] Failed to save library:', e);
   }

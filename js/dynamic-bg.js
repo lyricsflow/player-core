@@ -68,11 +68,11 @@ export async function applyLegacyBackground(bgContainer, img) {
   stopKawarp();
 
   bgContainer.innerHTML = "";
-  bgContainer.className = "spicy-dynamic-bg";
+  bgContainer.className = "lyricsflow-dynamic-bg";
 
   // Create canvas matching index.html (#bgCanvas)
   const canvas = document.createElement('canvas');
-  canvas.className = "spicy-dybg-canvas";
+  canvas.className = "lyricsflow-dybg-canvas";
   canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;';
   bgContainer.appendChild(canvas);
 
@@ -135,7 +135,7 @@ export async function applyLegacyBackground(bgContainer, img) {
 }
 
 export function stopKawarp() {
-  const bgContainer = document.querySelector('.spicy-dynamic-bg');
+  const bgContainer = document.querySelector('.lyricsflow-dynamic-bg');
   if (bgContainer) {
     bgContainer.classList.remove('loaded', 'active');
   }
@@ -196,7 +196,7 @@ export function setKawarpVolume(level01) {
  */
 export function applyColorBackground(bgContainer, colors) {
   stopKawarp();
-  bgContainer.className = "spicy-dynamic-bg ColorBackground";
+  bgContainer.className = "lyricsflow-dynamic-bg ColorBackground";
   bgContainer.style.setProperty('--MinContrastColor', colors.dark.join(', '));
   bgContainer.style.setProperty('--HighContrastColor', colors.vibrant.map(c => Math.floor(c * 0.3)).join(', '));
 }
@@ -207,7 +207,7 @@ export function applyColorBackground(bgContainer, colors) {
  */
 export function applyDefaultBackground(bgContainer) {
   stopKawarp();
-  bgContainer.className = "spicy-dynamic-bg ColorBackground";
+  bgContainer.className = "lyricsflow-dynamic-bg ColorBackground";
   bgContainer.style.setProperty('--MinContrastColor', '18, 18, 18');
   bgContainer.style.setProperty('--HighContrastColor', '8, 8, 8');
 }

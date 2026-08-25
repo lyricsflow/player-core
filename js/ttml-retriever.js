@@ -5,31 +5,30 @@ import { GetExpireStore } from './stores.js';
 
 export const LyricsStore = GetExpireStore("SL:lyrics", 1, { Duration: 3, Unit: "Days" });
 
-const SPICY_API_URL = 'https://api.spicylyrics.org';
-const SPICY_VERSION = '2.8.0';
-const CUSTOM_LYRICS_API = 'https://spicyamllplayer-api.hf.space/community';
+const LYRICSFLOW_API_URL = 'https://api.lyricsflowlyrics.org';
+const LYRICSFLOW_VERSION = '2.8.0';
+const CUSTOM_LYRICS_API = 'https://api.spicyamll.online/community';
 
 /** Source label mapping */
 const SOURCE_LABELS = {
-  spl: 'Spicy Lyrics Community',
   lyricsplus: 'LyricsPlus',
   aml: 'Apple Music',
   spt: 'Spotify',
-  spicy: 'Spicy AMLL Player',
+  lyricsflow: 'Lyricsflow',
   spotify: 'Spotify',
   lrclib: 'LRCLIB',
   netease: 'Netease',
   musixmatch: 'Musixmatch',
   genius: 'Genius',
   apple: 'Apple Music',
-  custom: "Our Community's Lyrics",
+  lfcommunity: "Lyricsflow Community",
 };
 
 function resolveSourceLabel(source, sourceDisplayName) {
   if (sourceDisplayName?.trim()) return sourceDisplayName.trim();
   if (source && SOURCE_LABELS[source]) return SOURCE_LABELS[source];
   if (source?.trim()) return source.trim();
-  return 'Spicy AMLL Player';
+  return 'Lyricsflow';
 }
 
 // ═══════════════════════════════════════════════
@@ -237,7 +236,7 @@ async function fetchFromLRCLIB(songName, artistName, albumName, durationSec) {
       if (album) params.append('album_name', album);
 
       const res = await fetch(`https://lrclib.net/api/get?${params}`, {
-        headers: { 'x-user-agent': 'spicy-amll-player/1.0' },
+        headers: { 'x-user-agent': 'lyricsflow-amll-player/1.0' },
       });
 
       if (!res.ok) return null;
@@ -322,7 +321,7 @@ async function fetchFromLyricsPlus(songName, artistName, albumName, durationSec)
 
       const res = await fetch(`https://lyrics.geeked.wtf/v2/lyrics/get?${params}`, {
         headers: {
-          'User-Agent': 'spicy-amll-player/1.0'
+          'User-Agent': 'lyricsflow-amll-player/1.0'
         }
       });
 
@@ -657,22 +656,22 @@ function buildAgentMap(agentsObj) {
 }
 
 // ═══════════════════════════════════════════════
-// Spicy AMLL Player API
+// Lyricsflow API
 // ═══════════════════════════════════════════════
 
-async function fetchFromSpicyAPI(songId) {
+async function fetchFromLyricsflowAPI(songId) {
   try {
     const token = await getSpotifyAccessToken();
-    const res = await fetch(`${SPICY_API_URL}/query`, {
+    const res = await fetch(`${LYRICSFLOW_API_URL}/query`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'spicylyrics-version': SPICY_VERSION,
-        'SpicyLyrics-WebAuth': token ? `Bearer ${token}` : ''
+        'lyricsflowlyrics-version': LYRICSFLOW_VERSION,
+        'Lyricsflow-WebAuth': token ? `Bearer ${token}` : ''
       },
       body: JSON.stringify({
-        queries: [{ operation: 'lyrics', variables: { id: songId, auth: 'SpicyLyrics-WebAuth' } }],
-        client: { version: SPICY_VERSION }
+        queries: [{ operation: 'lyrics', variables: { id: songId, auth: 'Lyricsflow-WebAuth' } }],
+        client: { version: LYRICSFLOW_VERSION }
       }),
     });
 
@@ -687,7 +686,7 @@ async function fetchFromSpicyAPI(songId) {
     }
 
     if (lyricsData?.Type) {
-      const source = lyricsData.source || 'spicy';
+      const source = lyricsData.source || 'lyricsflow';
       return {
         lyricsData,
         source,
@@ -709,7 +708,7 @@ async function fetchFromAppleMusic(songName, artistName, albumName, durationSec 
 
     if (trackId) {
       console.log(`[TTMLRetriever] Apple Music: Using track ID ${trackId}, fetching TTML...`);
-      apiRes = await proxiedFetch(`https://spicyamllplayer-api.hf.space/lyrics?song=${trackId}`, { skipProxy: true });
+      apiRes = await proxiedFetch(`https://api.spicyamll.online/lyrics?song=${trackId}`, { skipProxy: true });
     } else {
       console.log(`[TTMLRetriever] Apple Music: No track ID provided. Querying via text metadata metadata...`);
       const params = new URLSearchParams({
@@ -718,7 +717,7 @@ async function fetchFromAppleMusic(songName, artistName, albumName, durationSec 
         album: albumName || '',
         duration: String(Math.round(durationSec))
       });
-      apiRes = await proxiedFetch(`https://spicyamllplayer-api.hf.space/lyrics/get?${params}`, { skipProxy: true });
+      apiRes = await proxiedFetch(`https://api.spicyamll.online/lyrics/get?${params}`, { skipProxy: true });
     }
 
     if (!apiRes || !apiRes.ok) return null;
@@ -787,7 +786,7 @@ export async function retrieveTTML(songName, artistName, albumName, durationSec 
   for (const providerId of activeOrder) {
     providerPromises[providerId] = (async () => {
       try {
-        if (providerId === "spicy" || providerId === "genius") return null;
+        if (providerId === "lyricsflow" || providerId === "genius") return null;
         if (providerId === "apple" || providerId === "aml") return await fetchFromAppleMusic(songName, artistName, albumName, durationSec, finalSongId);
         if (providerId === "musixmatch") return await fetchFromMusixmatch(songName, artistName, albumName, durationSec * 1000);
         if (providerId === "netease") return await fetchFromNetease(songName, artistName);

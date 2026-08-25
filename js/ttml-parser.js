@@ -1,5 +1,5 @@
 /**
- * Spicy AMLL Player — TTML Parser
+ * Lyricsflow — TTML Parser
  * Exact port of ParseTTML.ts
  * Parses Apple Music-style TTML files into structured lyrics data.
  */

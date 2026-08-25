@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   Spicy AMLL Player WEB — Global Styles
+   Lyricsflow — Global Styles
    ═══════════════════════════════════════════════ */
 
 /* Google Fonts (fallback for Georgian, CJK, Cyrillic, Devanagari, etc.) */
@@ -66,6 +66,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'SF Pro Rounded';
+  src: url('../fonts/sfpro-rounded-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── Reset ── */
 *,
 *::before,
@@ -128,11 +136,11 @@ input {
   --spice-main: #000000;
   --spice-sidebar: #000000;
   --spice-text: #ffffff;
-  --spice-button: #1db954;
+  --spice-button: #ffffff;
 
   /* Lyrics sizing */
   --DefaultLyricsSize: clamp(1.85rem, calc(1cqw * 7), 3.5rem);
-  --SpicyLyrics-LineSpacing: 1cqw 0;
+  --Lyricsflow-LineSpacing: 1cqw 0;
 
   /* Glow definitions */
   --TextGlowDef: rgba(255, 255, 255, 0.15) 0px 0px 6px;
@@ -154,7 +162,7 @@ input {
   --LyricsRightSidePadding: 6cqw;
 
   /* Font */
-  --spicy-font-family: 'SF Pro Display', 'SF Pro', 'PingFang SC', 'Hiragino Sans', 'SF Arabic', Inter, "Noto Sans Georgian", "Vazirmatn", sans-serif;
+  --lyricsflow-font-family: 'SF Pro Display', 'SF Pro', 'PingFang SC', 'Hiragino Sans', 'SF Arabic', Inter, "Noto Sans Georgian", "Vazirmatn", sans-serif;
 
   /* Default font size for content */
   --default-font-size: clamp(0.5rem, calc(1cqw * 3), 2.4rem);

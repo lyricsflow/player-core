@@ -161,17 +161,36 @@ function tickPerLineY(now) {
     const el = line.HTMLElement;
     if (!spring || !el) continue;
 
+    // Skip settled lines entirely — rewriting an unchanged custom property
+    // still dirties style, and doing it for every line every frame tanks
+    // the frame rate on long songs.
+    if (spring.arrived() && !line._springsDirty) continue;
+
     spring.update(dt);
-    el.style.setProperty('--ty', `${spring.getCurrentPosition().toFixed(1)}px`);
+    const tyStr = `${spring.getCurrentPosition().toFixed(1)}px`;
+    if (line._lastTyStr !== tyStr) {
+      el.style.setProperty('--ty', tyStr);
+      line._lastTyStr = tyStr;
+    }
     if (!spring.arrived()) {
       anyActive = true;
+      line._springsDirty = true;
+    } else {
+      line._springsDirty = false;
     }
 
     if (line._scaleSpring) {
       line._scaleSpring.update(dt);
-      el.style.setProperty('--line-scale', `${line._scaleSpring.getCurrentPosition().toFixed(4)}`);
+      const scaleStr = line._scaleSpring.getCurrentPosition().toFixed(4);
+      if (line._lastScaleStr !== scaleStr) {
+        el.style.setProperty('--line-scale', scaleStr);
+        line._lastScaleStr = scaleStr;
+      }
       if (!line._scaleSpring.arrived()) {
         anyActive = true;
+        line._springsDirty = true;
+      } else {
+        line._springsDirty = false;
       }
     }
   }
@@ -179,16 +198,6 @@ function tickPerLineY(now) {
   if (anyActive) {
     _perLineRafId = requestAnimationFrame(tickPerLineY);
   } else {
-    for (let i = 0; i < arr.length; i++) {
-      const line = arr[i];
-      if (line.BGLine) continue;
-      if (line._posYSpring && line.HTMLElement) {
-        line.HTMLElement.style.setProperty('--ty', `${line._posYSpring.getCurrentPosition().toFixed(1)}px`);
-      }
-      if (line._scaleSpring && line.HTMLElement) {
-        line.HTMLElement.style.setProperty('--line-scale', `${line._scaleSpring.getCurrentPosition().toFixed(4)}`);
-      }
-    }
     _perLineRafId = null;
   }
 }
@@ -699,13 +708,19 @@ function driveEmphasisAnims(word, position) {
     const t = Math.max(0, position - wStart);
     if (letter._empAnim) {
       letter._empAnim.currentTime = t;
-      if (t > 0 && t < wEnd - wStart) letter._empAnim.play();
-      else letter._empAnim.pause();
+      const shouldPlay = t > 0 && t < wEnd - wStart;
+      if (shouldPlay === letter._empAnim.paused) {
+        if (shouldPlay) letter._empAnim.play();
+        else letter._empAnim.pause();
+      }
     }
     if (letter._empFloatAnim) {
       letter._empFloatAnim.currentTime = t;
-      if (t > 0 && t < letter._empFloatEnd) letter._empFloatAnim.play();
-      else letter._empFloatAnim.pause();
+      const shouldPlay = t > 0 && t < letter._empFloatEnd;
+      if (shouldPlay === letter._empFloatAnim.paused) {
+        if (shouldPlay) letter._empFloatAnim.play();
+        else letter._empFloatAnim.pause();
+      }
     }
   });
 }
@@ -1013,11 +1028,21 @@ function animateSyllable(position, deltaTime) {
         }
         if (word._floatAnim) {
           const relT = Math.max(0, position - line.StartTime);
-          word._floatAnim.currentTime = relT;
-          const timing = word._floatAnim.effect?.getComputedTiming?.();
-          const fEnd = Number(timing?.delay ?? 0) + Number(timing?.duration ?? 0);
-          if (relT >= 0 && relT < fEnd) word._floatAnim.play();
-          else word._floatAnim.pause();
+          // Cache the total duration once — getComputedTiming() per frame is
+          // expensive at high refresh rates.
+          if (word._floatEnd === undefined) {
+            const timing = word._floatAnim.effect?.getComputedTiming?.();
+            word._floatEnd = Number(timing?.delay ?? 0) + Number(timing?.duration ?? 0);
+          }
+          const shouldPlay = relT < word._floatEnd;
+          const wasPlaying = !word._floatAnim.paused;
+          if (shouldPlay || wasPlaying) {
+            word._floatAnim.currentTime = relT;
+            if (shouldPlay !== wasPlaying) {
+              if (shouldPlay) word._floatAnim.play();
+              else word._floatAnim.pause();
+            }
+          }
         }
 
         if (word.Letters) {
@@ -1224,22 +1249,30 @@ function animateSyllable(position, deltaTime) {
       const curYOffset = word.AnimatorStore.YOffset.Step(deltaTime);
       const curGlow = word.AnimatorStore.Glow.Step(deltaTime);
 
-      setStyleIfChanged(word.HTMLElement, "scale", `${curScale.toFixed(4)}`);
-      setStyleIfChanged(word.HTMLElement, "transform",
-        `translate3d(0, calc(var(--DefaultLyricsSize) * ${curYOffset.toFixed(4)}), 0)`);
+      if (!Number.isFinite(word._wsc) || Math.abs(curScale - word._wsc) > 0.0006) {
+        word._wsc = curScale;
+        setStyleIfChanged(word.HTMLElement, "scale", `${curScale.toFixed(4)}`);
+      }
+      if (!Number.isFinite(word._wty) || Math.abs(curYOffset - word._wty) > 0.001) {
+        word._wty = curYOffset;
+        setStyleIfChanged(word.HTMLElement, "transform",
+          `translate3d(0, calc(var(--DefaultLyricsSize) * ${curYOffset.toFixed(4)}), 0)`);
+      }
 
       if (!word.LetterGroup) {
         if (fillX !== null && fillGeo) {
           const it = fillGeo.items[wi];
           const gp = Math.max(-20, Math.min(120, ((fillX - it.left) / it.width) * 100));
-          setStyleIfChanged(word.HTMLElement, "--gradient-position", `${gp.toFixed(2)}%`);
+          // Epsilon-gate: sub-0.05% frontier moves are invisible but each
+          // write forces a gradient repaint — expensive at high refresh rates.
+          setStyleIfChanged(word.HTMLElement, "--gradient-position", `${gp.toFixed(2)}%`, 0.05);
         } else {
           setStyleIfChanged(word.HTMLElement, "--gradient-position", `${targetGradientPos.toFixed(2)}%`);
         }
         setStyleIfChanged(word.HTMLElement, "--text-shadow-blur-radius",
-          `${(4.8 + 2.4 * curGlow).toFixed(2)}px`);
+          `${(4.8 + 2.4 * curGlow).toFixed(2)}px`, 0.1);
         setStyleIfChanged(word.HTMLElement, "--text-shadow-opacity",
-          `${(curGlow * LetterGlowMultiplier_Opacity * 0.32).toFixed(2)}%`);
+          `${(curGlow * LetterGlowMultiplier_Opacity * 0.32).toFixed(2)}%`, 0.5);
       }
 
       if (word.LetterGroup && word.Letters) {
@@ -1320,18 +1353,27 @@ function animateSyllable(position, deltaTime) {
           const cy = letter.AnimatorStore.YOffset.Step(deltaTime);
           const cg = letter.AnimatorStore.Glow.Step(deltaTime);
 
-          setStyleIfChanged(letter.HTMLElement, "scale", `${cs.toFixed(4)}`);
-          setStyleIfChanged(letter.HTMLElement, "transform",
-            `translate3d(0, calc(var(--DefaultLyricsSize) * ${(cy * 2.5).toFixed(4)}), 0)`);
+          // Numeric epsilon gates: near-settled springs produce new strings
+          // every frame, and every write dirties style + repaints glyphs.
+          // Skip anything below visual threshold.
+          const le = letter.HTMLElement;
+          if (!Number.isFinite(letter._lsc) || Math.abs(cs - letter._lsc) > 0.0006) {
+            letter._lsc = cs;
+            setStyleIfChanged(le, "scale", `${cs.toFixed(4)}`);
+          }
+          const tyPx = cy * 2.5;
+          if (!Number.isFinite(letter._lty) || Math.abs(tyPx - letter._lty) > 0.003) {
+            letter._lty = tyPx;
+            setStyleIfChanged(le, "transform",
+              `translate3d(0, calc(var(--DefaultLyricsSize) * ${tyPx.toFixed(4)}), 0)`);
+          }
 
+          setStyleIfChanged(le, "--gradient-position", `${tgp.toFixed(2)}%`, 0.05);
 
-
-          setStyleIfChanged(letter.HTMLElement, "--gradient-position", `${tgp.toFixed(2)}%`);
-
-          setStyleIfChanged(letter.HTMLElement, "--text-shadow-blur-radius",
-            `${(3.2 + 16 * cg).toFixed(2)}px`);
-          setStyleIfChanged(letter.HTMLElement, "--text-shadow-opacity",
-            `${(cg * LetterGlowMultiplier_Opacity * 0.8).toFixed(2)}%`);
+          setStyleIfChanged(le, "--text-shadow-blur-radius",
+            `${(3.2 + 16 * cg).toFixed(2)}px`, 0.15);
+          setStyleIfChanged(le, "--text-shadow-opacity",
+            `${(cg * LetterGlowMultiplier_Opacity * 0.8).toFixed(2)}%`, 0.5);
         });
       }
     }

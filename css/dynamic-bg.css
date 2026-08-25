@@ -113,7 +113,9 @@
 
 /* ── Animated Art Background (blurred behind) ── */
 #SpicyLyricsPage .spicy-dynamic-bg.AnimatedArtBackground {
-  filter: saturate(1.6) brightness(0.45) blur(40px);
+  /* Blur re-rasterizes every animated frame; keep the radius modest so
+     high-refresh displays don't blow the GPU frame budget. */
+  filter: saturate(1.6) brightness(0.45) blur(18px);
   transition: filter 1s ease, opacity 1s ease;
   transform: scale(1.1);
   will-change: transform, filter;

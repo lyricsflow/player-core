@@ -1852,7 +1852,23 @@
     }
 
     function startAnimationLoop() {
+      // FPS probe: window.__spicyFps shows the real rAF rate on this page.
+      let fpsCount = 0, fpsStamp = performance.now();
+
+      // Progress bar / time text don't need 144 updates/s; 10 Hz is visually
+      // identical and saves layout+paint every frame.
+      let lastUiUpdate = 0;
+      const UI_INTERVAL = 100;
+
       function loop() {
+        const nowMs = performance.now();
+        fpsCount++;
+        if (nowMs - fpsStamp >= 1000) {
+          window.__spicyFps = fpsCount;
+          fpsCount = 0;
+          fpsStamp = nowMs;
+        }
+
         const pos = isDraggingProgress ? dragPosition : player.getPosition();
         // Use latency-compensated position for lyrics so they sync to when audio is heard,
         // not when it's scheduled into the Web Audio pipeline (~200–300ms earlier).
@@ -1864,17 +1880,20 @@
         // Feed bass energy into the dybg background (volume-reactive twist/zoom)
         setKawarpVolume(player.getLowFreqLevel());
 
+        const doUi = isDraggingProgress || (nowMs - lastUiUpdate >= UI_INTERVAL);
+        if (doUi) lastUiUpdate = nowMs;
+
         const nowBar = document.getElementById('now-bar');
-        if (nowBar) {
+        if (nowBar && doUi) {
           nowBar.setAttribute('data-position', pos.toString());
           nowBar.setAttribute('data-duration', (player.duration || 0).toString());
         }
         if (!document.hidden) {
-          if (player.duration > 0 && !isDraggingProgress) {
+          if (player.duration > 0 && doUi) {
             progressFill.style.width = `${Math.min((pos / player.duration) * 100, 100)}%`;
             timeTotal.textContent = AudioPlayer.formatTime(player.duration - pos, true);
           }
-          if (!isDraggingProgress) {
+          if (doUi) {
             timeCurrent.textContent = AudioPlayer.formatTime(pos);
           }
           animateLyrics(adjustedLyricsPos, lyricsType, false);

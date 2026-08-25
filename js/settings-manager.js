@@ -67,7 +67,7 @@ class SettingsManager {
       coverArtAnimation: true,
       rightAlignLyrics: false,
       lineBlur: true,
-      amlLyricsAnimations: false,
+      amlLyricsAnimations: true,
       customFontEnabled: false,
       customFont: "",
       lyricsSourceOrder: [...DEFAULT_LYRICS_SOURCE_ORDER],

@@ -178,14 +178,14 @@ export function setKawarpPlaybackState(isPlaying) {
  * @param {number} level01 Normalized beat envelope 0..1 from
  *   AudioPlayer.getLowFreqLevel(). Fall back to 0 when no tape is running.
  *
- * NOTE: dybg scales this by 1/10 internally, so to make a full-strength beat
- * visibly punch (roughly 70% zoom) the value must go in an order of magnitude
- * hotter than a raw 0..1 level.
+ * NOTE: dybg scales this by 1/10 internally. Tuned so each detected kick
+ * lands a strong, clean pump (~0.39 max feed) without slamming like the old
+ * undifferentiated blob.
  */
 export function setKawarpVolume(level01) {
   if (_dybg && typeof _dybg.setLowFreqVolume === 'function') {
     const raw = Math.max(0, Math.min(0.6, level01 || 0));
-    _dybg.setLowFreqVolume(raw * 0.8);
+    _dybg.setLowFreqVolume(raw * 0.65);
   }
 }
 

@@ -10,22 +10,21 @@ export default class AudioPlayer {
     this.masterGain = this.audioContext.createGain();
     this.masterGain.connect(this.audioContext.destination);
 
-    // Analysis tap (non-audio) so the background can react to low-frequency energy
+    // Analysis tap: wired post-EQ but PRE-masterGain in setupEQ(), so beat
+    // detection is independent of the user's output volume.
     this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 1024;
-    this.analyser.smoothingTimeConstant = 0.6;
-    this.masterGain.connect(this.analyser);
+    this.analyser.fftSize = 4096;
+    this.analyser.smoothingTimeConstant = 0.35;
     this._freqData = new Uint8Array(this.analyser.frequencyBinCount);
 
-    // Low-freq onset state (drives the background): kick-band flux with an
-    // adaptive energy threshold, pulses gated to the song's own rhythm.
-    this._prevBass = 0;
-    this._fluxEMA = 0.01;
-    this._interEMA = 0.5;
-    this._lastOnset = -1;
-    this._lastPulse = -1;
+    // Beat detection (drives the background): Roblox-style — current
+    // loudness vs the rolling average of the last N frames.
     this._pulse = 0;
     this._lastTime = 0;
+
+    this._loudnessData = new Uint8Array(this.analyser.fftSize);
+    this._loudHist = [];
+    this._loudHistMax = 25;
 
     // Channel A
     this.audioA = new Audio();
@@ -123,6 +122,9 @@ export default class AudioPlayer {
       this.eqNodes[i].connect(this.eqNodes[i + 1]);
     }
     this.eqNodes[this.eqNodes.length - 1].connect(this.masterGain);
+    // Beat-detection tap: post-EQ, pre-volume, so detection never depends
+    // on how loud the user listens.
+    this.eqNodes[this.eqNodes.length - 1].connect(this.analyser);
   }
 
   _bindChannelEvents(audioEl, channel) {
@@ -170,13 +172,9 @@ export default class AudioPlayer {
   setSource(url) {
     this._silenceChannel(this._inactiveAudio, this._inactiveGain);
     this._crossfadeTriggered = false;
-    this._prevBass = 0;
-    this._fluxEMA = 0.01;
-    this._interEMA = 0.5;
-    this._lastOnset = -1;
-    this._lastPulse = -1;
     this._pulse = 0;
     this._lastTime = 0;
+    this._loudHist.length = 0;
 
     this.activeGain.gain.cancelScheduledValues(this.audioContext.currentTime);
     this.activeGain.gain.setValueAtTime(1, this.audioContext.currentTime);
@@ -213,6 +211,7 @@ export default class AudioPlayer {
 
     this.currentChannel = this.currentChannel === 'A' ? 'B' : 'A';
     this._crossfadeTriggered = false;
+    this._loudHist.length = 0;
 
     nextAudio.play().catch(e => console.warn('Crossfade play failed:', e));
 
@@ -285,14 +284,25 @@ export default class AudioPlayer {
     return this.masterGain.gain.value;
   }
 
+  // Overall loudness (0..1), the equivalent of Roblox's PlaybackLoudness:
+  // plain RMS over the waveform from the pre-volume tap.
+  _loudness() {
+    this.analyser.getByteTimeDomainData(this._loudnessData);
+    let sum = 0;
+    for (let i = 0; i < this._loudnessData.length; i++) {
+      const v = (this._loudnessData[i] - 128) / 128;
+      sum += v * v;
+    }
+    return Math.sqrt(sum / this._loudnessData.length);
+  }
+
   /**
-   * Low-frequency beat level (0..1) driving the background.
+   * Beat level (0..1) driving the background.
    *
-   * Kick-band energy flux (~35-85Hz) with an adaptive onset threshold. Each
-   * detected bass hit fires a pulse gated to the song's self-learned onset
-   * interval, so rhythmic pulses stay locked to the beat and continuous 808
-   * walls become musical pumps instead of a constant blob. Validated offline
-   * against a 74 BPM track: one pulse per beat, quiet between.
+   * Same as the classic Roblox pattern: compare current loudness against the
+   * rolling average of the last ~30 frames — above average = beat. The punch
+   * scales with how far above the average we are, so hits pop harder than
+   * sustained loud sections, and quiet passages stay calm.
    */
   getLowFreqLevel() {
     const t = this.audioContext.currentTime;
@@ -302,50 +312,28 @@ export default class AudioPlayer {
     // Freeze the release when playback stops so the effect dies out gently.
     if (!this.isPlaying) {
       this._pulse = (this._pulse || 0) * Math.exp(-Math.max(dt, 0.016) / 0.09);
-      return this._pulse;
+      return Math.max(0, this._pulse || 0);
     }
 
-    this.analyser.getByteFrequencyData(this._freqData);
+    const level = this._loudness();
 
-    // Kick-band energy (~35-85Hz): the actual kick/sub hit, not the melodic
-    // bassline riding above. Flux = positive jump from last frame.
-    const binHz = this.audioContext.sampleRate / this.analyser.fftSize;
-    const maxBin = Math.min(this._freqData.length, Math.round(85 / binHz));
-    const minBin = Math.round(35 / binHz);
-    let bsum = 0, bn = 0;
-    for (let i = minBin; i < maxBin; i++) { bsum += this._freqData[i]; bn++; }
-    const bass = bn > 0 ? bsum / bn / 255 : 0;
-    const flux = Math.max(0, bass - this._prevBass);
-    this._prevBass = bass;
+    // Rolling average of recent loudness (the "is this frame louder than
+    // usual?" baseline).
+    const hist = this._loudHist;
+    hist.push(level);
+    if (hist.length > this._loudHistMax) hist.shift();
+    let avg = 0;
+    for (let i = 0; i < hist.length; i++) avg += hist[i];
+    avg /= hist.length || 1;
 
-    // Adaptive onset threshold: jump clearly above the recent flux noise.
-    // Rises fast on hits, decays toward a floor in between.
-    this._fluxEMA = flux > 0.5 * this._fluxEMA
-      ? 0.3 * flux + 0.7 * this._fluxEMA
-      : (this._fluxEMA * 0.9 + 0.005 * 0.1);
-    const onset = flux > Math.max(0.012, this._fluxEMA * 1.8);
-
-    // Track the song's rhythm via the average interval between onsets, and
-    // cooldown each pulse to it (clamped) so continuous 808 rolls pulse at
-    // the beat rate instead of stacking into a constant wall.
-    if (onset) {
-      if (this._lastOnset >= 0) {
-        const iv = t - this._lastOnset;
-        this._interEMA = 0.08 * iv + 0.92 * this._interEMA;
-      }
-      this._lastOnset = t;
-    }
-    const cooldown = Math.min(0.75, Math.max(0.22, this._interEMA));
-
-    // Fire one pulse per musical hit.
-    if (onset && t - this._lastPulse >= cooldown) {
-      this._pulse = 1;
-      this._lastPulse = t;
+    if (level > avg && level > 0.04) {
+      const excess = (level - avg) / (avg + 0.02);
+      this._pulse = Math.max(this._pulse, Math.min(1, 0.45 + excess * 0.9));
     }
 
     // Fast release so it visibly pops then breathes back between beats.
     this._pulse *= Math.exp(-dt / 0.09);
-    return Math.min(1, this._pulse);
+    return Math.max(0, Math.min(1, this._pulse));
   }
 
   static formatTime(ms, negative = false) {

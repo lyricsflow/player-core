@@ -5,8 +5,6 @@ import { GetExpireStore } from './stores.js';
 
 export const LyricsStore = GetExpireStore("SL:lyrics", 1, { Duration: 3, Unit: "Days" });
 
-const LYRICSFLOW_API_URL = 'https://api.lyricsflowlyrics.org';
-const LYRICSFLOW_VERSION = '2.8.0';
 const CUSTOM_LYRICS_API = 'https://api.spicyamll.online/community';
 
 /** Source label mapping */
@@ -653,49 +651,6 @@ function buildAgentMap(agentsObj) {
   }
 
   return map;
-}
-
-// ═══════════════════════════════════════════════
-// Lyricsflow API
-// ═══════════════════════════════════════════════
-
-async function fetchFromLyricsflowAPI(songId) {
-  try {
-    const token = await getSpotifyAccessToken();
-    const res = await fetch(`${LYRICSFLOW_API_URL}/query`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'lyricsflowlyrics-version': LYRICSFLOW_VERSION,
-        'Lyricsflow-WebAuth': token ? `Bearer ${token}` : ''
-      },
-      body: JSON.stringify({
-        queries: [{ operation: 'lyrics', variables: { id: songId, auth: 'Lyricsflow-WebAuth' } }],
-        client: { version: LYRICSFLOW_VERSION }
-      }),
-    });
-
-    if (!res.ok) return null;
-    const data = await res.json();
-    const result = data?.queries?.[0]?.result;
-    if (!result || result.httpStatus !== 200) return null;
-
-    let lyricsData = result.data;
-    if (typeof lyricsData === 'string') {
-      lyricsData = parseTTMLToLyrics(lyricsData);
-    }
-
-    if (lyricsData?.Type) {
-      const source = lyricsData.source || 'lyricsflow';
-      return {
-        lyricsData,
-        source,
-        sourceDisplayName: resolveSourceLabel(source, lyricsData.sourceDisplayName)
-      };
-    }
-  } catch (err) {
-    return null;
-  }
 }
 
 // ═══════════════════════════════════════════════

@@ -1562,6 +1562,7 @@
   width: 100%;
   max-width: 850px;
   z-index: 1;
+  overflow: visible;
 }
 
 .glass-card.premium-card {
@@ -1570,6 +1571,7 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 32px;
   padding: 48px;
+  overflow: visible;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
   animation: amFadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1623,6 +1625,7 @@
   padding: 8px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+  overflow: visible;
 }
 
 .premium-search-box:focus-within {
@@ -1653,6 +1656,17 @@
   justify-content: center;
   gap: 10px;
   border: none;
+}
+
+#dl-song-format {
+  position: relative;
+}
+
+#dl-song-format .aero-menu {
+  top: 0;
+  left: calc(100% + 6px);
+  right: auto;
+  min-width: 160px;
 }
 
 .premium-btn.primary {

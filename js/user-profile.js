@@ -461,12 +461,11 @@ export function openProfileSettingsModal() {
   }
 
   // Save changes
-  const nameInput = modalBox.querySelector('#prof-modal-name-input');
   const langSelect = modalBox.querySelector('#prof-modal-lang-select');
   const saveBtn = modalBox.querySelector('#prof-modal-save-btn');
 
   saveBtn.addEventListener('click', () => {
-    const newName = nameInput.value.trim() || DEFAULT_NAME;
+    const newName = nameInput ? (nameInput.value.trim() || DEFAULT_NAME) : DEFAULT_NAME;
     const newLang = langSelect.value;
     saveUserProfile({
       name: newName,

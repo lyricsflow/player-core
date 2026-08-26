@@ -9,6 +9,19 @@
   <meta name="description"
     content="Play and experience synchronized Apple Music lyrics with beautiful animations and high-fidelity graphics on Lyricsflow.">
 
+  <!-- AeroUI Design System -->
+  <link rel="stylesheet" href="https://nurislamaibekuly.github.io/aeroui/src/aeroui.css" integrity="sha384-Yjg7eQXX+vgni5bsws3wjA5rHh0Cjw3k3bkSWcWV2mQACQQu8Wx3884PNwhea2Ld" crossorigin="anonymous">
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/spinner/spinner.js" integrity="sha384-FpIIxPCSBl6yk3Migps1iqvOqDy/UCOyDMZEY+KCW7OADUsf3c3TRe1wetu438g5" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/button/button.js" integrity="sha384-jkGKWvGyjuQqF9AoUZRtPobWOYfZL2dde9r298hEEd+LHA4Bm9pmHLmeBc2ZOXmX" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/slider/slider.js" integrity="sha384-JIILD/Fbuaz3KMO4UmGBSHscpCKV9sVYo2Dus2SXeBp1LM17LQ/9GjNEuGUIS9KY" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/toggle/toggle.js" integrity="sha384-Vu2ogO3oby87XgeXWmcmgKZsEkNY+m3DofpLapUFBoGzz51tWJrU5+1GgzyN4/xq" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/tooltip/tooltip.js" integrity="sha384-uVI2QiwjyCrpno+Y7cocRTZZ53xc1y0vZTOk5ROmtZ2N2zVAwfv4m4YU0QqXqmKE" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/segmented/segmented.js" integrity="sha384-1biUzTo5IWl0+pM/Cf7x2uaF4DpyJVc3jdC77gbDmI7cc5BTTo5fpklASJ1RMXgm" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js" integrity="sha384-pmk5eP8SSyHrhauL3vDeDJr62UqnEaNSy3Jw8z/P9YOM1uftp9Y6Zm9fYPed9Nsa" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/modal/modal.js" integrity="sha384-Rbl7iBFMLjBU8FepHnK2p48fEChl069rMkSf6ipBiBhwsQcjqL8DlwzNSgw6ezPn" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/accordion/accordion.js" integrity="sha384-wCc8UEqZvQS7/SRHKxFpnb4NfXWc9QBLRfrrPGhfm8LmORf0wcNMLWhORBSXb25/" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/progress/progress.js" integrity="sha384-Vmtto52V7mfSC7ANEN/NZQaP9IIDkXgkn/1sUdgFyRvRN6d0G9jQCgJPxl5RqZUJ" crossorigin="anonymous"></script>
+
   <!-- Stylesheets -->
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/animations.css">
@@ -296,7 +309,7 @@
     import { getAnimatedArtwork, applyAnimatedArt } from './js/animated-art.js';
     import VideoExporter from './js/video-exporter.js';
     import { MediaSessionManager } from './js/media-session.js';
-    import { escapeHTML } from './js/security-utils.js';
+    import { escapeHTML, cleanArtworkUrl } from './js/security-utils.js';
     import extensionManager from './js/extensions.js';
     import { generateTTML } from './js/ttml-parser.js';
     import isRtl from './js/is-rtl.js';
@@ -473,15 +486,20 @@
 
         const safeName = escapeHTML(track.name.replace(/\.[^.]+$/, ''));
         const safeArtist = escapeHTML(track.artist || 'Unknown Artist');
+        const safeArt = cleanArtworkUrl(track.artUrl || 'favicon.svg');
 
         item.innerHTML = `
           <div class="drag-handle" style="margin-right: 12px; opacity: 0.3;">≡</div>
-          <div class="pq-art" style="background-image: url('${track.artUrl || 'favicon.svg'}');"></div>
+          <div class="pq-art"></div>
           <div class="pq-info">
             <span class="pq-name">${safeName}</span>
             <span class="pq-artist">${safeArtist}</span>
           </div>
         `;
+        const artEl = item.querySelector('.pq-art');
+        if (artEl) {
+          artEl.style.backgroundImage = `url("${safeArt || 'favicon.svg'}")`;
+        }
 
         item.onclick = (e) => {
           if (e.target.classList.contains('drag-handle')) return;

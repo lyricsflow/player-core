@@ -2,7 +2,7 @@
 
 ![Lyricsflow Banner](images/banner.png)
 
-**A web-based music player with synced lyrics, dynamic backgrounds, and that glassmorphism look you've been seeing everywhere.**
+**A high-fidelity web music player with word-by-word synced lyrics, dynamic animated artwork backgrounds, and the AeroUI glassmorphism design system.**
 
 [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
 [![Maintained](https://img.shields.io/badge/Maintained-Yes-brightgreen)](https://github.com/)
@@ -11,9 +11,11 @@
 
 ---
 
-## What is this?
+## 🎵 What is Lyricsflow?
 
-Lyricsflow started as a love letter to Apple Music's lyric experience — you know, the one where the words light up syllable by syllable and the background pulses with the album art. I wanted that on the web, so here we are.
+Lyricsflow is a fast, web-based music player designed for beautiful synchronized lyrics experiences with fluid animations, dynamic canvas backgrounds, and syllable-level glow and scale effects.
+
+> **Note:** Lyricsflow is based on and incorporates bits from [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics). It **does not use AMLL** (Apple Music Lyrics Library) — all playback, synchronization, TTML/LRC parsing, and lyrics rendering are handled independently via custom lightweight web engines.
 
 <div align="center">
 
@@ -21,37 +23,47 @@ Lyricsflow started as a love letter to Apple Music's lyric experience — you kn
 
 </div>
 
-## What can it do?
+---
 
-**Looks**
-- Semi-transparent glassmorphism UI that shifts colors based on whatever album art is playing
-- Dynamic backgrounds pulled straight from the artwork in real time
-- Animated video cover art (Apple Music style, if that's your thing)
+## ✨ Features
 
-**Lyrics**
-- Word-by-word sync with glow and scale effects — the words literally pop as they're sung
-- TTML syllable lyrics and classic LRC files both work
-- A simpler animation mode if the full effect feels like too much
+### 🎨 Visuals & Design
+- **AeroUI Design System**: Sleek Apple-style frosted glassmorphism, spring physics, tactile buttons, squish sliders, and fluid modals.
+- **Dynamic Backgrounds**: Real-time canvas mesh and palette gradients generated from album artwork.
+- **Animated Artwork**: Support for animated album covers and video motion backgrounds.
 
-**Under the hood**
-- Multiple lyric providers you can swap between on the fly — Lyricsflow API, Apple Music, Musixmatch, LRCLIB, and Netease
-- Handles ID3 and FLAC tags so your track info comes through clean
-- Gibberish and Weeb display modes exist because why not
+### 🎤 Synchronized Lyrics
+- **Word-by-Word Sync**: Syllable-level tracking, glow, and spring scale effects as lyrics are sung.
+- **Multi-Format Support**: Native `.ttml` (Rich TTML), `.lrc`, and plain text lyrics.
+- **Multi-Source Fetching**: Seamless fallback across Musixmatch, Genius, LRCLIB, Netease, and the Lyricsflow Community database.
+- **Offset Calibration**: Live millisecond synchronization slider to fine-tune lyrics timing.
 
-## Getting started
+### 🎧 Audio & Controls
+- **Catalog Search & Local Uploads**: Search tracks, albums, and playlists or drag-and-drop local MP3/M4A/FLAC files.
+- **Graphic Equalizer**: Built-in 10-band equalizer with Apple-style sound presets (Bass Boost, Vocal, Acoustic, Electronic, etc.).
+- **Extensions**: Custom plugin engine allowing modular extensions with sandboxing and permissions.
 
-No install, no build step — it just runs in your browser.
+---
 
-1.  Go to [spicyamll.online](https://spicyamll.online)
-2.  Drop your audio files (MP3, FLAC, whatever) and optionally a `.ttml` lyrics file, or just search the Apple Music catalog
-3.  It figures out the rest — metadata, sync, backgrounds, all of it
+## 🚀 Getting Started
 
-## Credits
+No build tools or installations required — Lyricsflow runs directly in any modern web browser.
 
--   [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics) — parts of this project are built on and incorporate Spicy Lyrics
--   Everyone who's contributed, tested, or just used the thing
--   San Francisco Pro Fonts from [Apple Developer Fonts](https://developer.apple.com/fonts/) (all rights to Apple Inc.)
+1. Visit [spicyamll.online](https://spicyamll.online).
+2. Search for any song/artist or drop your local audio files.
+3. Enjoy high-fidelity playback with synchronized lyrics and dynamic artwork.
 
-## License
+---
 
-Licensed under the GNU Affero General Public License v3.0. Full terms in [LICENSE](LICENSE).
+## 🤝 Credits & Acknowledgements
+
+- **[Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics)** — Foundation and concepts that inspired parts of this project.
+- **[AeroUI](https://nurislamaibekuly.github.io/aeroui/)** — Beautiful glassmorphic UI components and spring motion design.
+- **Apple Developer Fonts** — San Francisco Pro typography (all rights reserved by Apple Inc.).
+- Thanks to all contributors, testers, and the open-source community!
+
+---
+
+## 📄 License
+
+Licensed under the **GNU Affero General Public License v3.0**. See the [LICENSE](LICENSE) file for details.

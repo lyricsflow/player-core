@@ -85,8 +85,6 @@ output
 deploy_temp/PROMPTS
 discord-bot
 hf_upload_server2.py
-__pycache__
-lyrprep
-ignore/
-
-# i hate myself
+# Backend server
+server-main/
+server-main

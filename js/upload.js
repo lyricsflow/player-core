@@ -65,11 +65,14 @@ const API_BASE = "https://api.spicyamll.online";
 
 function cleanArtworkUrl(url, w = 300, h = 300) {
   if (!url || typeof url !== 'string') return '';
-  const cleaned = url
+  let cleaned = url
     .replace('{w}', String(w))
     .replace('{h}', String(h))
     .replace('{c}', '')
     .replace('{f}', 'jpg');
+  if (w > 100 && /\/\d+x\d+bb\./.test(cleaned)) {
+    cleaned = cleaned.replace(/\/\d+x\d+bb\./, `/${w}x${h}bb.`);
+  }
   if (!/^https?:\/\//i.test(cleaned)) return '';
   return cleaned.replace(/["'<>\s]/g, c => encodeURIComponent(c));
 }
@@ -1551,17 +1554,92 @@ document.addEventListener('DOMContentLoaded', () => {
     albumTracksGrid.innerHTML = '';
 
     try {
-      const res = await fetch(`${API_BASE}/album?album=${albumId}&l=${getCurrentLang()}`);
-      if (!res.ok) throw new Error(`Album fetch failed ${res.status}`);
-      const data = await res.json();
+      let data = null;
+      try {
+        const res = await fetch(`${API_BASE}/album?album=${albumId}&l=${getCurrentLang()}`);
+        if (res.ok) {
+          data = await res.json();
+          if (data && data.error) data = null;
+        }
+      } catch (e) {}
+
+      // Fallback to iTunes lookup if /album endpoint returned an error or empty data
+      if (!data || (!data.raw_data && !data.data && !data.results && !data.parsed_tracks)) {
+        try {
+          const lRes = await fetch(`${API_BASE}/itunes/lookup?id=${albumId}&entity=song`);
+          if (lRes.ok) {
+            const lData = await lRes.json();
+            const results = lData.results || [];
+            if (results.length > 0) {
+              const col = results[0];
+              const tracks = results.slice(1).map((tItem, idx) => ({
+                id: String(tItem.trackId || idx),
+                title: tItem.trackName,
+                name: tItem.trackName,
+                artist: tItem.artistName,
+                artistName: tItem.artistName,
+                track_number: tItem.trackNumber || idx + 1,
+                trackNumber: tItem.trackNumber || idx + 1,
+                duration_ms: tItem.trackTimeMillis,
+                durationInMillis: tItem.trackTimeMillis,
+                artwork_url: cleanArtworkUrl(tItem.artworkUrl100, 300, 300),
+                is_explicit: tItem.trackExplicitness === 'explicit',
+                preview_url: tItem.previewUrl
+              }));
+              const art = cleanArtworkUrl(col.artworkUrl100, 600, 600);
+              const albumObj = {
+                id: String(albumId),
+                type: 'albums',
+                attributes: {
+                  name: col.collectionName,
+                  artistName: col.artistName,
+                  releaseDate: col.releaseDate,
+                  genreNames: [col.primaryGenreName].filter(Boolean),
+                  artwork: { url: art },
+                  copyright: col.copyright
+                },
+                relationships: {
+                  artists: {
+                    data: col.artistId ? [{ id: String(col.artistId), type: 'artists' }] : []
+                  },
+                  tracks: {
+                    data: tracks.map(tr => ({
+                      id: tr.id,
+                      type: 'songs',
+                      attributes: {
+                        name: tr.title,
+                        artistName: tr.artist,
+                        trackNumber: tr.track_number,
+                        durationInMillis: tr.duration_ms,
+                        contentRating: tr.is_explicit ? 'explicit' : 'clean',
+                        previews: tr.preview_url ? [{ url: tr.preview_url }] : [],
+                        artwork: { url: tr.artwork_url }
+                      }
+                    }))
+                  }
+                }
+              };
+              data = {
+                album_id: albumId,
+                total_parsed_tracks: tracks.length,
+                parsed_tracks: tracks,
+                raw_data: { data: [albumObj] },
+                data: [albumObj]
+              };
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (!data) throw new Error('Album not found');
 
       // Robust extraction compatible with raw_data or standard data envelopes
       const albumObj = data.raw_data?.data?.[0] || data.data?.[0] || data.results?.albums?.data?.[0] || data;
       if (!albumObj || (!albumObj.attributes && !albumObj.name)) throw new Error('Album not found in response');
 
       const attr = albumObj.attributes || albumObj;
-      const artUrl = cleanArtworkUrl(attr.artwork?.url, 600, 600);
-      const artistId = albumObj.relationships?.artists?.data?.[0]?.id || data.artist_id || null;
+      const artUrl = cleanArtworkUrl(attr.artwork?.url || data.artwork_url, 600, 600);
+      const artistId = albumObj.relationships?.artists?.data?.[0]?.id || data.artist_id || attr.artistId || null;
       const artistName = attr.artistName || data.artist_name || '';
 
       let videoUrl = null;
@@ -1580,11 +1658,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // Render Album Header
       albumHeader.innerHTML = `
         <div class="am-album-art-container">
-          ${videoUrl ? `<video src="${cleanMediaUrl(videoUrl)}" autoplay loop muted playsinline class="am-album-cover"></video>` : `<img src="${cleanArtworkUrl(artUrl)}" referrerpolicy="no-referrer" class="am-album-cover">`}
+          ${videoUrl ? `<video src="${cleanMediaUrl(videoUrl)}" autoplay loop muted playsinline class="am-album-cover"></video>` : `<img src="${cleanArtworkUrl(artUrl, 600, 600)}" referrerpolicy="no-referrer" class="am-album-cover" onerror="this.src='favicon.svg'">`}
         </div>
         <div class="am-album-details">
           <h2 class="am-album-title">${escapeHTML(attr.name || 'Album')}</h2>
-          <div class="am-album-artist" id="album-artist-link" style="${artistId ? 'cursor:pointer;' : ''}">${escapeHTML(artistName)}</div>
+          <div class="am-album-artist" id="album-artist-link" style="${artistId || artistName ? 'cursor:pointer;' : ''}">${escapeHTML(artistName)}</div>
           <div class="am-album-meta">${escapeHTML(genre)} • ${year}</div>
           <div class="am-album-actions" style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
             <button class="premium-btn primary" id="album-play-btn" style="border-radius:100px; padding:0 28px; height:42px; display:inline-flex; align-items:center; gap:8px;">
@@ -1600,8 +1678,8 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
 
       const artistLink = document.getElementById('album-artist-link');
-      if (artistLink && artistId) {
-        artistLink.onclick = () => showArtistView(artistId, artistName);
+      if (artistLink && (artistId || artistName)) {
+        artistLink.onclick = () => showArtistView(artistId || artistName, artistName);
       }
 
       const addLibBtn = document.getElementById('album-add-lib-btn');
@@ -1620,33 +1698,33 @@ document.addEventListener('DOMContentLoaded', () => {
       // Extract tracks from parsed_tracks (fast) or relationships.tracks.data
       const relTracks = albumObj.relationships?.tracks?.data || [];
       const tracks = (data.parsed_tracks && data.parsed_tracks.length > 0)
-        ? data.parsed_tracks.map(t => ({
-            id: t.id,
-            name: t.title || t.name,
-            artistName: t.artist || t.artistName || artistName,
-            trackNumber: t.track_number || t.trackNumber,
-            durationInMillis: t.duration_ms || t.durationInMillis,
-            is_explicit: t.is_explicit || false
+        ? data.parsed_tracks.map(tItem => ({
+            id: tItem.id,
+            name: tItem.title || tItem.name,
+            artistName: tItem.artist || tItem.artistName || artistName,
+            trackNumber: tItem.track_number || tItem.trackNumber,
+            durationInMillis: tItem.duration_ms || tItem.durationInMillis,
+            is_explicit: tItem.is_explicit || false
           }))
-        : relTracks.map(t => ({
-            id: t.id,
-            name: t.attributes?.name,
-            artistName: t.attributes?.artistName || artistName,
-            trackNumber: t.attributes?.trackNumber,
-            durationInMillis: t.attributes?.durationInMillis,
-            is_explicit: t.attributes?.contentRating === 'explicit'
+        : relTracks.map(tItem => ({
+            id: tItem.id,
+            name: tItem.attributes?.name,
+            artistName: tItem.attributes?.artistName || artistName,
+            trackNumber: tItem.attributes?.trackNumber,
+            durationInMillis: tItem.attributes?.durationInMillis,
+            is_explicit: tItem.attributes?.contentRating === 'explicit'
           }));
 
       // Render Tracks
-      albumTracksGrid.innerHTML = tracks.map((t, idx) => `
-        <div class="am-track-row animate-fade" data-id="${t.id}" data-index="${idx}">
-           <div class="am-track-num">${t.trackNumber || idx + 1}</div>
+      albumTracksGrid.innerHTML = tracks.map((tItem, idx) => `
+        <div class="am-track-row animate-fade" data-id="${tItem.id}" data-index="${idx}">
+           <div class="am-track-num">${tItem.trackNumber || idx + 1}</div>
            <div class="am-track-title">
-             <span>${escapeHTML(t.name || 'Unknown')}</span>
-             ${t.is_explicit ? '<span class="am-explicit-tag">E</span>' : ''}
+             <span>${escapeHTML(tItem.name || 'Unknown')}</span>
+             ${tItem.is_explicit ? '<span class="am-explicit-tag">E</span>' : ''}
            </div>
-           <div class="am-track-duration">${formatDuration(t.durationInMillis)}</div>
-           <button class="am-song-more-btn" data-id="${t.id}">•••</button>
+           <div class="am-track-duration">${formatDuration(tItem.durationInMillis)}</div>
+           <button class="am-song-more-btn" data-id="${tItem.id}">•••</button>
         </div>
       `).join('');
 
@@ -1654,14 +1732,14 @@ document.addEventListener('DOMContentLoaded', () => {
         row.onclick = (e) => {
           const id = row.dataset.id;
           const idx = parseInt(row.dataset.index, 10);
-          const t = tracks[idx] || tracks.find(x => x.id === id);
+          const tItem = tracks[idx] || tracks.find(x => x.id === id);
 
           if (e.target.classList.contains('am-song-more-btn')) {
             e.stopPropagation();
             showContextMenu(e, {
               trackId: id,
-              trackName: t?.name,
-              artistName: t?.artistName || artistName,
+              trackName: tItem?.name,
+              artistName: tItem?.artistName || artistName,
               collectionName: attr.name,
               albumId: albumId,
               artistId: artistId,
@@ -1684,7 +1762,7 @@ document.addEventListener('DOMContentLoaded', () => {
         albumTracksGrid.after(footerContainer);
       }
 
-      const totalMs = tracks.reduce((acc, t) => acc + (t.durationInMillis || 0), 0);
+      const totalMs = tracks.reduce((acc, tItem) => acc + (tItem.durationInMillis || 0), 0);
       const editorialReview = attr.editorialNotes?.standard || attr.editorialNotes?.short || '';
 
       footerContainer.innerHTML = `
@@ -1740,21 +1818,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       let otherAlbums = [];
-      if (artistId) {
-        const res = await fetch(`${API_BASE}/artist/albums?artist=${artistId}&limit=25&l=${getCurrentLang()}`);
-        if (res.ok) {
-          const data = await res.json();
-          otherAlbums = data.data || [];
-        }
+      if (artistId && /^\d+$/.test(String(artistId))) {
+        try {
+          const res = await fetch(`${API_BASE}/artist/albums?artist=${artistId}&limit=25&l=${getCurrentLang()}`);
+          if (res.ok) {
+            const data = await res.json();
+            otherAlbums = data.data || [];
+          }
+        } catch (e) {}
       }
 
-      if (otherAlbums.length === 0) {
+      if (otherAlbums.length === 0 && artistName) {
         // Fallback to search query for artist name
-        const sRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(artistName)}&types=albums&limit=25&l=${getCurrentLang()}`);
-        if (sRes.ok) {
-          const sData = await sRes.json();
-          otherAlbums = sData.results?.albums?.data || [];
-        }
+        try {
+          const sRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(artistName)}&types=albums&limit=25&l=${getCurrentLang()}`);
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            otherAlbums = sData.results?.albums?.data || [];
+          }
+        } catch (e) {}
+      }
+
+      if (otherAlbums.length === 0 && artistId && /^\d+$/.test(String(artistId))) {
+        try {
+          const lRes = await fetch(`${API_BASE}/itunes/lookup?id=${artistId}&entity=album&limit=25`);
+          if (lRes.ok) {
+            const lData = await lRes.json();
+            const results = lData.results || [];
+            otherAlbums = results.filter(r => r.wrapperType === 'collection').map(c => ({
+              id: String(c.collectionId),
+              type: 'albums',
+              attributes: {
+                name: c.collectionName,
+                artistName: c.artistName,
+                releaseDate: c.releaseDate,
+                artwork: { url: c.artworkUrl100 }
+              }
+            }));
+          }
+        } catch (e) {}
       }
 
       // Filter out current album and randomize
@@ -1767,13 +1869,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       moreGrid.innerHTML = randomized.map(alb => {
-        const attr = alb.attributes || {};
-        const art = cleanArtworkUrl(attr.artwork?.url, 300, 300);
+        const attr = alb.attributes || alb || {};
+        const art = cleanArtworkUrl(attr.artwork?.url || attr.artworkUrl100, 300, 300);
         const y = attr.releaseDate ? new Date(attr.releaseDate).getFullYear() : '';
         return `
           <div class="am-standard-media-card animate-fade" data-id="${alb.id}">
-            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
-            <div class="am-media-card-title">${escapeHTML(attr.name || '')}</div>
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+            <div class="am-media-card-title">${escapeHTML(attr.name || attr.collectionName || '')}</div>
             <div class="am-media-card-sub">${escapeHTML(y || t('badge_album'))}</div>
           </div>
         `;
@@ -1802,37 +1904,111 @@ document.addEventListener('DOMContentLoaded', () => {
       let attr = {};
       let albums = [];
       let songs = [];
+      let resolvedArtistId = artistId;
 
-      const res = await fetch(`${API_BASE}/artist?artist=${artistId}&l=${getCurrentLang()}`);
-      if (res.ok) {
-        const data = await res.json();
-        const found = Array.isArray(data.data) ? data.data[0] : (data.data || data);
-        if (found?.attributes) attr = found.attributes;
+      const isNumericId = /^\d+$/.test(String(artistId || '').trim());
+
+      // If artistId is not numeric (or missing), search for artist to get proper artist ID & artwork
+      if (!isNumericId && (artistName || artistId)) {
+        const query = artistName || artistId;
+        try {
+          const sRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(query)}&types=artists&limit=5&l=${getCurrentLang()}`);
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            const foundArt = sData.results?.artists?.data?.[0] || sData.results?.top?.data?.find(x => x.type === 'artists');
+            if (foundArt) {
+              resolvedArtistId = foundArt.id;
+              if (foundArt.attributes) attr = { ...foundArt.attributes };
+            }
+          }
+        } catch (e) {}
       }
 
-      const displayName = attr.name || artistName;
-      const artistPhoto = cleanArtworkUrl(attr.artwork?.url, 1200, 630);
+      // If we have a numeric artist ID, fetch artist details
+      if (resolvedArtistId && /^\d+$/.test(String(resolvedArtistId))) {
+        try {
+          const res = await fetch(`${API_BASE}/artist?artist=${resolvedArtistId}&l=${getCurrentLang()}`);
+          if (res.ok) {
+            const data = await res.json();
+            const found = Array.isArray(data.data) ? data.data[0] : (data.data || data);
+            if (found?.attributes) attr = { ...attr, ...found.attributes };
+          }
+        } catch (e) {}
+      }
+
+      const displayName = attr.name || artistName || (isNumericId ? '' : artistId) || 'Artist';
+
+      // If artist artwork is still missing, fallback to search by artist name to retrieve artwork
+      if (!attr.artwork?.url && displayName) {
+        try {
+          const sRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=artists&limit=5&l=${getCurrentLang()}`);
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            const foundArt = sData.results?.artists?.data?.[0] || sData.results?.top?.data?.find(x => x.type === 'artists');
+            if (foundArt?.attributes?.artwork) {
+              attr.artwork = foundArt.attributes.artwork;
+              if (!resolvedArtistId) resolvedArtistId = foundArt.id;
+            }
+          }
+        } catch (e) {}
+      }
 
       // Fan out parallel fetches for albums and top songs
-      const [albumsRes, songsRes] = await Promise.all([
-        fetch(`${API_BASE}/artist/albums?artist=${artistId}&limit=100&l=${getCurrentLang()}`).catch(() => null),
-        fetch(`${API_BASE}/artist/songs?artist=${artistId}&limit=50&l=${getCurrentLang()}`).catch(() => null)
+      const albumFetchPromises = [];
+      const songFetchPromises = [];
+
+      if (resolvedArtistId && /^\d+$/.test(String(resolvedArtistId))) {
+        albumFetchPromises.push(
+          fetch(`${API_BASE}/artist/albums?artist=${resolvedArtistId}&limit=100&l=${getCurrentLang()}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(d => d?.data || [])
+            .catch(() => [])
+        );
+        songFetchPromises.push(
+          fetch(`${API_BASE}/artist/songs?artist=${resolvedArtistId}&limit=50&l=${getCurrentLang()}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(d => d?.data || [])
+            .catch(() => [])
+        );
+      }
+
+      const [albRes, songRes] = await Promise.all([
+        Promise.all(albumFetchPromises),
+        Promise.all(songFetchPromises)
       ]);
 
-      if (albumsRes && albumsRes.ok) {
-        const d = await albumsRes.json();
-        albums = d.data || [];
-      }
+      albums = (albRes[0] || []);
+      songs = (songRes[0] || []);
 
-      if (songsRes && songsRes.ok) {
-        const d = await songsRes.json();
-        songs = d.data || [];
-      }
-
-      // If songs are few, search for artist name to populate 4x7 grid (28 songs)
-      if (songs.length < 28) {
+      // If albums are empty, fallback to searching albums for artist name or itunes lookup
+      if (albums.length === 0 && (displayName || resolvedArtistId)) {
         try {
-          const sSearch = await fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=songs&limit=30&l=${getCurrentLang()}`);
+          const [sData, lData] = await Promise.all([
+            displayName ? fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=albums&limit=50&l=${getCurrentLang()}`).then(r => r.ok ? r.json() : null).catch(() => null) : null,
+            resolvedArtistId ? fetch(`${API_BASE}/itunes/lookup?id=${resolvedArtistId}&entity=album&limit=50`).then(r => r.ok ? r.json() : null).catch(() => null) : null
+          ]);
+          if (sData?.results?.albums?.data?.length > 0) {
+            albums = sData.results.albums.data;
+          } else if (lData?.results?.length > 0) {
+            albums = lData.results.filter(r => r.wrapperType === 'collection').map(c => ({
+              id: String(c.collectionId),
+              type: 'albums',
+              attributes: {
+                name: c.collectionName,
+                artistName: c.artistName,
+                releaseDate: c.releaseDate,
+                trackCount: c.trackCount,
+                artwork: { url: c.artworkUrl100 }
+              }
+            }));
+          }
+        } catch (e) {}
+      }
+
+      // If songs are few, search for artist name or itunes lookup to populate 4x7 grid (28 songs)
+      if (songs.length < 28 && (displayName || resolvedArtistId)) {
+        try {
+          const sSearch = await fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=songs&limit=50&l=${getCurrentLang()}`);
           if (sSearch.ok) {
             const sData = await sSearch.json();
             const moreSongs = sData.results?.songs?.data || [];
@@ -1847,23 +2023,41 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {}
       }
 
+      // Determine artist photo (from artist attributes, or first album/song)
+      let rawArtistPhoto = attr.artwork?.url;
+      if (!rawArtistPhoto && albums.length > 0) {
+        rawArtistPhoto = albums[0]?.attributes?.artwork?.url;
+      }
+      if (!rawArtistPhoto && songs.length > 0) {
+        rawArtistPhoto = songs[0]?.attributes?.artwork?.url;
+      }
+      const artistPhoto = rawArtistPhoto ? cleanArtworkUrl(rawArtistPhoto, 1200, 630) : '';
+
       // Separate into Full Albums vs Singles & EPs
       const fullAlbums = [];
       const singles = [];
 
       albums.forEach(alb => {
-        const aAttr = alb.attributes || {};
-        const name = (aAttr.name || '').toLowerCase();
-        const isSingle = aAttr.isSingle || (aAttr.trackCount && aAttr.trackCount <= 3) || name.includes(' - single') || name.includes(' - ep');
+        const aAttr = alb.attributes || alb || {};
+        const name = (aAttr.name || aAttr.collectionName || '').toLowerCase();
+        const trackCount = aAttr.trackCount || 0;
+        const isSingle = aAttr.isSingle === true || 
+                         (trackCount > 0 && trackCount <= 3) || 
+                         name.includes(' - single') || 
+                         name.includes(' - ep') ||
+                         name.includes(' (single)') ||
+                         name.includes(' (ep)') ||
+                         name.endsWith(' single') ||
+                         name.endsWith(' ep');
         if (isSingle) singles.push(alb);
         else fullAlbums.push(alb);
       });
 
       // Sort both from latest to oldest release date
-      fullAlbums.sort((a, b) => new Date(b.attributes?.releaseDate || 0) - new Date(a.attributes?.releaseDate || 0));
-      singles.sort((a, b) => new Date(b.attributes?.releaseDate || 0) - new Date(a.attributes?.releaseDate || 0));
+      fullAlbums.sort((a, b) => new Date(b.attributes?.releaseDate || b.releaseDate || 0) - new Date(a.attributes?.releaseDate || a.releaseDate || 0));
+      singles.sort((a, b) => new Date(b.attributes?.releaseDate || b.releaseDate || 0) - new Date(a.attributes?.releaseDate || a.releaseDate || 0));
 
-      const inLib = isArtistInLibrary(artistId);
+      const inLib = isArtistInLibrary(resolvedArtistId || displayName);
 
       const bioRaw = attr.artistBio || attr.editorialNotes?.standard || attr.editorialNotes?.short || '';
       const bioText = bioRaw
@@ -1875,14 +2069,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // 4 rows x 7 cols (28 top songs)
       const top28Songs = songs.slice(0, 28);
       const topSongsCardsHTML = top28Songs.map((s, i) => {
-        const sAttr = s.attributes || {};
-        const art = cleanArtworkUrl(sAttr.artwork?.url, 80, 80);
+        const sAttr = s.attributes || s || {};
+        const art = cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100);
         const dateStr = sAttr.releaseDate ? new Date(sAttr.releaseDate).getFullYear() : '';
         return `
           <div class="am-artist-song-card" data-id="${s.id}" data-idx="${i}">
-            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-artist-card-art" alt="">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-artist-card-art" alt="" onerror="this.src='favicon.svg'">
             <div class="am-artist-card-meta">
-              <div class="am-artist-card-title">${escapeHTML(sAttr.name || '')}</div>
+              <div class="am-artist-card-title">${escapeHTML(sAttr.name || sAttr.trackName || '')}</div>
               <div class="am-artist-card-subline">
                 <span>${escapeHTML(sAttr.artistName || displayName)}</span>
                 ${dateStr ? `<span>• ${dateStr}</span>` : ''}
@@ -1894,33 +2088,37 @@ document.addEventListener('DOMContentLoaded', () => {
       }).join('') || `<p class="am-empty-msg">${t('empty_picks')}</p>`;
 
       const albumsHTML = fullAlbums.map(a => {
-        const aAttr = a.attributes || {};
-        const art = cleanArtworkUrl(aAttr.artwork?.url, 300, 300);
+        const aAttr = a.attributes || a || {};
+        const art = cleanArtworkUrl(aAttr.artwork?.url || aAttr.artworkUrl100, 300, 300);
         const y = aAttr.releaseDate ? new Date(aAttr.releaseDate).getFullYear() : '';
         return `
-          <div class="am-standard-media-card" data-id="${a.id}">
-            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
-            <div class="am-media-card-title">${escapeHTML(aAttr.name || '')}</div>
+          <div class="am-standard-media-card" data-id="${a.id || a.collectionId}">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+            <div class="am-media-card-title">${escapeHTML(aAttr.name || aAttr.collectionName || '')}</div>
             <div class="am-media-card-sub">${escapeHTML(y || t('badge_album'))}</div>
           </div>
         `;
       }).join('') || `<p class="am-empty-msg">${t('empty_library')}</p>`;
 
       const singlesHTML = singles.map(s => {
-        const sAttr = s.attributes || {};
-        const art = cleanArtworkUrl(sAttr.artwork?.url, 300, 300);
+        const sAttr = s.attributes || s || {};
+        const art = cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 300, 300);
         const y = sAttr.releaseDate ? new Date(sAttr.releaseDate).getFullYear() : '';
         return `
-          <div class="am-standard-media-card" data-id="${s.id}">
-            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
-            <div class="am-media-card-title">${escapeHTML(sAttr.name || '')}</div>
+          <div class="am-standard-media-card" data-id="${s.id || s.collectionId}">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+            <div class="am-media-card-title">${escapeHTML(sAttr.name || sAttr.collectionName || '')}</div>
             <div class="am-media-card-sub">${escapeHTML(y || t('artist_singles'))}</div>
           </div>
         `;
       }).join('') || `<p class="am-empty-msg">${t('empty_library')}</p>`;
 
+      const heroBackgroundStyle = artistPhoto
+        ? `background-image: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(18,18,18,0.85) 60%, rgba(18,18,18,0.98) 100%), url('${artistPhoto}');`
+        : `background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);`;
+
       artistViewContent.innerHTML = `
-        <div class="am-artist-header am-artist-hero" style="background-image: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(18,18,18,0.95) 100%), url('${cleanArtworkUrl(artistPhoto)}');">
+        <div class="am-artist-header am-artist-hero" style="${heroBackgroundStyle}">
           <div class="am-artist-name-row">
             <h1 class="am-artist-name">${escapeHTML(displayName)}</h1>
             <div style="display: flex; gap: 10px; align-items: center;">
@@ -1989,11 +2187,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const artistAddBtn = artistViewContent.querySelector('#artist-add-lib-btn');
       if (artistAddBtn) {
         artistAddBtn.onclick = () => {
-          if (isArtistInLibrary(artistId)) {
-            removeArtistFromLibrary(artistId);
+          if (isArtistInLibrary(resolvedArtistId || displayName)) {
+            removeArtistFromLibrary(resolvedArtistId || displayName);
             document.getElementById('artist-lib-label').textContent = t('ctx_add_library');
           } else {
-            addArtistToLibrary({ id: artistId, name: displayName, artUrl: artistPhoto, genre });
+            addArtistToLibrary({ id: resolvedArtistId || displayName, name: displayName, artUrl: artistPhoto, genre });
             document.getElementById('artist-lib-label').textContent = t('ctx_in_library');
           }
         };
@@ -2009,31 +2207,31 @@ document.addEventListener('DOMContentLoaded', () => {
         card.onclick = (e) => {
           const idx = parseInt(card.dataset.idx, 10);
           const song = top28Songs[idx];
-          const sAttr = song?.attributes || {};
+          const sAttr = song?.attributes || song || {};
           const albumId = song?.relationships?.albums?.data?.[0]?.id || sAttr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
 
           if (e.target.classList.contains('am-song-more-btn')) {
             e.stopPropagation();
             showContextMenu(e, {
               trackId: song.id,
-              trackName: sAttr.name,
+              trackName: sAttr.name || sAttr.trackName,
               artistName: sAttr.artistName || displayName,
-              collectionName: sAttr.albumName,
+              collectionName: sAttr.albumName || sAttr.collectionName,
               albumId: albumId,
-              artistId: artistId,
-              artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url, 100, 100)
+              artistId: resolvedArtistId || artistId,
+              artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100)
             });
             return;
           }
 
           loadRemoteTrack({
             trackId: song.id,
-            trackName: sAttr.name,
+            trackName: sAttr.name || sAttr.trackName,
             artistName: sAttr.artistName || displayName,
-            collectionName: sAttr.albumName,
+            collectionName: sAttr.albumName || sAttr.collectionName,
             albumId: albumId,
-            artistId: artistId,
-            artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url, 100, 100)
+            artistId: resolvedArtistId || artistId,
+            artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100)
           });
         };
       });
@@ -2043,16 +2241,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (playBtn && top28Songs.length > 0) {
         playBtn.onclick = (e) => {
           e.stopPropagation();
-          const sAttr = top28Songs[0].attributes || {};
+          const sAttr = top28Songs[0].attributes || top28Songs[0] || {};
           const albumId = top28Songs[0]?.relationships?.albums?.data?.[0]?.id || sAttr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
           loadRemoteTrack({
             trackId: top28Songs[0].id,
-            trackName: sAttr.name,
+            trackName: sAttr.name || sAttr.trackName,
             artistName: sAttr.artistName || displayName,
-            collectionName: sAttr.albumName,
+            collectionName: sAttr.albumName || sAttr.collectionName,
             albumId: albumId,
-            artistId: artistId,
-            artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url, 100, 100)
+            artistId: resolvedArtistId || artistId,
+            artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100)
           });
         };
       }

@@ -3,11 +3,10 @@
  * Provides a robust fetch implementation with proxy rotation and error handling.
  */
 
+const API_BASE = 'https://api.spicyamll.online';
+
 const PROXIES = [
-  (url) => `https://proxy.corsfix.com/?${url}`,
-  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url) => `${API_BASE}/proxy?url=${encodeURIComponent(url)}`
 ];
 
 /**

@@ -135,7 +135,6 @@ async function fetchFromMusixmatch(songName, artistName, albumName, durationMs) 
 
   try {
     const params = new URLSearchParams({
-      provider: 'musixmatch',
       format: "json",
       namespace: "lyrics_richsynched",
       subtitle_format: "mxm",
@@ -146,7 +145,7 @@ async function fetchFromMusixmatch(songName, artistName, albumName, durationMs) 
       q_duration: durationSec
     });
 
-    const res = await fetch(`/api/proxy?${params}`);
+    const res = await fetch(`https://api.spicyamll.online/musixmatch?${params}`);
     if (!res.ok) return null;
 
     const data = await res.json();

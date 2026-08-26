@@ -80,11 +80,39 @@ document.addEventListener('DOMContentLoaded', () => {
     searchResultsEl.innerHTML = '';
 
     try {
-      // If it's a full Apple Music URL or raw numeric ID, download directly
-      if (/^https?:\/\//i.test(query) || /^\d+$/.test(query)) {
-        const isVideo = query.includes('/music-video/');
+      let targetId = query;
+      let isVideo = false;
+
+      // Extract Apple Music track ID if a URL is provided
+      if (/^https?:\/\//i.test(query)) {
+        try {
+          const urlObj = new URL(query);
+          if (!urlObj.hostname.endsWith('music.apple.com')) {
+            throw new Error('Please enter a valid Apple Music URL or search query.');
+          }
+          isVideo = urlObj.pathname.includes('/music-video/');
+          const iParam = urlObj.searchParams.get('i');
+          if (iParam && /^\d+$/.test(iParam)) {
+            targetId = iParam;
+          } else {
+            const pathMatch = urlObj.pathname.match(/\/(\d+)(?:$|\?)/);
+            if (pathMatch) {
+              targetId = pathMatch[1];
+            } else {
+              throw new Error('Could not find a valid track ID in the provided URL.');
+            }
+          }
+        } catch (urlErr) {
+          setStatus(urlErr.message, true);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // If we have a resolved numeric ID, download directly
+      if (/^\d+$/.test(targetId)) {
         setStatus(t('loading_download'));
-        downloadTrack(query, query, isVideo);
+        downloadTrack(targetId, targetId, isVideo);
         return;
       }
 

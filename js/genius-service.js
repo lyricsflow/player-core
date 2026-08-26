@@ -3,32 +3,31 @@
  * Handles fetching songwriter credits, legal names, and plain-text lyrics from the Genius API.
  */
 
-const BASE_URL = 'https://api.genius.com';
+const API_BASE = 'https://api.spicyamll.online';
 
-/** CORS proxies for scraping Genius song pages */
+/** Secure backend proxy for scraping Genius song pages */
 const SCRAPE_PROXIES = [
-  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-  (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
-  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-  (url) => `https://cors.eu.org/${url}`,
-  (url) => `https://api.cors.lol/?url=${encodeURIComponent(url)}`,
+  (url) => `${API_BASE}/proxy?url=${encodeURIComponent(url)}`
 ];
 
 export const GeniusService = {
   /**
    * Proxied fetch for Genius API.
-   * Authentication is handled on the server side via Netlify Functions.
+   * Authentication is handled on the backend API server securely.
    */
   async fetchApi(endpoint, options = {}) {
     try {
       const urlObj = new URL(endpoint, 'https://api.genius.com');
-      const params = new URLSearchParams(urlObj.search);
-      params.set('provider', 'genius');
-      params.set('endpoint', urlObj.pathname);
+      let url = '';
+      if (urlObj.pathname === '/search') {
+        url = `${API_BASE}/genius/search?${urlObj.searchParams.toString()}`;
+      } else if (urlObj.pathname.startsWith('/songs/')) {
+        const songId = urlObj.pathname.split('/songs/')[1].split('/')[0];
+        url = `${API_BASE}/genius/song/${songId}`;
+      } else {
+        url = `${API_BASE}/proxy?url=${encodeURIComponent('https://api.genius.com' + endpoint)}`;
+      }
 
-      const url = `/api/proxy?${params.toString()}`;
       const response = await fetch(url, options);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return response.json();

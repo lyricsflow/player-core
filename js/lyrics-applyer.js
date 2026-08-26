@@ -1145,7 +1145,9 @@ function showUserProfileIframe(username) {
   });
 
   const iframe = document.createElement("iframe");
-  iframe.src = `https://api.spicyamll.online/user/@${username}`;
+  const safeUsername = encodeURIComponent(String(username || '').replace(/^@/, ''));
+  iframe.src = `https://api.spicyamll.online/user/@${safeUsername}`;
+  iframe.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups");
   iframe.style.cssText = `
     width: 100%;
     height: 100%;

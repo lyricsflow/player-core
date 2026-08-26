@@ -6,6 +6,19 @@
 
 const API_BASE = "https://api.spicyamll.online";
 
+function cleanArtUrl(url, w = 600, h = 600) {
+  if (!url || typeof url !== 'string') return 'favicon.svg';
+  let cleaned = url
+    .replace('{w}', String(w))
+    .replace('{h}', String(h))
+    .replace('{c}', '')
+    .replace('{f}', 'jpg');
+  if (w > 100 && /\/\d+x\d+bb\./.test(cleaned)) {
+    cleaned = cleaned.replace(/\/\d+x\d+bb\./, `/${w}x${h}bb.`);
+  }
+  return /^https?:\/\//i.test(cleaned) ? cleaned : 'favicon.svg';
+}
+
 export function getListeningHistory() {
   try {
     const raw = localStorage.getItem('lyricsflow_recent_tracks');
@@ -79,7 +92,7 @@ export async function generateTopPicks() {
           id: art.id,
           title: attr.name || 'Artist',
           subtitle: 'Artist',
-          artUrl: attr.artwork?.url ? attr.artwork.url.replace('{w}', '600').replace('{h}', '600') : 'favicon.svg',
+          artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
           raw: art
         });
       });
@@ -92,7 +105,7 @@ export async function generateTopPicks() {
           id: alb.id,
           title: attr.name || 'Album',
           subtitle: attr.artistName || 'Artist',
-          artUrl: attr.artwork?.url ? attr.artwork.url.replace('{w}', '600').replace('{h}', '600') : 'favicon.svg',
+          artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
           raw: alb
         });
       });
@@ -107,7 +120,7 @@ export async function generateTopPicks() {
             title: attr.name || 'Song',
             subtitle: attr.artistName || 'Artist',
             album: attr.albumName || '',
-            artUrl: attr.artwork?.url ? attr.artwork.url.replace('{w}', '600').replace('{h}', '600') : 'favicon.svg',
+            artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
             raw: s
           });
         }
@@ -196,7 +209,7 @@ export async function generate90Recommendations() {
             title: attr.name || 'Song',
             subtitle: attr.artistName || 'Artist',
             album: attr.albumName || '',
-            artUrl: attr.artwork?.url ? attr.artwork.url.replace('{w}', '600').replace('{h}', '600') : 'favicon.svg',
+            artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
             raw: s
           });
         }
@@ -209,7 +222,7 @@ export async function generate90Recommendations() {
           id: a.id,
           title: attr.name || 'Album',
           subtitle: attr.artistName || 'Artist',
-          artUrl: attr.artwork?.url ? attr.artwork.url.replace('{w}', '600').replace('{h}', '600') : 'favicon.svg',
+          artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
           raw: a
         });
       });
@@ -221,7 +234,7 @@ export async function generate90Recommendations() {
           id: ar.id,
           title: attr.name || 'Artist',
           subtitle: 'Artist',
-          artUrl: attr.artwork?.url ? attr.artwork.url.replace('{w}', '600').replace('{h}', '600') : 'favicon.svg',
+          artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
           raw: ar
         });
       });

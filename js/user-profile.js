@@ -6,6 +6,7 @@
 
 import { SUPPORTED_LANGUAGES, getCurrentLang, setLanguage, t, detectBrowserLanguage } from './i18n.js';
 import { settingsUI } from './settings-ui.js';
+import { escapeHTML, cleanArtworkUrl } from './security-utils.js';
 
 const PROFILE_KEY = 'lyricsflow_user_profile';
 const SETUP_KEY = 'lyricsflow_user_setup_done';
@@ -180,7 +181,7 @@ export function showSetupAssistant() {
         <p class="am-setup-step-desc">${t('setup_name_hint')}</p>
         
         <div class="am-setup-field">
-          <input type="text" id="setup-name-input" class="am-macos-input" placeholder="${t('setup_name_placeholder')}" value="${tempName}" autofocus autocomplete="off">
+          <input type="text" id="setup-name-input" class="am-macos-input" placeholder="${t('setup_name_placeholder')}" autofocus autocomplete="off">
         </div>
 
         <div class="am-macos-actions">
@@ -190,6 +191,8 @@ export function showSetupAssistant() {
       `;
 
       const input = content.querySelector('#setup-name-input');
+      if (input) input.value = tempName || '';
+
       const skipBtn = content.querySelector('#setup-step2-skip');
       const nextBtn = content.querySelector('#setup-step2-next');
 
@@ -217,17 +220,19 @@ export function showSetupAssistant() {
 
     } else if (currentStep === 3) {
       // Step 3: Greeting & Profile Picture (Skippable)
+      const safePfp = cleanArtworkUrl(tempPfp) || DEFAULT_PFP;
+      const safeDisplayName = escapeHTML(tempName || DEFAULT_NAME);
       content.innerHTML = `
         <div class="am-setup-avatar-preview-wrap">
-          <img id="setup-avatar-preview" src="${tempPfp}" class="am-setup-avatar-preview" alt="Avatar">
+          <img id="setup-avatar-preview" src="${safePfp}" class="am-setup-avatar-preview" alt="Avatar">
         </div>
-        <h2 class="am-setup-step-title">${t('setup_greet', { name: tempName || DEFAULT_NAME })}</h2>
+        <h2 class="am-setup-step-title">${t('setup_greet', { name: safeDisplayName })}</h2>
         <p class="am-setup-step-desc">${t('setup_greet_sub')}</p>
 
         <div class="am-avatar-picker-row">
           ${PRESET_AVATARS.map(av => `
-            <div class="am-avatar-choice ${av === tempPfp ? 'active' : ''}" data-src="${av}">
-              <img src="${av}" alt="">
+            <div class="am-avatar-choice ${av === tempPfp ? 'active' : ''}" data-src="${cleanArtworkUrl(av)}">
+              <img src="${cleanArtworkUrl(av)}" alt="">
             </div>
           `).join('')}
         </div>
@@ -252,7 +257,7 @@ export function showSetupAssistant() {
           choices.forEach(x => x.classList.remove('active'));
           c.classList.add('active');
           tempPfp = c.dataset.src;
-          avatarPreview.src = tempPfp;
+          avatarPreview.src = cleanArtworkUrl(tempPfp);
         });
       });
 
@@ -261,11 +266,23 @@ export function showSetupAssistant() {
         fileInput.addEventListener('change', (e) => {
           const file = e.target.files[0];
           if (file) {
+            // Check file size (max ~2MB) and MIME type
+            if (file.size > 2 * 1024 * 1024) {
+              alert('Image file size must be less than 2MB.');
+              return;
+            }
+            if (file.type && !file.type.startsWith('image/')) {
+              alert('Only image files are allowed.');
+              return;
+            }
             const reader = new FileReader();
             reader.onload = (evt) => {
-              tempPfp = evt.target.result;
-              avatarPreview.src = tempPfp;
-              choices.forEach(x => x.classList.remove('active'));
+              const resUrl = evt.target.result;
+              if (typeof resUrl === 'string' && resUrl.startsWith('data:image/')) {
+                tempPfp = resUrl;
+                avatarPreview.src = tempPfp;
+                choices.forEach(x => x.classList.remove('active'));
+              }
             };
             reader.readAsDataURL(file);
           }
@@ -347,11 +364,11 @@ export function openProfileSettingsModal() {
     <div class="am-macos-content">
       <!-- PFP Editor -->
       <div class="am-profile-edit-avatar-section">
-        <img id="prof-modal-avatar-preview" src="${tempPfp}" class="am-profile-modal-avatar" alt="Avatar">
+        <img id="prof-modal-avatar-preview" src="${cleanArtworkUrl(tempPfp) || DEFAULT_PFP}" class="am-profile-modal-avatar" alt="Avatar">
         <div class="am-avatar-picker-row mini">
           ${PRESET_AVATARS.map(av => `
-            <div class="am-avatar-choice ${av === tempPfp ? 'active' : ''}" data-src="${av}">
-              <img src="${av}" alt="">
+            <div class="am-avatar-choice ${av === tempPfp ? 'active' : ''}" data-src="${cleanArtworkUrl(av)}">
+              <img src="${cleanArtworkUrl(av)}" alt="">
             </div>
           `).join('')}
         </div>
@@ -364,7 +381,7 @@ export function openProfileSettingsModal() {
       <!-- Name Editor -->
       <div class="am-setup-field" style="margin-top: 20px;">
         <label class="am-setup-label">${t('profile_name_label')}</label>
-        <input type="text" id="prof-modal-name-input" class="am-macos-input" value="${tempName}" autocomplete="off">
+        <input type="text" id="prof-modal-name-input" class="am-macos-input" autocomplete="off">
       </div>
 
       <!-- Language Selector -->
@@ -393,6 +410,10 @@ export function openProfileSettingsModal() {
   overlay.appendChild(modalBox);
   document.body.appendChild(overlay);
 
+  // Set input value securely via property
+  const nameInput = modalBox.querySelector('#prof-modal-name-input');
+  if (nameInput) nameInput.value = tempName || '';
+
   // Close handlers
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) overlay.remove();
@@ -407,7 +428,7 @@ export function openProfileSettingsModal() {
       choices.forEach(x => x.classList.remove('active'));
       c.classList.add('active');
       tempPfp = c.dataset.src;
-      preview.src = tempPfp;
+      preview.src = cleanArtworkUrl(tempPfp);
     });
   });
 
@@ -417,11 +438,22 @@ export function openProfileSettingsModal() {
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+          alert('Image file size must be less than 2MB.');
+          return;
+        }
+        if (file.type && !file.type.startsWith('image/')) {
+          alert('Only image files are allowed.');
+          return;
+        }
         const reader = new FileReader();
         reader.onload = (evt) => {
-          tempPfp = evt.target.result;
-          preview.src = tempPfp;
-          choices.forEach(x => x.classList.remove('active'));
+          const resUrl = evt.target.result;
+          if (typeof resUrl === 'string' && resUrl.startsWith('data:image/')) {
+            tempPfp = resUrl;
+            preview.src = tempPfp;
+            choices.forEach(x => x.classList.remove('active'));
+          }
         };
         reader.readAsDataURL(file);
       }

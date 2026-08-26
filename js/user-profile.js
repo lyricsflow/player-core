@@ -8,6 +8,60 @@ import { SUPPORTED_LANGUAGES, getCurrentLang, setLanguage, t, detectBrowserLangu
 import { settingsUI } from './settings-ui.js';
 import { escapeHTML, cleanArtworkUrl } from './security-utils.js';
 
+function initDropdowns(root = document) {
+  root.querySelectorAll('.aero-dropdown').forEach(dropdown => {
+    const trigger = dropdown.querySelector('[data-aero-dropdown]');
+    const menu = dropdown.querySelector(':scope > .aero-menu');
+    if (!trigger || !menu || trigger._aeroBound) return;
+    trigger._aeroBound = true;
+    trigger.setAttribute('aria-haspopup', 'menu');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.addEventListener('click', () => {
+      const open = menu.classList.contains('aero-menu--open');
+      document.querySelectorAll('.aero-menu.aero-menu--open').forEach(m => {
+        if (m !== menu) { m.classList.remove('aero-menu--open'); m.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]')?.setAttribute('aria-expanded', 'false'); }
+      });
+      menu.classList.toggle('aero-menu--open', !open);
+      trigger.setAttribute('aria-expanded', String(!open));
+    });
+    menu.addEventListener('click', e => {
+      const item = e.target.closest('.aero-menu-item');
+      if (!item || item.disabled) return;
+      menu.classList.remove('aero-menu--open');
+      trigger.setAttribute('aria-expanded', 'false');
+    });
+  });
+  document.addEventListener('click', e => {
+    document.querySelectorAll('.aero-menu.aero-menu--open').forEach(menu => {
+      if (!menu.closest('.aero-dropdown')?.contains(e.target)) {
+        menu.classList.remove('aero-menu--open');
+        menu.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]')?.setAttribute('aria-expanded', 'false');
+      }
+    });
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.aero-menu.aero-menu--open').forEach(menu => {
+        menu.classList.remove('aero-menu--open');
+        menu.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]')?.setAttribute('aria-expanded', 'false');
+      });
+    }
+  });
+}
+
+function langDropdownHTML(id, selectedCode) {
+  const current = SUPPORTED_LANGUAGES.find(l => l.code === selectedCode) || SUPPORTED_LANGUAGES[0];
+  return `
+    <div class="aero-dropdown" id="${id}">
+      <button class="am-macos-select" data-aero-dropdown="" data-selected="${current.code}">${current.name}</button>
+      <div class="aero-menu">
+        ${SUPPORTED_LANGUAGES.map(l => `
+          <button class="aero-menu-item" data-value="${l.code}">${l.name}</button>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
 const PROFILE_KEY = 'lyricsflow_user_profile';
 const SETUP_KEY = 'lyricsflow_user_setup_done';
 
@@ -146,13 +200,7 @@ export function showSetupAssistant() {
         
         <div class="am-setup-field">
           <label class="am-setup-label">${t('setup_lang_label')}</label>
-          <select id="setup-lang-select" class="am-macos-select">
-            ${SUPPORTED_LANGUAGES.map(l => `
-              <option value="${l.code}" ${l.code === tempLang ? 'selected' : ''}>
-                ${l.name}
-              </option>
-            `).join('')}
-          </select>
+          ${langDropdownHTML('setup-lang-select', tempLang)}
         </div>
 
         <div class="am-macos-actions">
@@ -160,10 +208,15 @@ export function showSetupAssistant() {
         </div>
       `;
 
-      const select = content.querySelector('#setup-lang-select');
-      select.addEventListener('change', (e) => {
-        tempLang = e.target.value;
+      const langDropdown = content.querySelector('#setup-lang-select');
+      initDropdowns(langDropdown);
+      langDropdown.addEventListener('click', (e) => {
+        const item = e.target.closest('.aero-menu-item');
+        if (!item) return;
+        tempLang = item.dataset.value;
         setLanguage(tempLang);
+        langDropdown.querySelector('[data-aero-dropdown]').textContent = item.textContent;
+        langDropdown.querySelector('[data-aero-dropdown]').setAttribute('data-selected', tempLang);
         renderStep();
       });
 
@@ -387,13 +440,7 @@ export function openProfileSettingsModal() {
       <!-- Language Selector -->
       <div class="am-setup-field" style="margin-top: 14px;">
         <label class="am-setup-label">${t('profile_lang_label')}</label>
-        <select id="prof-modal-lang-select" class="am-macos-select">
-          ${SUPPORTED_LANGUAGES.map(l => `
-            <option value="${l.code}" ${l.code === tempLang ? 'selected' : ''}>
-              ${l.name}
-            </option>
-          `).join('')}
-        </select>
+        ${langDropdownHTML('prof-modal-lang-select', tempLang)}
       </div>
 
       <!-- Actions -->
@@ -409,6 +456,20 @@ export function openProfileSettingsModal() {
 
   overlay.appendChild(modalBox);
   document.body.appendChild(overlay);
+
+  // Init language dropdown
+  const langDrop = modalBox.querySelector('#prof-modal-lang-select');
+  if (langDrop) {
+    initDropdowns(langDrop);
+    langDrop.addEventListener('click', (e) => {
+      const item = e.target.closest('.aero-menu-item');
+      if (!item) return;
+      tempLang = item.dataset.value;
+      setLanguage(tempLang);
+      langDrop.querySelector('[data-aero-dropdown]').textContent = item.textContent;
+      langDrop.querySelector('[data-aero-dropdown]').setAttribute('data-selected', tempLang);
+    });
+  }
 
   // Set input value securely via property
   const nameInput = modalBox.querySelector('#prof-modal-name-input');

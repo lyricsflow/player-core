@@ -258,7 +258,7 @@ export function applySyllableLyrics(data, lyricsContentEl) {
     container.classList.add("is-converted-line");
   }
   if (settingsManager.get("simpleLyricsMode")) {
-    container.classList.add("sl-simple-mode");
+    container.classList.add("lf-simple-mode");
   }
 
   // Leading interlude dots

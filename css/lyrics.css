@@ -695,8 +695,8 @@
 /* When enabled, promote word/letter elements to GPU compositor layers.
    Without this, only .Active elements get will-change via CSS. */
 
-.sl-hw-accel #LyricsflowPage .LyricsContainer .LyricsContent .line .word,
-.sl-hw-accel #LyricsflowPage .LyricsContainer .LyricsContent .line .letter,
-.sl-hw-accel #LyricsflowPage .LyricsContainer .LyricsContent .line .letterGroup {
+.lf-hw-accel #LyricsflowPage .LyricsContainer .LyricsContent .line .word,
+.lf-hw-accel #LyricsflowPage .LyricsContainer .LyricsContent .line .letter,
+.lf-hw-accel #LyricsflowPage .LyricsContainer .LyricsContent .line .letterGroup {
   will-change: transform, opacity;
 }

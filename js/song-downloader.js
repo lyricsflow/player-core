@@ -8,7 +8,14 @@ const API_BASE = 'https://api.spicyamll.online';
 
 document.addEventListener('DOMContentLoaded', () => {
   const inputEl = document.getElementById('dl-song-input');
-  const formatSelect = document.getElementById('dl-song-format');
+  const formatDropdown = document.getElementById('dl-song-format');
+  const formatSelect = formatDropdown;
+  if (formatDropdown) {
+    formatDropdown.addEventListener('click', (e) => {
+      const item = e.target.closest('.aero-menu-item');
+      if (item) formatDropdown.querySelector('[data-aero-dropdown]').setAttribute('data-selected', item.dataset.value);
+    });
+  }
   const fetchBtn = document.getElementById('fetch-song-btn');
   if (!fetchBtn || !inputEl) return;
   const btnText = fetchBtn.querySelector('.btn-text');
@@ -43,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const downloadTrack = (songIdOrUrl, name, isVideo = false) => {
-    const format = formatSelect ? formatSelect.value : 'm4a';
+    const format = formatSelect?.querySelector('[data-aero-dropdown]')?.getAttribute('data-selected') || 'm4a';
     searchResultsEl.classList.add('hidden');
     
     if (isVideo || String(songIdOrUrl).includes('/music-video/') || format === 'mp4') {

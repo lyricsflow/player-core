@@ -201,23 +201,23 @@ class SettingsManager {
 
     // Alignment
     if (this.settings.rightAlignLyrics) {
-      root.classList.add("sl-right-aligned");
+      root.classList.add("lf-right-aligned");
     } else {
-      root.classList.remove("sl-right-aligned");
+      root.classList.remove("lf-right-aligned");
     }
 
     // Minimal Mode
     if (this.settings.minimalLyricsMode) {
-      body.classList.add("sl-minimal-mode");
+      body.classList.add("lf-minimal-mode");
     } else {
-      body.classList.remove("sl-minimal-mode");
+      body.classList.remove("lf-minimal-mode");
     }
 
     // Hardware Acceleration Hack
     if (this.settings.hardwareAccelerationHack) {
-      root.classList.add("sl-hw-accel");
+      root.classList.add("lf-hw-accel");
     } else {
-      root.classList.remove("sl-hw-accel");
+      root.classList.remove("lf-hw-accel");
     }
 
     // Background Visibility

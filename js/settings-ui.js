@@ -14,31 +14,72 @@ import { t } from "./i18n.js";
  * Handles the creation and management of the settings modal.
  */
 
+function initDropdowns(root = document) {
+  root.querySelectorAll('.aero-dropdown').forEach(dropdown => {
+    const trigger = dropdown.querySelector('[data-aero-dropdown]');
+    const menu = dropdown.querySelector(':scope > .aero-menu');
+    if (!trigger || !menu || trigger._aeroBound) return;
+    trigger._aeroBound = true;
+    trigger.setAttribute('aria-haspopup', 'menu');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.addEventListener('click', () => {
+      const open = menu.classList.contains('aero-menu--open');
+      document.querySelectorAll('.aero-menu.aero-menu--open').forEach(m => {
+        if (m !== menu) { m.classList.remove('aero-menu--open'); m.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]')?.setAttribute('aria-expanded', 'false'); }
+      });
+      menu.classList.toggle('aero-menu--open', !open);
+      trigger.setAttribute('aria-expanded', String(!open));
+    });
+    menu.addEventListener('click', e => {
+      const item = e.target.closest('.aero-menu-item');
+      if (!item || item.disabled) return;
+      menu.classList.remove('aero-menu--open');
+      trigger.setAttribute('aria-expanded', 'false');
+    });
+  });
+  document.addEventListener('click', e => {
+    document.querySelectorAll('.aero-menu.aero-menu--open').forEach(menu => {
+      if (!menu.closest('.aero-dropdown')?.contains(e.target)) {
+        menu.classList.remove('aero-menu--open');
+        menu.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]')?.setAttribute('aria-expanded', 'false');
+      }
+    });
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.aero-menu.aero-menu--open').forEach(menu => {
+        menu.classList.remove('aero-menu--open');
+        menu.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]')?.setAttribute('aria-expanded', 'false');
+      });
+    }
+  });
+}
+
 const TABS = [
-  { 
-    id: "appearance", 
-    label: "Appearance", 
-    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.725 3.09 17.2 4.86 19A2 2 0 0 1 5.5 20.8V21a1 1 0 0 0 1 1h5.8Z"/><circle cx="7.5" cy="10.5" r="1.5" fill="currentColor"/><circle cx="11.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="16.5" cy="9.5" r="1.5" fill="currentColor"/></svg>` 
+  {
+    id: "appearance",
+    label: "Appearance",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.725 3.09 17.2 4.86 19A2 2 0 0 1 5.5 20.8V21a1 1 0 0 0 1 1h5.8Z"/><circle cx="7.5" cy="10.5" r="1.5" fill="currentColor"/><circle cx="11.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="16.5" cy="9.5" r="1.5" fill="currentColor"/></svg>`
   },
-  { 
-    id: "playback", 
-    label: "Playback & Audio", 
-    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>` 
+  {
+    id: "playback",
+    label: "Playback & Audio",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`
   },
-  { 
-    id: "lyrics", 
-    label: "Lyrics & Sources", 
-    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 7h8M8 11h8"/></svg>` 
+  {
+    id: "lyrics",
+    label: "Lyrics & Sources",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 7h8M8 11h8"/></svg>`
   },
-  { 
-    id: "extensions", 
-    label: "Extensions", 
-    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>` 
+  {
+    id: "extensions",
+    label: "Extensions",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`
   },
-  { 
-    id: "advanced", 
-    label: "Advanced & Tools", 
-    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>` 
+  {
+    id: "advanced",
+    label: "Advanced & Tools",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`
   },
   {
     id: "developer",
@@ -103,7 +144,7 @@ class SettingsUI {
     // Sidebar Tabs
     TABS.forEach(tab => {
       const btn = document.createElement("button");
-      btn.className = `sl-sidebar-tab ${tab.id === this.activeTab ? "active" : ""}`;
+      btn.className = `lf-sidebar-tab ${tab.id === this.activeTab ? "active" : ""}`;
       const tabLabel = t(`settings_tab_${tab.id}`) || tab.label;
       btn.innerHTML = `${tab.icon} <span>${tabLabel}</span>`;
       btn.dataset.tabId = tab.id;
@@ -114,7 +155,7 @@ class SettingsUI {
 
       btn.onclick = async () => {
         this.activeTab = tab.id;
-        sidebar.querySelectorAll(".sl-sidebar-tab").forEach(b => b.classList.remove("active"));
+        sidebar.querySelectorAll(".lf-sidebar-tab").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         Object.keys(panels).forEach(id => {
           panels[id].style.display = id === tab.id ? "block" : "none";
@@ -166,34 +207,34 @@ class SettingsUI {
 
   createCard(container) {
     const card = document.createElement("div");
-    card.className = "sl-settings-card";
+    card.className = "lf-settings-card";
     container.appendChild(card);
     return card;
   }
 
   addGroup(container, title) {
     const h = document.createElement("h3");
-    h.className = "sl-settings-group";
+    h.className = "lf-settings-group";
     h.textContent = title;
     container.appendChild(h);
   }
 
   addRow(container, label, description, control, extraClass = "", hidden = false) {
     const row = document.createElement("div");
-    row.className = `sl-settings-row ${extraClass}`;
+    row.className = `lf-settings-row ${extraClass}`;
     if (hidden) row.style.display = "none";
 
     const meta = document.createElement("div");
-    meta.className = "sl-settings-meta";
+    meta.className = "lf-settings-meta";
 
     const lbl = document.createElement("span");
-    lbl.className = "sl-settings-label";
+    lbl.className = "lf-settings-label";
     lbl.textContent = label;
     meta.appendChild(lbl);
 
     if (description) {
       const desc = document.createElement("span");
-      desc.className = "sl-settings-description";
+      desc.className = "lf-settings-description";
       desc.textContent = description;
       meta.appendChild(desc);
     }
@@ -206,7 +247,7 @@ class SettingsUI {
 
   addToggle(container, label, description, key, callback) {
     const wrap = document.createElement("label");
-    wrap.className = "sl-toggle";
+    wrap.className = "aero-toggle";
     const input = document.createElement("input");
     input.type = "checkbox";
     input.checked = settingsManager.get(key);
@@ -214,16 +255,17 @@ class SettingsUI {
       settingsManager.set(key, input.checked);
       if (callback) callback(input.checked);
     };
-    const knob = document.createElement("span");
+    const track = document.createElement("span");
+    track.className = "aero-toggle-track";
     wrap.appendChild(input);
-    wrap.appendChild(knob);
+    wrap.appendChild(track);
     this.addRow(container, label, description, wrap);
   }
 
   addInput(container, label, description, key, extraClass = "", hidden = false) {
     const input = document.createElement("input");
     input.type = "text";
-    input.className = "sl-input";
+    input.className = "lf-input";
     input.value = settingsManager.get(key);
     input.oninput = () => {
       settingsManager.set(key, input.value);
@@ -235,15 +277,15 @@ class SettingsUI {
     const currentVal = settingsManager.get(key) ?? min;
 
     const wrap = document.createElement("div");
-    wrap.className = "sl-slider-wrap";
+    wrap.className = "lf-slider-wrap";
 
     const valueLabel = document.createElement("span");
-    valueLabel.className = "sl-slider-value";
+    valueLabel.className = "lf-slider-value";
     valueLabel.textContent = formatCallback ? formatCallback(currentVal) : currentVal;
 
     const slider = document.createElement("input");
     slider.type = "range";
-    slider.className = "sl-range-slider";
+    slider.className = "lf-range-slider";
     slider.min = min;
     slider.max = max;
     slider.step = step;
@@ -261,19 +303,39 @@ class SettingsUI {
   }
 
   addDropdown(container, label, description, key, options) {
-    const sel = document.createElement("select");
-    sel.className = "sl-select";
+    const current = settingsManager.get(key);
+
+    const dropdown = document.createElement("div");
+    dropdown.className = "aero-dropdown";
+
+    const trigger = document.createElement("button");
+    trigger.className = "lf-select";
+    trigger.setAttribute("data-aero-dropdown", "");
+    trigger.textContent = current ?? options[0];
+
+    const menu = document.createElement("div");
+    menu.className = "aero-menu";
+
     options.forEach(opt => {
-      const o = document.createElement("option");
-      o.value = opt;
-      o.textContent = opt;
-      if (opt === settingsManager.get(key)) o.selected = true;
-      sel.appendChild(o);
+      const item = document.createElement("button");
+      item.className = "aero-menu-item";
+      item.setAttribute("data-value", opt);
+      item.textContent = opt;
+      if (opt === current) item.setAttribute("aria-current", "true");
+      item.addEventListener("click", () => {
+        settingsManager.set(key, opt);
+        trigger.textContent = opt;
+        menu.querySelectorAll(".aero-menu-item").forEach(i => i.removeAttribute("aria-current"));
+        item.setAttribute("aria-current", "true");
+      });
+      menu.appendChild(item);
     });
-    sel.onchange = () => {
-      settingsManager.set(key, sel.value);
-    };
-    this.addRow(container, label, description, sel);
+
+    dropdown.appendChild(trigger);
+    dropdown.appendChild(menu);
+    this.addRow(container, label, description, dropdown);
+
+    initDropdowns(dropdown);
   }
 
   renderAppearance(container) {
@@ -331,12 +393,12 @@ class SettingsUI {
 
   renderEqualizerInline(container) {
     const presetRow = document.createElement("div");
-    presetRow.className = "sl-eq-preset-row";
-    presetRow.innerHTML = `<span class="sl-eq-preset-label">EQ Preset:</span>`;
-    
+    presetRow.className = "lf-eq-preset-row";
+    presetRow.innerHTML = `<span class="lf-eq-preset-label">EQ Preset:</span>`;
+
     const sel = document.createElement("select");
-    sel.className = "sl-select";
-    
+    sel.className = "lf-select";
+
     Object.keys(EQ_PRESETS).forEach(p => {
       const o = document.createElement("option");
       o.value = p; o.textContent = p;
@@ -346,7 +408,7 @@ class SettingsUI {
     container.appendChild(presetRow);
 
     const slidersContainer = document.createElement("div");
-    slidersContainer.className = "sl-eq-sliders-container";
+    slidersContainer.className = "lf-eq-sliders-container";
     container.appendChild(slidersContainer);
 
     const currentGains = settingsManager.get("eqGains") || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -354,16 +416,16 @@ class SettingsUI {
 
     EQ_BANDS.forEach((freq, i) => {
       const col = document.createElement("div");
-      col.className = "sl-eq-band-col";
+      col.className = "lf-eq-band-col";
 
       const valLabel = document.createElement("span");
-      valLabel.className = "sl-eq-val-label";
+      valLabel.className = "lf-eq-val-label";
       const val = currentGains[i] ?? 0;
       valLabel.textContent = val > 0 ? `+${val}` : val;
 
       const slider = document.createElement("input");
       slider.type = "range";
-      slider.className = "sl-eq-slider";
+      slider.className = "lf-eq-slider";
       slider.setAttribute("orient", "vertical");
       slider.min = "-12";
       slider.max = "12";
@@ -371,7 +433,7 @@ class SettingsUI {
       slider.value = val;
 
       const freqLabel = document.createElement("span");
-      freqLabel.className = "sl-eq-freq-label";
+      freqLabel.className = "lf-eq-freq-label";
       freqLabel.textContent = freq >= 1000 ? `${freq / 1000}k` : freq;
 
       slider.oninput = () => {
@@ -412,7 +474,7 @@ class SettingsUI {
     const providerCard = this.createCard(container);
 
     const providerBtn = document.createElement("button");
-    providerBtn.className = "sl-btn";
+    providerBtn.className = "lf-btn";
     providerBtn.textContent = "Manage Provider Order";
     providerBtn.onclick = () => this.showProviderManager();
 
@@ -516,7 +578,7 @@ my-extension.zip/
     const installCard = this.createCard(container);
 
     const guideBtn = document.createElement('button');
-    guideBtn.className = 'sl-btn';
+    guideBtn.className = 'lf-btn';
     guideBtn.style.marginBottom = '16px';
     guideBtn.style.width = '100%';
     guideBtn.textContent = '📚 How do I make an extension?';
@@ -586,7 +648,7 @@ my-extension.zip/
 
     extensionManager.extensions.forEach((ext, i) => {
       const extCard = document.createElement('div');
-      extCard.className = 'sl-settings-row';
+      extCard.className = 'lf-settings-row';
       extCard.style.padding = '15px';
       extCard.style.background = 'rgba(255,255,255,0.05)';
       extCard.style.borderRadius = '8px';
@@ -600,11 +662,11 @@ my-extension.zip/
           ${ext.tags && ext.tags.length > 0 ? `<div style="margin-top: 6px;">${ext.tags.map(tag => `<span style="display: inline-block; padding: 2px 8px; background: rgba(255,255,255,0.1); border-radius: 100px; font-size: 11px; margin-right: 4px; margin-top: 2px;">${escapeHTML(tag)}</span>`).join('')}</div>` : ''}
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-          <label class="sl-toggle" style="margin-right: 8px;">
+          <label class="aero-toggle" style="margin-right: 8px;">
             <input type="checkbox" ${ext.enabled ? 'checked' : ''} />
-            <span></span>
+            <span class="aero-toggle-track"></span>
           </label>
-          <button class="sl-btn-small" style="padding: 4px 12px; font-size: 12px;">Remove</button>
+          <button class="lf-btn-small" style="padding: 4px 12px; font-size: 12px;">Remove</button>
         </div>
       `;
 
@@ -643,13 +705,13 @@ my-extension.zip/
     const exportCard = this.createCard(container);
 
     const exportTTMLBtn = document.createElement("button");
-    exportTTMLBtn.className = "sl-btn";
+    exportTTMLBtn.className = "lf-btn";
     exportTTMLBtn.textContent = "Export Word-Sync TTML";
     exportTTMLBtn.onclick = () => this.handleTTMLExport(exportTTMLBtn);
     this.addRow(exportCard, "TTML Export", "Convert current song lyrics into Word-Sync TTML format.", exportTTMLBtn);
 
     const exportBtn = document.createElement("button");
-    exportBtn.className = "sl-btn sl-btn-accent";
+    exportBtn.className = "lf-btn lf-btn-accent";
     exportBtn.textContent = "Start Video Render";
     exportBtn.onclick = () => {
       this.hide();
@@ -660,7 +722,7 @@ my-extension.zip/
     this.addGroup(container, "Developer Mode");
     const devCard = this.createCard(container);
     this.addToggle(devCard, "Developer Mode", "Enable developer tools, custom timings, and testing utilities.", "developerMode", (val) => {
-      const devTabBtn = this.modal.querySelector('.sl-sidebar-tab[data-tab-id="developer"]');
+      const devTabBtn = this.modal.querySelector('.lf-sidebar-tab[data-tab-id="developer"]');
       if (devTabBtn) {
         devTabBtn.style.display = val ? "flex" : "none";
       }
@@ -773,7 +835,7 @@ my-extension.zip/
       order.forEach((id, index) => {
         const def = LYRICS_SOURCE_PROVIDER_DEFINITIONS[id];
         const row = document.createElement("div");
-        row.className = "sl-settings-row";
+        row.className = "lf-settings-row";
         row.style.padding = "10px 15px";
         row.style.background = "rgba(255,255,255,0.05)";
         row.style.borderRadius = "8px";
@@ -798,7 +860,7 @@ my-extension.zip/
         // Up/Down Buttons
         const createBtn = (text, disabled, cb) => {
           const b = document.createElement("button");
-          b.className = "sl-btn-small";
+          b.className = "lf-btn-small";
           b.style.padding = "4px 8px";
           b.style.fontSize = "12px";
           b.textContent = text;
@@ -884,7 +946,7 @@ my-extension.zip/
           <label style="color:white; font-weight:500; display:block; margin-bottom:8px;">Or Paste TTML Content</label>
           <textarea id="ttml-tester-textarea" style="width:100%; height:200px; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); color:white; font-family:monospace; font-size:13px;"></textarea>
         </div>
-        <button id="ttml-tester-load-btn" class="sl-btn sl-btn-accent" style="width:100%;">Load & Test TTML</button>
+        <button id="ttml-tester-load-btn" class="lf-btn lf-btn-accent" style="width:100%;">Load & Test TTML</button>
       </div>
     `;
     testerModal.appendChild(content);
@@ -919,7 +981,7 @@ my-extension.zip/
         // Dynamically import parser
         const parseTTMLToLyrics = (await import("./ttml-parser.js")).default;
         const GeniusService = (await import("./genius-service.js")).GeniusService;
-        
+
         let parsedLyrics = parseTTMLToLyrics(ttml);
 
         // Check for missing songwriters and offer to fetch!
@@ -978,7 +1040,7 @@ my-extension.zip/
     this.addGroup(container, "TTML Testing & Authoring");
     const ttmlCard = this.createCard(container);
     const testTTMLBtn = document.createElement("button");
-    testTTMLBtn.className = "sl-btn";
+    testTTMLBtn.className = "lf-btn";
     testTTMLBtn.textContent = "Test TTML Lyrics";
     testTTMLBtn.onclick = () => this.showTTMLTester();
     this.addRow(ttmlCard, "TTML Tester", "Load and test custom TTML lyric files.", testTTMLBtn);
@@ -987,28 +1049,28 @@ my-extension.zip/
     const syncCard = this.createCard(container);
     // Custom Playback Offset Slider with Reset!
     const offsetRow = document.createElement("div");
-    offsetRow.className = "sl-settings-row";
-    
+    offsetRow.className = "lf-settings-row";
+
     const offsetMeta = document.createElement("div");
-    offsetMeta.className = "sl-settings-meta";
+    offsetMeta.className = "lf-settings-meta";
     offsetMeta.innerHTML = `
-      <span class="sl-settings-label">Playback Offset</span>
-      <span class="sl-settings-description">Shift lyrics timing in milliseconds. Negative values show lyrics earlier; positive values delay them.</span>
+      <span class="lf-settings-label">Playback Offset</span>
+      <span class="lf-settings-description">Shift lyrics timing in milliseconds. Negative values show lyrics earlier; positive values delay them.</span>
     `;
-    
+
     const offsetControls = document.createElement("div");
     offsetControls.style.display = "flex";
     offsetControls.style.alignItems = "center";
     offsetControls.style.gap = "12px";
-    
+
     const offsetValue = document.createElement("span");
-    offsetValue.className = "sl-slider-value";
+    offsetValue.className = "lf-slider-value";
     const formatVal = (v) => v === 0 ? "0ms (Sync)" : (v > 0 ? `+${v}ms` : `${v}ms`);
     offsetValue.textContent = formatVal(settingsManager.get("playbackOffset"));
-    
+
     const offsetSlider = document.createElement("input");
     offsetSlider.type = "range";
-    offsetSlider.className = "sl-range-slider";
+    offsetSlider.className = "lf-range-slider";
     offsetSlider.style.width = "200px";
     offsetSlider.min = -5000;
     offsetSlider.max = 5000;
@@ -1019,9 +1081,9 @@ my-extension.zip/
       settingsManager.set("playbackOffset", v);
       offsetValue.textContent = formatVal(v);
     };
-    
+
     const offsetResetBtn = document.createElement("button");
-    offsetResetBtn.className = "sl-btn-small";
+    offsetResetBtn.className = "lf-btn-small";
     offsetResetBtn.textContent = "Reset";
     offsetResetBtn.style.padding = "4px 12px";
     offsetResetBtn.onclick = () => {
@@ -1029,21 +1091,21 @@ my-extension.zip/
       offsetSlider.value = 0;
       offsetValue.textContent = formatVal(0);
     };
-    
+
     offsetControls.appendChild(offsetValue);
     offsetControls.appendChild(offsetSlider);
     offsetControls.appendChild(offsetResetBtn);
-    
+
     offsetRow.appendChild(offsetMeta);
     offsetRow.appendChild(offsetControls);
-    
+
     syncCard.appendChild(offsetRow);
 
     this.addGroup(container, "Persistent Cache Utilities");
     const cacheCard = this.createCard(container);
 
     const btnClearCurrentCache = document.createElement("button");
-    btnClearCurrentCache.className = "sl-btn";
+    btnClearCurrentCache.className = "lf-btn";
     btnClearCurrentCache.textContent = "Clear current song state cache";
     btnClearCurrentCache.onclick = async () => {
       const { RemoveCurrentLyrics_AllCaches } = await import("./lyrics-cache-tools.js");
@@ -1052,7 +1114,7 @@ my-extension.zip/
     this.addRow(cacheCard, "Destroy Current Lyrics Cache", "Erase persistent cache for the currently playing track.", btnClearCurrentCache);
 
     const btnClearAllCache = document.createElement("button");
-    btnClearAllCache.className = "sl-btn sl-btn-accent";
+    btnClearAllCache.className = "lf-btn lf-btn-accent";
     btnClearAllCache.textContent = "Clear all stored lyrics caches";
     btnClearAllCache.onclick = async () => {
       const { RemoveLyricsCache } = await import("./lyrics-cache-tools.js");
@@ -1061,7 +1123,7 @@ my-extension.zip/
     this.addRow(cacheCard, "Destroy All Lyrics Cache", "Wipe clean the entire local lyrics CacheStorage cache.", btnClearAllCache);
 
     const btnClearState = document.createElement("button");
-    btnClearState.className = "sl-btn";
+    btnClearState.className = "lf-btn";
     btnClearState.textContent = "Clear current song state";
     btnClearState.onclick = async () => {
       const { RemoveCurrentLyrics_StateCache } = await import("./lyrics-cache-tools.js");

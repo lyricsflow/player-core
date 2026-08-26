@@ -108,7 +108,7 @@
   display: none;
 }
 
-.sl-sidebar-tab {
+.lf-sidebar-tab {
   background: transparent;
   border: none;
   color: rgba(255, 255, 255, 0.6);
@@ -125,22 +125,22 @@
   text-align: left;
 }
 
-.sl-sidebar-tab svg {
+.lf-sidebar-tab svg {
   flex-shrink: 0;
   opacity: 0.8;
   transition: transform 0.2s ease;
 }
 
-.sl-sidebar-tab:hover {
+.lf-sidebar-tab:hover {
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
 }
 
-.sl-sidebar-tab:hover svg {
+.lf-sidebar-tab:hover svg {
   transform: scale(1.05);
 }
 
-.sl-sidebar-tab.active {
+.lf-sidebar-tab.active {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
   font-weight: 600;
@@ -173,7 +173,7 @@
   }
 }
 
-.sl-settings-group {
+.lf-settings-group {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -182,11 +182,11 @@
   font-weight: 600;
 }
 
-.sl-settings-group:first-of-type {
+.lf-settings-group:first-of-type {
   margin-top: 4px;
 }
 
-.sl-settings-card {
+.lf-settings-card {
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 14px;
@@ -194,7 +194,7 @@
   overflow: hidden;
 }
 
-.sl-settings-row {
+.lf-settings-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -203,31 +203,31 @@
   gap: 20px;
 }
 
-.sl-settings-row:last-child {
+.lf-settings-row:last-child {
   border-bottom: none;
 }
 
-.sl-settings-meta {
+.lf-settings-meta {
   display: flex;
   flex-direction: column;
   gap: 3px;
   flex: 1;
 }
 
-.sl-settings-label {
+.lf-settings-label {
   font-size: 0.92rem;
   color: #fff;
   font-weight: 500;
 }
 
-.sl-settings-description {
+.lf-settings-description {
   font-size: 0.76rem;
   color: rgba(255, 255, 255, 0.45);
   line-height: 1.35;
 }
 
 /* UI Components */
-.sl-toggle {
+.lf-toggle {
   position: relative;
   display: inline-block;
   width: 46px;
@@ -235,13 +235,13 @@
   flex-shrink: 0;
 }
 
-.sl-toggle input {
+.lf-toggle input {
   opacity: 0;
   width: 0;
   height: 0;
 }
 
-.sl-toggle span {
+.lf-toggle span {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -254,7 +254,7 @@
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.sl-toggle span:before {
+.lf-toggle span:before {
   position: absolute;
   content: "";
   height: 19px;
@@ -267,19 +267,19 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
 }
 
-.sl-toggle input:checked + span {
+.lf-toggle input:checked + span {
   background-color: #ffffff;
 }
 
-.sl-toggle input:checked + span:before {
+.lf-toggle input:checked + span:before {
   background-color: #1c1c1e;
 }
 
-.sl-toggle input:checked + span:before {
+.lf-toggle input:checked + span:before {
   transform: translateX(21px);
 }
 
-.sl-select {
+.lf-select {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 8px;
@@ -298,17 +298,17 @@
   background-size: 13px;
 }
 
-.sl-select:focus {
+.lf-select:focus {
   border-color: rgba(255, 255, 255, 0.2);
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-.sl-select option {
+.lf-select option {
   background: #1c1c1e;
   color: #fff;
 }
 
-.sl-input {
+.lf-input {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 8px;
@@ -322,19 +322,19 @@
   transition: all 0.2s ease;
 }
 
-.sl-input:focus {
+.lf-input:focus {
   border-color: rgba(255, 255, 255, 0.2);
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-.sl-slider-wrap {
+.lf-slider-wrap {
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 170px;
 }
 
-.sl-slider-value {
+.lf-slider-value {
   font-size: 0.82rem;
   color: rgba(255, 255, 255, 0.6);
   min-width: 32px;
@@ -343,7 +343,7 @@
   font-family: monospace;
 }
 
-.sl-range-slider {
+.lf-range-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 120px;
@@ -354,7 +354,7 @@
   cursor: pointer;
 }
 
-.sl-range-slider::-webkit-slider-thumb {
+.lf-range-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 14px;
@@ -365,11 +365,11 @@
   transition: transform 0.15s ease;
 }
 
-.sl-range-slider::-webkit-slider-thumb:active {
+.lf-range-slider::-webkit-slider-thumb:active {
   transform: scale(1.25);
 }
 
-.sl-range-slider::-moz-range-thumb {
+.lf-range-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border: none;
@@ -379,11 +379,11 @@
   transition: transform 0.15s ease;
 }
 
-.sl-range-slider::-moz-range-thumb:active {
+.lf-range-slider::-moz-range-thumb:active {
   transform: scale(1.25);
 }
 
-.sl-btn {
+.lf-btn {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
@@ -396,28 +396,28 @@
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
 }
 
-.sl-btn:hover {
+.lf-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.15);
 }
 
-.sl-btn:active {
+.lf-btn:active {
   transform: scale(0.97);
 }
 
-.sl-btn-accent {
+.lf-btn-accent {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.2);
   color: #ffffff;
 }
 
-.sl-btn-accent:hover {
+.lf-btn-accent:hover {
   background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.35);
 }
 
 /* Inline Equalizer Styling */
-.sl-eq-preset-row {
+.lf-eq-preset-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -425,13 +425,13 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.sl-eq-preset-label {
+.lf-eq-preset-label {
   font-size: 0.92rem;
   color: rgba(255, 255, 255, 0.85);
   font-weight: 500;
 }
 
-.sl-eq-sliders-container {
+.lf-eq-sliders-container {
   display: flex;
   justify-content: space-between;
   align-items: stretch;
@@ -441,7 +441,7 @@
   background: rgba(0, 0, 0, 0.15);
 }
 
-.sl-eq-band-col {
+.lf-eq-band-col {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -450,20 +450,20 @@
   height: 100%;
 }
 
-.sl-eq-val-label {
+.lf-eq-val-label {
   font-size: 0.68rem;
   color: rgba(255, 255, 255, 0.45);
   min-height: 12px;
   font-family: monospace;
 }
 
-.sl-eq-freq-label {
+.lf-eq-freq-label {
   font-size: 0.65rem;
   color: rgba(255, 255, 255, 0.4);
   font-weight: 500;
 }
 
-.sl-eq-slider {
+.lf-eq-slider {
   height: 100px;
   width: 5px;
   appearance: none;
@@ -475,7 +475,7 @@
   cursor: ns-resize;
 }
 
-.sl-eq-slider::-webkit-slider-thumb {
+.lf-eq-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 13px;
@@ -487,6 +487,6 @@
   transition: transform 0.1s ease;
 }
 
-.sl-eq-slider::-webkit-slider-thumb:hover {
+.lf-eq-slider::-webkit-slider-thumb:hover {
   transform: scale(1.25);
 }

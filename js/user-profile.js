@@ -8,6 +8,49 @@ import { SUPPORTED_LANGUAGES, getCurrentLang, setLanguage, t, detectBrowserLangu
 import { settingsUI } from './settings-ui.js';
 import { escapeHTML, cleanArtworkUrl } from './security-utils.js';
 
+const SETTLE_EPSILON = 0.001;
+function _clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+function _resolveSpring({ stiffness = 170, damping = 26, mass = 1, bounce, duration } = {}) {
+  if (duration !== undefined && bounce !== undefined) { const zeta = _clamp(1 - bounce, 0.0001, 1); const omega = Math.log(1 / SETTLE_EPSILON) / (zeta * duration); return { zeta, omega }; }
+  const omega = Math.sqrt(stiffness / mass); const zeta = damping / (2 * Math.sqrt(stiffness * mass)); return { zeta, omega };
+}
+function _displacement(t, zeta, omega) {
+  if (zeta < 1) { const wd = omega * Math.sqrt(1 - zeta * zeta); return Math.exp(-zeta * omega * t) * (Math.cos(wd * t) + ((zeta * omega) / wd) * Math.sin(wd * t)); }
+  if (zeta === 1) { return Math.exp(-omega * t) * (1 + omega * t); }
+  const s = Math.sqrt(zeta * zeta - 1); const r1 = -omega * (zeta - s); const r2 = -omega * (zeta + s);
+  return (r2 * Math.exp(r1 * t) - r1 * Math.exp(r2 * t)) / (r2 - r1);
+}
+function _settleTime(zeta, omega) { let t = 0.016; while (t < 10 && Math.abs(_displacement(t, zeta, omega)) > SETTLE_EPSILON) t *= 1.25; return t; }
+function _springToEasing(config = {}) {
+  const { zeta, omega } = _resolveSpring(config); const durationSec = config.duration !== undefined ? config.duration : _settleTime(zeta, omega);
+  const steps = _clamp(Math.round((durationSec * 1000) / 8), 24, 480); const points = [];
+  for (let i = 0; i <= steps; i++) { const t = (i / steps) * durationSec; points.push(Number((1 - _displacement(t, zeta, omega)).toFixed(5))); }
+  points[0] = 0; points[points.length - 1] = 1;
+  return { easing: `linear(${points.join(', ')})`, durationMs: Math.round(durationSec * 1000) };
+}
+function aeroAnimate(el, keyframes, options = {}) {
+  const { easing, durationMs } = _springToEasing(options.spring ?? {});
+  const anim = el.animate(keyframes, { duration: options.durationMs ?? durationMs, delay: options.delay ?? 0, easing, fill: 'both' });
+  anim.finished.catch(() => {}); return anim;
+}
+const _DD_ENTER = { hidden: { opacity: 0, transform: 'scale(0.95) translateY(-8px)' }, shown: { opacity: 1, transform: 'scale(1) translateY(0)' } };
+function _openMenu(menu) {
+  const trigger = menu.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]');
+  if (!menu || !trigger || menu.classList.contains('aero-menu--open')) return;
+  document.querySelectorAll('.aero-menu.aero-menu--open').forEach(m => { if (m !== menu) _closeMenu(m); });
+  menu.getAnimations().forEach(a => a.cancel()); delete menu._aeroClosing;
+  menu.classList.add('aero-menu--open');
+  aeroAnimate(menu, [_DD_ENTER.hidden, _DD_ENTER.shown], { spring: { duration: 0.3, bounce: 0.15 } });
+  trigger.setAttribute('aria-expanded', 'true');
+}
+function _closeMenu(menu) {
+  const trigger = menu.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]');
+  if (!menu || !menu.classList.contains('aero-menu--open') || menu._aeroClosing) return;
+  menu._aeroClosing = true;
+  aeroAnimate(menu, [_DD_ENTER.shown, _DD_ENTER.hidden], { spring: { duration: 0.18, bounce: 0 } })
+    .finished.then(() => { menu._aeroClosing = false; menu.classList.remove('aero-menu--open'); });
+  trigger?.setAttribute('aria-expanded', 'false');
+}
 function initDropdowns(root = document) {
   root.querySelectorAll('.aero-dropdown').forEach(dropdown => {
     const trigger = dropdown.querySelector('[data-aero-dropdown]');
@@ -16,37 +59,12 @@ function initDropdowns(root = document) {
     trigger._aeroBound = true;
     trigger.setAttribute('aria-haspopup', 'menu');
     trigger.setAttribute('aria-expanded', 'false');
-    trigger.addEventListener('click', () => {
-      const open = menu.classList.contains('aero-menu--open');
-      document.querySelectorAll('.aero-menu.aero-menu--open').forEach(m => {
-        if (m !== menu) { m.classList.remove('aero-menu--open'); m.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]')?.setAttribute('aria-expanded', 'false'); }
-      });
-      menu.classList.toggle('aero-menu--open', !open);
-      trigger.setAttribute('aria-expanded', String(!open));
-    });
-    menu.addEventListener('click', e => {
-      const item = e.target.closest('.aero-menu-item');
-      if (!item || item.disabled) return;
-      menu.classList.remove('aero-menu--open');
-      trigger.setAttribute('aria-expanded', 'false');
-    });
+    trigger.addEventListener('click', () => menu.classList.contains('aero-menu--open') ? _closeMenu(menu) : _openMenu(menu));
+    trigger.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { e.preventDefault(); if (!menu.classList.contains('aero-menu--open')) _openMenu(menu); [...menu.querySelectorAll('.aero-menu-item:not(:disabled)')][0]?.focus(); } });
+    menu.addEventListener('click', e => { const item = e.target.closest('.aero-menu-item'); if (!item || item.disabled) return; _closeMenu(menu); trigger.focus(); });
   });
-  document.addEventListener('click', e => {
-    document.querySelectorAll('.aero-menu.aero-menu--open').forEach(menu => {
-      if (!menu.closest('.aero-dropdown')?.contains(e.target)) {
-        menu.classList.remove('aero-menu--open');
-        menu.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]')?.setAttribute('aria-expanded', 'false');
-      }
-    });
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      document.querySelectorAll('.aero-menu.aero-menu--open').forEach(menu => {
-        menu.classList.remove('aero-menu--open');
-        menu.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]')?.setAttribute('aria-expanded', 'false');
-      });
-    }
-  });
+  document.addEventListener('click', e => { document.querySelectorAll('.aero-menu.aero-menu--open').forEach(menu => { if (!menu.closest('.aero-dropdown')?.contains(e.target)) _closeMenu(menu); }); });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; document.querySelectorAll('.aero-menu.aero-menu--open').forEach(menu => { _closeMenu(menu); menu.closest('.aero-dropdown')?.querySelector('[data-aero-dropdown]')?.focus(); }); });
 }
 
 function langDropdownHTML(id, selectedCode) {

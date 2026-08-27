@@ -794,6 +794,7 @@ my-extension.zip/
 
       order.forEach((id, index) => {
         const def = LYRICS_SOURCE_PROVIDER_DEFINITIONS[id];
+        if (!def) return;
         const row = document.createElement("div");
         row.className = "lf-settings-row";
         row.style.padding = "10px 15px";

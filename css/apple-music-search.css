@@ -1345,7 +1345,7 @@
   width: 100%;
   max-width: 480px;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  overflow: hidden;
+  overflow: visible;
   color: #fff;
   animation: amScaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

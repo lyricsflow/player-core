@@ -3,7 +3,7 @@
  * Provides a robust fetch implementation with proxy rotation and error handling.
  */
 
-const API_BASE = 'http://api.spicyamll.online';
+const API_BASE = 'https://api.spicyamll.online';
 
 const PROXIES = [
   (url) => `${API_BASE}/proxy?url=${encodeURIComponent(url)}`

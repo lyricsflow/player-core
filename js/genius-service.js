@@ -3,7 +3,7 @@
  * Handles fetching songwriter credits, legal names, and plain-text lyrics from the Genius API.
  */
 
-const API_BASE = window.API_BASE || 'http://api.spicyamll.online';
+const API_BASE = window.API_BASE || 'https://api.spicyamll.online';
 
 /** Secure backend proxy for scraping Genius song pages */
 const SCRAPE_PROXIES = [

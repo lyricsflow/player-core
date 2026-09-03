@@ -1,0 +1,1240 @@
+/**
+ * Lyricsflow — Lyrics Applyer
+ * Builds DOM elements from parsed TTML data.
+ * Port of Applyer/Synced/Syllable.ts + Line.ts
+ */
+
+import isRtl from './is-rtl.js';
+import { settingsManager } from './settings-manager.js';
+import { gibberishify, weebify, uppercase, lowercase } from './text-transformers.js';
+
+const LYRICS_BETWEEN_SHOW = 3;
+const INTERLUDE_EARLIER_BY = 0;
+
+function transformText(text) {
+  const format = settingsManager.get("memeFormat");
+  if (format === "Gibberish (Wenomechainsama)") return gibberishify(text);
+  if (format === "Weeb (・`ω´・)") return weebify(text);
+  if (format === "UPPERCASE") return uppercase(text);
+  if (format === "lowercase") return lowercase(text);
+  return text;
+}
+
+/**
+ * Convert time from seconds to milliseconds.
+ */
+function convertTime(t) {
+  return t * 1000;
+}
+
+function getLastBaseArabicChar(str) {
+  if (!str) return null;
+  const diacriticsRegex = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E8\u06EA-\u06EC\u06ED]/;
+  for (let i = str.length - 1; i >= 0; i--) {
+    const char = str[i];
+    if (!diacriticsRegex.test(char)) {
+      return char;
+    }
+  }
+  return null;
+}
+
+function getFirstBaseArabicChar(str) {
+  if (!str) return null;
+  const diacriticsRegex = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E8\u06EA-\u06EC\u06ED]/;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (!diacriticsRegex.test(char)) {
+      return char;
+    }
+  }
+  return null;
+}
+
+function canConnectLeft(str) {
+  const lastChar = getLastBaseArabicChar(str);
+  if (!lastChar) return false;
+  const isArabicLetter = /[\u0621-\u064A\u0671-\u06D3\u06D5]/.test(lastChar);
+  if (!isArabicLetter) return false;
+  const NON_CONNECTORS = /[ءآأؤإادذرزوة\u0621\u0622\u0623\u0624\u0625\u0627\u062f\u0630\u0631\u0632\u0648\u0629]/;
+  return !NON_CONNECTORS.test(lastChar);
+}
+
+function canConnectRight(str) {
+  const firstChar = getFirstBaseArabicChar(str);
+  if (!firstChar) return false;
+  const isArabicLetter = /[\u0621-\u064A\u0671-\u06D3\u06D5]/.test(firstChar);
+  if (!isArabicLetter) return false;
+  return firstChar !== 'ء' && firstChar !== '\u0621';
+}
+
+function preprocessArabicSyllables(syllables) {
+  if (!syllables || syllables.length <= 1) return syllables;
+  const diacriticsRegex = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E8\u06EA-\u06EC\u06ED]/;
+  
+  const result = [];
+  for (let i = 0; i < syllables.length; i++) {
+    result.push({ ...syllables[i] });
+  }
+
+  for (let i = 0; i < result.length - 1; i++) {
+    const cur = result[i];
+    const next = result[i + 1];
+    
+    if (!cur.IsPartOfWord) continue;
+    
+    const curText = cur.Text ?? "";
+    const nextText = next.Text ?? "";
+    
+    const lastChar = getLastBaseArabicChar(curText);
+    const firstChar = getFirstBaseArabicChar(nextText);
+    
+    if (lastChar === 'ل' && firstChar === 'ا') {
+      let alefIndex = -1;
+      for (let j = 0; j < nextText.length; j++) {
+        if (nextText[j] === 'ا') {
+          alefIndex = j;
+          break;
+        }
+      }
+      
+      if (alefIndex !== -1) {
+        let len = 1;
+        while (alefIndex + len < nextText.length && diacriticsRegex.test(nextText[alefIndex + len])) {
+          len++;
+        }
+        
+        const extracted = nextText.substring(alefIndex, alefIndex + len);
+        cur.Text = curText + extracted;
+        next.Text = nextText.substring(0, alefIndex) + nextText.substring(alefIndex + len);
+      }
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Checks if a word is eligible for letter-by-letter emphasis.
+ * Restricted to LTR languages and depends on character length vs duration.
+ */
+function getSyllableCount(syllables, index) {
+  let count = 1;
+  for (let i = index; i < syllables.length - 1 && syllables[i].IsPartOfWord; i++) {
+    count++;
+  }
+  for (let i = index; i > 0 && syllables[i - 1].IsPartOfWord; i--) {
+    count++;
+  }
+  return count;
+}
+
+function isLetterCapable(text, duration, syllableCount = 1) {
+  if (text.trim().includes(" ")) return false;
+
+  const isSimpleMode = settingsManager.get("simpleLyricsMode");
+  const letterLength = text.split("").length;
+
+  if (isSimpleMode) return false;
+
+  if (settingsManager.get("amlLyricsAnimations")) {
+    if (isRtl(text)) return false;
+    return duration > 1000 && letterLength <= 7;
+  }
+
+  if (isRtl(text)) return false;
+
+  if (duration >= 900 && letterLength >= 8) {
+    return true;
+  }
+
+  const baseMinDuration = 1000;
+  const complexMinDuration = baseMinDuration + ((letterLength - 1) * 25);
+
+  return duration >= complexMinDuration;
+}
+
+/**
+ * Splits a word into individual letters and sets up timing for each.
+ */
+function applyEmphasis(letters, wordElem, lead, isBgWord = false) {
+  const isSimpleMode = settingsManager.get("simpleLyricsMode");
+
+  // Official subtractions from Emphasize.ts
+  // In simple mode: shift start 21ms earlier and trim less off the end (40ms vs 250ms)
+  const subStart = isSimpleMode ? 21 : 0;
+  const subEnd = isSimpleMode ? 40 : 250;
+
+  const startTime = convertTime(lead.StartTime) - subStart;
+  const endTime = convertTime(lead.EndTime) - subEnd;
+  const totalDuration = endTime - startTime;
+  const letterDuration = totalDuration / letters.length;
+
+  const letterDataArr = [];
+
+  letters.forEach((letter, index) => {
+    const letterElem = document.createElement("span");
+    letterElem.textContent = letter;
+    letterElem.classList.add("letter", "Emphasis");
+
+    const letterStartTime = startTime + (index * letterDuration);
+    const letterEndTime = letterStartTime + letterDuration;
+
+    if (index === letters.length - 1) {
+      letterElem.classList.add("LastLetterInWord");
+    }
+
+    if (!settingsManager.get("simpleLyricsMode") && !settingsManager.get("amlLyricsAnimations")) {
+      letterElem.style.setProperty("--gradient-position", "-20%");
+    }
+
+    letterDataArr.push({
+      HTMLElement: letterElem,
+      StartTime: letterStartTime,
+      EndTime: letterEndTime,
+      TotalTime: letterDuration,
+      Emphasis: true,
+      BGLetter: isBgWord
+    });
+
+    wordElem.appendChild(letterElem);
+  });
+
+  wordElem.classList.add("letterGroup");
+  return letterDataArr;
+}
+
+/**
+ * Global lyrics object tracking all line/word references.
+ */
+export const LyricsObject = {
+  Types: {
+    Syllable: { Lines: [] },
+    Line: { Lines: [] },
+    Static: { Lines: [] },
+  },
+  RawData: null, // Stores the original parsed data
+};
+
+let currentLineIndex = -1;
+
+function setWordArrayInCurrentLine() {
+  currentLineIndex = LyricsObject.Types.Syllable.Lines.length - 1;
+  if (currentLineIndex >= 0) {
+    LyricsObject.Types.Syllable.Lines[currentLineIndex].Syllables = { Lead: [] };
+  }
+}
+
+function setWordArrayInCurrentLine_LINE() {
+  currentLineIndex = LyricsObject.Types.Line.Lines.length - 1;
+  if (currentLineIndex >= 0) {
+    LyricsObject.Types.Line.Lines[currentLineIndex].Syllables = { Lead: [] };
+  }
+}
+
+export function clearLyricsArrays() {
+  LyricsObject.Types.Syllable.Lines = [];
+  LyricsObject.Types.Line.Lines = [];
+  LyricsObject.Types.Static.Lines = [];
+  currentLineIndex = -1;
+}
+
+/**
+ * Apply Syllable-synced lyrics to the DOM.
+ * @param {object} data - Parsed TTML data with Type="Syllable"
+ * @param {HTMLElement} lyricsContentEl - The .LyricsContent element
+ * @returns {HTMLElement} The scroll container element
+ */
+export function applySyllableLyrics(data, lyricsContentEl) {
+  const showRomanized = settingsManager.get("showRomanized");
+  const showTranslation = settingsManager.get("showTranslation");
+  LyricsObject.RawData = data;
+  clearLyricsArrays();
+
+  const container = document.createElement("div");
+  container.classList.add("LyricsflowScrollContainer");
+  container.setAttribute("data-lyrics-type", "Syllable");
+  if (data.IsConvertedLine) {
+    container.classList.add("is-converted-line");
+  }
+  if (settingsManager.get("simpleLyricsMode")) {
+    container.classList.add("lf-simple-mode");
+  }
+
+  // Leading interlude dots
+  if (data.StartTime >= LYRICS_BETWEEN_SHOW) {
+    createMusicalLine(container, 0, convertTime(data.StartTime + INTERLUDE_EARLIER_BY),
+      data.Content[0]?.OppositeAligned, "Syllable");
+  }
+
+  data.Content.forEach((line, index, arr) => {
+    const lineElem = document.createElement("div");
+    lineElem.classList.add("line");
+    if (data.IsConvertedLine) {
+      lineElem.classList.add("is-converted-line");
+    }
+    lineElem.setAttribute("dir", "auto");
+
+    const nextLineStartTime = arr[index + 1]?.Lead.StartTime ?? 0;
+    const lineEndTimeAndNextDist = nextLineStartTime !== 0 ? nextLineStartTime - line.Lead.EndTime : 0;
+    const lineEndTime = line.Lead.EndTime;
+
+    LyricsObject.Types.Syllable.Lines.push({
+      HTMLElement: lineElem,
+      StartTime: convertTime(line.Lead.StartTime),
+      EndTime: convertTime(lineEndTime),
+      TotalTime: convertTime(lineEndTime) - convertTime(line.Lead.StartTime),
+      IsConvertedLine: data.IsConvertedLine,
+    });
+    setWordArrayInCurrentLine();
+
+    if (line.OppositeAligned) lineElem.classList.add("OppositeAligned");
+
+    container.appendChild(lineElem);
+
+    let currentWordGroup = null;
+
+    // Build words/syllables
+    let syllablesToRender = preprocessArabicSyllables(line.Lead.Syllables);
+    if (showTranslation && line.TranslatedText) {
+      const words = line.TranslatedText.split(" ");
+      const totalTime = line.Lead.EndTime - line.Lead.StartTime;
+      const wordTime = totalTime / words.length;
+
+      syllablesToRender = words.map((w, index) => ({
+        Text: w,
+        StartTime: line.Lead.StartTime + (index * wordTime),
+        EndTime: line.Lead.StartTime + ((index + 1) * wordTime),
+        IsPartOfWord: false
+      }));
+    }
+
+    // Pre-compute emphasis at word level (consecutive IsPartOfWord entries)
+    const wordEmphasisMask = new Array(syllablesToRender.length).fill(null);
+    const syllableWordInfo = new Array(syllablesToRender.length).fill(null);
+    for (let wi = 0; wi < syllablesToRender.length;) {
+      const wStart = wi;
+      let combinedText = "";
+      let wordStartTime = convertTime(syllablesToRender[wi].StartTime);
+      let wordEndTime = convertTime(syllablesToRender[wi].EndTime);
+      while (wi < syllablesToRender.length) {
+        const s = syllablesToRender[wi];
+        const raw = ((!showTranslation && showRomanized && s.RomanizedText !== undefined) ? s.RomanizedText : s.Text) ?? "";
+        combinedText += settingsManager.get("trimSyllableSpaces") ? raw.trim() : raw;
+        wordEndTime = convertTime(s.EndTime);
+        wi++;
+        if (!s.IsPartOfWord) break;
+      }
+      const wordDuration = wordEndTime - wordStartTime;
+      const wordLetterCount = combinedText.replace(/\s/g, "").length;
+      const wordSyllableCount = wi - wStart;
+      const wordEmphasized = isLetterCapable(combinedText, wordDuration, wordSyllableCount);
+
+      // Find the syllable with the longest duration in this word
+      let maxDuration = -1;
+      let longestSyllable = syllablesToRender[wStart];
+      for (let sIdx = wStart; sIdx < wi; sIdx++) {
+        const s = syllablesToRender[sIdx];
+        const sDur = convertTime(s.EndTime) - convertTime(s.StartTime);
+        if (sDur > maxDuration) {
+          maxDuration = sDur;
+          longestSyllable = s;
+        }
+      }
+      const emphasisStartTime = convertTime(longestSyllable.StartTime);
+      const emphasisEndTime = convertTime(longestSyllable.EndTime);
+
+      for (let j = wStart; j < wi; j++) {
+        wordEmphasisMask[j] = wordEmphasized;
+        if (wordEmphasized) {
+          syllableWordInfo[j] = {
+            wStart,
+            wEndIndex: wi,
+            wordStartTime: emphasisStartTime,
+            wordEndTime: emphasisEndTime,
+            wordLetterCount,
+            combinedText
+          };
+        }
+      }
+    }
+
+    syllablesToRender.forEach((lead, iL, aL) => {
+      const rawText = ((!showTranslation && showRomanized && lead.RomanizedText !== undefined) ? lead.RomanizedText : lead.Text) ?? "";
+      const displayText = settingsManager.get("trimSyllableSpaces") ? rawText.trim() : rawText;
+      const totalDuration = convertTime(lead.EndTime) - convertTime(lead.StartTime);
+      const isEmphasized = data.IsConvertedLine ? false : wordEmphasisMask[iL];
+
+      let word;
+      let lettersData = null;
+
+      if (isEmphasized) {
+        word = document.createElement("div");
+        word.classList.add("letterGroup");
+        if (lead.IsPartOfWord) {
+          word.classList.add("PartOfWord");
+        }
+
+        const info = syllableWordInfo[iL];
+        let letterOffsetInWord = 0;
+        for (let sIdx = info.wStart; sIdx < iL; sIdx++) {
+          const s = aL[sIdx];
+          const sRaw = ((!showTranslation && showRomanized && s.RomanizedText !== undefined) ? s.RomanizedText : s.Text) ?? "";
+          const sDisplay = settingsManager.get("trimSyllableSpaces") ? sRaw.trim() : sRaw;
+          letterOffsetInWord += transformText(sDisplay).replace(/\s/g, "").length;
+        }
+
+        const syllableLetters = transformText(displayText).split("");
+        const syllableStartTime = convertTime(lead.StartTime);
+        const syllableEndTime = convertTime(lead.EndTime);
+        const syllableDuration = syllableEndTime - syllableStartTime;
+        const letterDuration = syllableDuration / Math.max(1, syllableLetters.length);
+
+        lettersData = syllableLetters.map((ch, ci) => {
+          const letterEl = document.createElement("span");
+          letterEl.textContent = ch;
+          letterEl.classList.add("letter", "Emphasis");
+
+          const globalIdx = letterOffsetInWord + ci;
+          const lStart = syllableStartTime + ci * letterDuration;
+          const lEnd = lStart + letterDuration;
+
+          if (globalIdx === info.wordLetterCount - 1) {
+            letterEl.classList.add("LastLetterInWord");
+          }
+          word.appendChild(letterEl);
+          return {
+            HTMLElement: letterEl,
+            StartTime: lStart,
+            EndTime: lEnd,
+            TotalTime: letterDuration,
+            Emphasis: true,
+            BGLetter: false,
+            WordStartTime: info.wordStartTime,
+            WordEndTime: info.wordEndTime,
+            WordLetterIndex: globalIdx,
+            WordLetterCount: info.wordLetterCount
+          };
+        });
+      } else {
+        word = document.createElement("span");
+        // Add ZWJ for Arabic cursive connections across syllable splits selectively
+        let visualText = transformText(displayText);
+        if (isRtl(displayText)) {
+          const ZWJ = '\u200D';
+          const prevText = iL > 0 ? ((!showTranslation && showRomanized && aL[iL - 1].RomanizedText !== undefined) ? aL[iL - 1].RomanizedText : aL[iL - 1].Text) ?? "" : "";
+          const nextText = iL < aL.length - 1 ? ((!showTranslation && showRomanized && aL[iL + 1].RomanizedText !== undefined) ? aL[iL + 1].RomanizedText : aL[iL + 1].Text) ?? "" : "";
+          
+          if (iL > 0 && aL[iL - 1]?.IsPartOfWord && canConnectLeft(prevText) && canConnectRight(displayText)) {
+            visualText = ZWJ + visualText;
+          }
+          if (lead.IsPartOfWord && canConnectLeft(displayText) && canConnectRight(nextText)) {
+            visualText = visualText + ZWJ;
+          }
+        }
+        word.textContent = visualText;
+        if (!settingsManager.get("simpleLyricsMode") && !settingsManager.get("amlLyricsAnimations")) {
+          word.style.setProperty("--gradient-position", "-20%");
+          word.style.setProperty("--text-shadow-opacity", "0%");
+          word.style.setProperty("--text-shadow-blur-radius", "4px");
+        } else {
+          // Clear any stale inline styles from a previous non-simple render
+          word.style.removeProperty("--gradient-position");
+          word.style.removeProperty("--text-shadow-opacity");
+          word.style.removeProperty("--text-shadow-blur-radius");
+          word.style.removeProperty("scale");
+          word.style.removeProperty("transform");
+        }
+        word.classList.add("word");
+      }
+
+      if (isRtl(displayText) && !lineElem.classList.contains("rtl")) {
+        lineElem.classList.add("rtl");
+      }
+
+      if (iL === aL.length - 1) {
+        word.classList.add("LastWordInLine");
+      } else if (lead.IsPartOfWord) {
+        word.classList.add("PartOfWord");
+      }
+
+      const ci = LyricsObject.Types.Syllable.Lines.length - 1;
+      if (LyricsObject.Types.Syllable.Lines[ci]?.Syllables?.Lead) {
+        const syllableObj = {
+          HTMLElement: word,
+          Text: displayText,
+          StartTime: convertTime(lead.StartTime),
+          EndTime: convertTime(lead.EndTime),
+          TotalTime: totalDuration,
+          Emphasis: isEmphasized,
+        };
+        if (isEmphasized) {
+          const info = syllableWordInfo[iL];
+          syllableObj.LetterGroup = true;
+          syllableObj.Letters = lettersData;
+          syllableObj.WordStartTime = info.wordStartTime;
+          syllableObj.WordEndTime = info.wordEndTime;
+        }
+        LyricsObject.Types.Syllable.Lines[ci].Syllables.Lead.push(syllableObj);
+      }
+
+      // Always group syllables that are part of a word to prevent awkward line breaks
+      if (lead.IsPartOfWord) {
+        if (!currentWordGroup) {
+          currentWordGroup = document.createElement("span");
+          currentWordGroup.classList.add("word-group");
+          currentWordGroup.style.display = "inline-block";
+          currentWordGroup.style.whiteSpace = "nowrap";
+          lineElem.appendChild(currentWordGroup);
+        }
+        currentWordGroup.appendChild(word);
+      } else {
+        if (currentWordGroup) {
+          currentWordGroup.appendChild(word);
+          currentWordGroup = null;
+        } else {
+          lineElem.appendChild(word);
+        }
+      }
+    });
+
+    // Background vocals (wrapped inside parent line div, matching AMLL LyricLineGroup)
+    if (line.Background) {
+      const bgWrapper = document.createElement("div");
+      bgWrapper.classList.add("bg-wrapper");
+
+      // AMLL: bg that starts before the lead is prepositioned ABOVE the main line.
+      const bgFirstStart = Math.min(...line.Background.map(b => convertTime(b.StartTime)));
+      const leadFirstStart = convertTime(line.Lead.Syllables?.[0]?.StartTime ?? line.Lead.StartTime);
+      const isBgFirst = bgFirstStart < leadFirstStart;
+      if (isBgFirst) bgWrapper.classList.add("top");
+
+      line.Background.forEach(bg => {
+        const bgLine = document.createElement("div");
+        bgLine.classList.add("line", "bg-line");
+        bgLine.setAttribute("dir", "auto");
+
+        LyricsObject.Types.Syllable.Lines.push({
+          HTMLElement: bgLine,
+          ParentLineElement: lineElem,
+          WrapperElement: bgWrapper,
+          StartTime: convertTime(bg.StartTime),
+          EndTime: convertTime(bg.EndTime),
+          TotalTime: convertTime(bg.EndTime) - convertTime(bg.StartTime),
+          BGLine: true,
+          IsConvertedLine: data.IsConvertedLine,
+        });
+        setWordArrayInCurrentLine();
+
+        if (line.OppositeAligned) bgLine.classList.add("OppositeAligned");
+        bgWrapper.appendChild(bgLine);
+
+        let currentBGWordGroup = null;
+
+        let bgSyllablesToRender = preprocessArabicSyllables(bg.Syllables);
+        const bgWordEmphasisMask = new Array(bgSyllablesToRender.length).fill(null);
+        const bgSyllableWordInfo = new Array(bgSyllablesToRender.length).fill(null);
+        for (let bwi = 0; bwi < bgSyllablesToRender.length;) {
+          const bwStart = bwi;
+          let bgCombinedText = "";
+          let bgWordStartTime = convertTime(bgSyllablesToRender[bwi].StartTime);
+          let bgWordEndTime = convertTime(bgSyllablesToRender[bwi].EndTime);
+          while (bwi < bgSyllablesToRender.length) {
+            const bs = bgSyllablesToRender[bwi];
+            const braw = ((showRomanized && bs.RomanizedText !== undefined) ? bs.RomanizedText : bs.Text) ?? "";
+            bgCombinedText += settingsManager.get("trimSyllableSpaces") ? braw.trim() : braw;
+            bgWordEndTime = convertTime(bs.EndTime);
+            bwi++;
+            if (!bs.IsPartOfWord) break;
+          }
+          const bgWordDuration = bgWordEndTime - bgWordStartTime;
+          const bgWordLetterCount = bgCombinedText.replace(/\s/g, "").length;
+          const bgWordSyllableCount = bwi - bwStart;
+          const bgWordEmphasized = isLetterCapable(bgCombinedText, bgWordDuration, bgWordSyllableCount);
+
+          // Find the longest syllable in the background word
+          let bgMaxDuration = -1;
+          let bgLongestSyllable = bgSyllablesToRender[bwStart];
+          for (let sIdx = bwStart; sIdx < bwi; sIdx++) {
+            const s = bgSyllablesToRender[sIdx];
+            const sDur = convertTime(s.EndTime) - convertTime(s.StartTime);
+            if (sDur > bgMaxDuration) {
+              bgMaxDuration = sDur;
+              bgLongestSyllable = s;
+            }
+          }
+          const bgEmphasisStartTime = convertTime(bgLongestSyllable.StartTime);
+          const bgEmphasisEndTime = convertTime(bgLongestSyllable.EndTime);
+
+          for (let j = bwStart; j < bwi; j++) {
+            bgWordEmphasisMask[j] = bgWordEmphasized;
+            if (bgWordEmphasized) {
+              bgSyllableWordInfo[j] = {
+                wStart: bwStart,
+                wEndIndex: bwi,
+                wordStartTime: bgEmphasisStartTime,
+                wordEndTime: bgEmphasisEndTime,
+                wordLetterCount: bgWordLetterCount,
+                combinedText: bgCombinedText
+              };
+            }
+          }
+        }
+
+        bgSyllablesToRender.forEach((bw, bI, bA) => {
+          const rawBgText = ((showRomanized && bw.RomanizedText !== undefined) ? bw.RomanizedText : bw.Text) ?? "";
+          const displayBgText = settingsManager.get("trimSyllableSpaces") ? rawBgText.trim() : rawBgText;
+          const isEmphasized = data.IsConvertedLine ? false : bgWordEmphasisMask[bI];
+          const info = bgSyllableWordInfo[bI];
+          const totalDuration = convertTime(bw.EndTime) - convertTime(bw.StartTime);
+
+          let bwE;
+          let lettersData = null;
+
+          if (isEmphasized && info && bI === info.wStart) {
+            bwE = document.createElement("span");
+
+            let letterOffsetInWord = 0;
+            for (let sIdx = info.wStart; sIdx < bI; sIdx++) {
+              const sText = bgSyllablesToRender[sIdx].Text ?? "";
+              const sDisplay = settingsManager.get("trimSyllableSpaces") ? sText.trim() : sText;
+              letterOffsetInWord += transformText(sDisplay).replace(/\s/g, "").length;
+            }
+
+            const syllableLetters = transformText(displayBgText).split("");
+            const syllableStartTime = convertTime(bw.StartTime);
+            const syllableEndTime = convertTime(bw.EndTime);
+            const syllableDuration = syllableEndTime - syllableStartTime;
+            const letterDuration = syllableDuration / Math.max(1, syllableLetters.length);
+
+            lettersData = syllableLetters.map((ch, ci) => {
+              const letterEl = document.createElement("span");
+              letterEl.textContent = ch;
+              letterEl.classList.add("letter", "Emphasis");
+
+              const globalIdx = letterOffsetInWord + ci;
+              const lStart = syllableStartTime + ci * letterDuration;
+              const lEnd = lStart + letterDuration;
+
+              if (globalIdx === info.wordLetterCount - 1) {
+                letterEl.classList.add("LastLetterInWord");
+              }
+
+              bwE.appendChild(letterEl);
+
+              return {
+                HTMLElement: letterEl,
+                StartTime: lStart,
+                EndTime: lEnd,
+                TotalTime: letterDuration,
+                Emphasis: true,
+                BGLetter: true,
+                WordStartTime: info.wordStartTime,
+                WordEndTime: info.wordEndTime,
+                WordLetterIndex: globalIdx,
+                WordLetterCount: info.wordLetterCount
+              };
+            });
+          } else {
+            bwE = document.createElement("span");
+            // Add ZWJ for Arabic cursive connections across syllable splits selectively
+            let visualBgText = transformText(displayBgText);
+            if (isRtl(displayBgText)) {
+              const ZWJ = '\u200D';
+              const prevText = bI > 0 ? ((showRomanized && bA[bI - 1].RomanizedText !== undefined) ? bA[bI - 1].RomanizedText : bA[bI - 1].Text) ?? "" : "";
+              const nextText = bI < bA.length - 1 ? ((showRomanized && bA[bI + 1].RomanizedText !== undefined) ? bA[bI + 1].RomanizedText : bA[bI + 1].Text) ?? "" : "";
+
+              if (bI > 0 && bA[bI - 1]?.IsPartOfWord && canConnectLeft(prevText) && canConnectRight(displayBgText)) {
+                visualBgText = ZWJ + visualBgText;
+              }
+              if (bw.IsPartOfWord && canConnectLeft(displayBgText) && canConnectRight(nextText)) {
+                visualBgText = visualBgText + ZWJ;
+              }
+            }
+            bwE.textContent = visualBgText;
+            if (!settingsManager.get("simpleLyricsMode") && !settingsManager.get("amlLyricsAnimations")) {
+              bwE.style.setProperty("--gradient-position", "0%");
+              bwE.style.setProperty("--text-shadow-opacity", "0%");
+              bwE.style.setProperty("--text-shadow-blur-radius", "4px");
+            } else {
+              bwE.style.removeProperty("--gradient-position");
+              bwE.style.removeProperty("--text-shadow-opacity");
+              bwE.style.removeProperty("--text-shadow-blur-radius");
+              bwE.style.removeProperty("scale");
+              bwE.style.removeProperty("transform");
+            }
+            bwE.classList.add("word");
+          }
+
+          if (isRtl(displayBgText) && !bgLine.classList.contains("rtl")) {
+            bgLine.classList.add("rtl");
+          }
+
+          bwE.classList.add("bg-word", "word");
+          
+          if (bI === bA.length - 1) {
+            bwE.classList.add("LastWordInLine");
+          } else if (bw.IsPartOfWord) {
+            bwE.classList.add("PartOfWord");
+          }
+
+          const ci = LyricsObject.Types.Syllable.Lines.length - 1;
+          if (LyricsObject.Types.Syllable.Lines[ci]?.Syllables?.Lead) {
+            const syllableObj = {
+              HTMLElement: bwE,
+              Text: displayBgText,
+              StartTime: convertTime(bw.StartTime),
+              EndTime: convertTime(bw.EndTime),
+              TotalTime: totalDuration,
+              BGWord: true,
+              Emphasis: isEmphasized,
+            };
+            if (isEmphasized) {
+              const info = bgSyllableWordInfo[bI];
+              syllableObj.LetterGroup = true;
+              syllableObj.Letters = lettersData;
+              syllableObj.WordStartTime = info.wordStartTime;
+              syllableObj.WordEndTime = info.wordEndTime;
+            }
+            LyricsObject.Types.Syllable.Lines[ci].Syllables.Lead.push(syllableObj);
+          }
+
+          const prevBG = bA[bI - 1];
+          if (bw.IsPartOfWord || (prevBG?.IsPartOfWord && currentBGWordGroup)) {
+            if (!currentBGWordGroup) {
+              const group = document.createElement("span");
+              group.classList.add("word-group");
+              group.style.display = "inline-block";
+              group.style.whiteSpace = "nowrap";
+              bgLine.appendChild(group);
+              currentBGWordGroup = group;
+            }
+            currentBGWordGroup.appendChild(bwE);
+          } else {
+            bgLine.appendChild(bwE);
+          }
+          if (!bw.IsPartOfWord && prevBG?.IsPartOfWord) currentBGWordGroup = null;
+        });
+      });
+
+      if (isBgFirst) {
+        lineElem.insertBefore(bgWrapper, lineElem.firstChild);
+      } else {
+        lineElem.appendChild(bgWrapper);
+      }
+    }
+
+    // Interlude dots between lines
+    if (arr[index + 1] && arr[index + 1].Lead.StartTime - line.Lead.EndTime >= LYRICS_BETWEEN_SHOW) {
+      createMusicalLine(container,
+        convertTime(line.Lead.EndTime),
+        convertTime(arr[index + 1].Lead.StartTime + INTERLUDE_EARLIER_BY),
+        arr[index + 1].OppositeAligned, "Syllable");
+    }
+  });
+
+  // Extend each parent line's active window to cover trailing background vocals,
+  // so the bg line doesn't vanish while it is still being sung (Apple Music behavior).
+  // Also wire each parent line to its bg wrapper (AMLL LyricLineGroup bgSlideY spring).
+  const elToLine = new Map();
+  for (const l of LyricsObject.Types.Syllable.Lines) elToLine.set(l.HTMLElement, l);
+  for (const l of LyricsObject.Types.Syllable.Lines) {
+    if (l.ParentLineElement) {
+      const parent = elToLine.get(l.ParentLineElement);
+      if (parent && l.EndTime > parent.EndTime) {
+        parent.EndTime = l.EndTime;
+      }
+      if (parent && l.BGLine && !parent._bgWrapper) {
+        const wrapper = l.WrapperElement;
+        parent._bgWrapper = wrapper;
+        wrapper._bgHeight = wrapper.scrollHeight || wrapper.clientHeight || 0;
+        const leadStart = parent.Syllables?.Lead?.[0]?.StartTime ?? parent.StartTime;
+        const bgStart = l.Syllables?.Lead?.[0]?.StartTime ?? l.StartTime;
+        parent._isBgFirst = bgStart < leadStart;
+      }
+    }
+  }
+
+  // Credits
+  renderCredits(data, container);
+
+  // Add spacer for centering
+  const spacer = document.createElement("div");
+  spacer.classList.add("lyrics-spacer");
+  container.appendChild(spacer);
+
+  lyricsContentEl.innerHTML = "";
+  lyricsContentEl.appendChild(container);
+
+  return container;
+}
+
+
+/**
+ * Estimates the 'rhythmic weight' of a word based on character count,
+ * ignoring punctuation to provide more natural timing.
+ */
+function getTextWeight(text) {
+  const compact = text.replace(/[.,!?;:'"()[\]{}\-—–…@#$%^&*~`]/g, "").replace(/\s/g, "");
+  return Math.max(1, compact.length || text.trim().length);
+}
+
+/**
+ * Converts Line-synced lyrics to Syllable-synced by estimating word durations.
+ * Distributes line duration proportionally based on character weight.
+ * Preserves original spacing and punctuation into the syllable tokens.
+ */
+export function convertToSyllable(data) {
+  try {
+    const processTextSegment = (text, startTime, endTime) => {
+      if (!text || typeof text !== "string") return [];
+      const rawWords = text.split(/\s+/).filter(Boolean);
+      if (rawWords.length === 0) return [];
+
+      const totalDuration = (endTime && endTime > startTime) ? endTime - startTime : 1.5;
+      const weights = rawWords.map(w => getTextWeight(w));
+      const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+      let currentCursor = startTime;
+      let currentPosInLine = 0;
+
+      return rawWords.map((word, i) => {
+        const weight = weights[i];
+        const wordDuration = (weight / totalWeight) * totalDuration;
+        const start = currentCursor;
+        const end = currentCursor + wordDuration;
+        currentCursor = end;
+
+        // Find the exact text in the line for spacing/punctuation accuracy
+        const foundIdx = text.indexOf(word, currentPosInLine);
+        let capturedText = word;
+
+        if (foundIdx !== -1) {
+          // Find where the next word starts to capture the "gap" (spaces/punctuation)
+          const nextWord = rawWords[i + 1];
+          let nextIdx = nextWord ? text.indexOf(nextWord, foundIdx + word.length) : text.length;
+
+          // If we found the next word, capture everything from current word start to next word start
+          if (nextIdx !== -1) {
+            capturedText = text.substring(foundIdx, nextIdx);
+            currentPosInLine = nextIdx;
+          } else {
+            // Last word, capture everything to the end
+            capturedText = text.substring(foundIdx);
+            currentPosInLine = text.length;
+          }
+        }
+
+        return {
+          Text: settingsManager.get("trimSyllableSpaces") ? capturedText.trim() : capturedText,
+          StartTime: start,
+          EndTime: end,
+          IsPartOfWord: false
+        };
+      });
+    };
+
+    const syllableData = {
+      ...data,
+      Type: "Syllable",
+      IsConvertedLine: !settingsManager.get("forceWordSync"),
+      Content: data.Content.map(line => {
+        if (!line) return null;
+        const textVal = line.Text || "";
+        const leadSyllables = processTextSegment(textVal, line.StartTime, line.EndTime);
+        if (leadSyllables.length === 0) return null;
+
+        const res = {
+          OppositeAligned: !!line.OppositeAligned,
+          Lead: {
+            StartTime: line.StartTime,
+            EndTime: line.EndTime,
+            Syllables: leadSyllables
+          }
+        };
+
+        // Preserve translated and romanized text
+        if (line.TranslatedText) res.TranslatedText = line.TranslatedText;
+        if (line.RomanizedText) res.RomanizedText = line.RomanizedText;
+
+        // Handle background vocals if they exist in the line data
+        if (line.Background && Array.isArray(line.Background) && line.Background.length > 0) {
+          res.Background = line.Background.map(bg => {
+            if (!bg) return null;
+            const bgText = bg.Text || bg.Syllables?.map(s => s.Text).join("") || "";
+            return {
+              StartTime: bg.StartTime,
+              EndTime: bg.EndTime,
+              Syllables: processTextSegment(bgText, bg.StartTime, bg.EndTime)
+            };
+          }).filter(Boolean);
+        }
+
+        return res;
+      }).filter(Boolean)
+    };
+    return syllableData;
+  } catch (err) {
+    console.error("[LyricsflowPlayer] convertToSyllable failed:", err);
+    return data;
+  }
+}
+
+/**
+ * Apply Line-synced lyrics to the DOM.
+ */
+export function applyLineLyrics(data, lyricsContentEl) {
+  return applySyllableLyrics(convertToSyllable(data), lyricsContentEl);
+}
+
+
+/**
+ * Apply Static lyrics to the DOM.
+ */
+export function applyStaticLyrics(data, lyricsContentEl) {
+  const showRomanized = settingsManager.get("showRomanized");
+  const showTranslation = settingsManager.get("showTranslation");
+  LyricsObject.RawData = data;
+  clearLyricsArrays();
+
+  const container = document.createElement("div");
+  container.classList.add("LyricsflowScrollContainer");
+  container.setAttribute("data-lyrics-type", "Static");
+
+  data.Lines.forEach(line => {
+    const displayText = (showTranslation && line.TranslatedText !== undefined) ? line.TranslatedText : (showRomanized && line.RomanizedText !== undefined) ? line.RomanizedText : line.Text;
+    const lineElem = document.createElement("div");
+    lineElem.classList.add("line", "static");
+    lineElem.setAttribute("dir", "auto");
+    if (isRtl(displayText)) lineElem.classList.add("rtl");
+
+    const wordElem = document.createElement("span");
+    wordElem.classList.add("word");
+    wordElem.textContent = transformText(displayText);
+    lineElem.appendChild(wordElem);
+
+    LyricsObject.Types.Static.Lines.push({ HTMLElement: lineElem });
+    container.appendChild(lineElem);
+  });
+
+  // Credits
+  renderCredits(data, container);
+
+  // Add spacer for centering
+  const spacer = document.createElement("div");
+  spacer.classList.add("lyrics-spacer");
+  container.appendChild(spacer);
+
+  lyricsContentEl.innerHTML = "";
+  lyricsContentEl.appendChild(container);
+  return container;
+}
+
+/**
+ * Renders credits for songwriters and TTML makers.
+ */
+function renderCredits(data, container) {
+  const hasSongWriters = data.SongWriters && data.SongWriters.length > 0;
+  const hasMaker = data.makerHandle && data.makerId;
+
+  if (!hasSongWriters && !hasMaker) return;
+
+  const creditsContainer = document.createElement("div");
+  creditsContainer.classList.add("Credits");
+
+  if (hasSongWriters) {
+    const songwriters = document.createElement("div");
+    songwriters.classList.add("CreditLine", "Songwriters");
+    songwriters.textContent = "Written by: " + data.SongWriters.join(", ");
+    creditsContainer.appendChild(songwriters);
+  }
+
+  if (hasMaker) {
+    const makerSection = document.createElement("div");
+    makerSection.classList.add("MakerSection");
+    makerSection.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      text-align: center;
+    `;
+
+    const communityHeader = document.createElement("div");
+    communityHeader.classList.add("CreditNotice");
+    communityHeader.textContent = "These lyrics have been provided by our community";
+    makerSection.appendChild(communityHeader);
+
+    const makerCredits = document.createElement("div");
+    makerCredits.classList.add("CreditLine", "TTMLMaker");
+    makerCredits.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      width: 100%;
+    `;
+
+    const label = document.createElement("span");
+    label.textContent = "Made and Uploaded by";
+    label.style.cssText = `
+      font-size: 0.85rem;
+      opacity: 0.6;
+      font-weight: 500;
+    `;
+    makerCredits.appendChild(label);
+
+    const badgeContainer = document.createElement("a");
+    badgeContainer.href = `https://api.spicyamll.online/user/@${data.makerHandle}`;
+    badgeContainer.target = "_blank";
+    badgeContainer.classList.add("maker-link");
+    badgeContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 16px;
+      border-radius: 16px;
+      text-decoration: none;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    `;
+    badgeContainer.addEventListener("mouseover", () => {
+      badgeContainer.style.background = "rgba(255, 255, 255, 0.1)";
+      badgeContainer.style.borderColor = "rgba(255, 255, 255, 0.2)";
+      badgeContainer.style.transform = "translateY(-1px)";
+    });
+    badgeContainer.addEventListener("mouseout", () => {
+      badgeContainer.style.background = "rgba(255, 255, 255, 0.05)";
+      badgeContainer.style.borderColor = "rgba(255, 255, 255, 0.1)";
+      badgeContainer.style.transform = "translateY(0)";
+    });
+    badgeContainer.addEventListener("click", (e) => {
+      e.preventDefault();
+      showUserProfileIframe(data.makerHandle);
+    });
+
+    // PFP
+    const avatar = document.createElement("img");
+    avatar.src = data.makerAvatar || "https://discord.com/assets/embed/avatars/0.png";
+    avatar.onerror = () => {
+      avatar.src = "https://cdn.discordapp.com/embed/avatars/0.png";
+    };
+    avatar.style.cssText = `
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    `;
+    badgeContainer.appendChild(avatar);
+
+    // Text container (Name + Username)
+    const textCol = document.createElement("div");
+    textCol.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    `;
+
+    // Display Name
+    const nameEl = document.createElement("span");
+    nameEl.textContent = data.makerDisplayName || data.makerNickname || data.makerHandle;
+    nameEl.style.cssText = `
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #ffffff;
+    `;
+    textCol.appendChild(nameEl);
+
+    // Username (not the nickname) under the name in small text
+    const handleEl = document.createElement("span");
+    handleEl.textContent = `@${data.makerHandle}`;
+    handleEl.style.cssText = `
+      font-size: 0.75rem;
+      opacity: 0.5;
+      font-weight: 400;
+    `;
+    textCol.appendChild(handleEl);
+
+    badgeContainer.appendChild(textCol);
+    makerCredits.appendChild(badgeContainer);
+    makerSection.appendChild(makerCredits);
+
+    creditsContainer.appendChild(makerSection);
+  }
+
+  container.appendChild(creditsContainer);
+}
+
+function showUserProfileIframe(username) {
+  let existingModal = document.getElementById("lyricsflow-profile-modal");
+  if (existingModal) existingModal.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "lyricsflow-profile-modal";
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  `;
+
+  const card = document.createElement("div");
+  card.style.cssText = `
+    position: relative;
+    width: 90%;
+    max-width: 500px;
+    height: 80vh;
+    background: #0f0f0f;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+    transform: scale(0.9);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  `;
+
+  const closeBtn = document.createElement("button");
+  closeBtn.innerHTML = "&times;";
+  closeBtn.style.cssText = `
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    font-size: 24px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 10;
+  `;
+  closeBtn.addEventListener("mouseover", () => {
+    closeBtn.style.background = "rgba(255, 255, 255, 0.3)";
+  });
+  closeBtn.addEventListener("mouseout", () => {
+    closeBtn.style.background = "rgba(255, 255, 255, 0.15)";
+  });
+  closeBtn.addEventListener("click", () => {
+    modal.style.opacity = "0";
+    card.style.transform = "scale(0.9)";
+    setTimeout(() => modal.remove(), 300);
+  });
+
+  const iframe = document.createElement("iframe");
+  const safeUsername = encodeURIComponent(String(username || '').replace(/^@/, ''));
+  iframe.src = `https://api.spicyamll.online/user/@${safeUsername}`;
+  iframe.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups");
+  iframe.style.cssText = `
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+  `;
+
+  card.appendChild(closeBtn);
+  card.appendChild(iframe);
+  modal.appendChild(card);
+  document.body.appendChild(modal);
+
+  requestAnimationFrame(() => {
+    modal.style.opacity = "1";
+    card.style.transform = "scale(1)";
+  });
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      modal.style.opacity = "0";
+      card.style.transform = "scale(0.9)";
+      setTimeout(() => modal.remove(), 300);
+    }
+  });
+}
+
+/**
+ * Creates musical interlude dots.
+ */
+function createMusicalLine(container, startTime, endTime, oppositeAligned, lyricsType) {
+  const musicalLine = document.createElement("div");
+  musicalLine.classList.add("line", "musical-line");
+
+  const totalTime = endTime - startTime;
+  const lineData = {
+    HTMLElement: musicalLine,
+    StartTime: startTime,
+    EndTime: endTime,
+    TotalTime: totalTime,
+    DotLine: true,
+  };
+
+  if (lyricsType === "Syllable") {
+    LyricsObject.Types.Syllable.Lines.push(lineData);
+    setWordArrayInCurrentLine();
+  } else {
+    LyricsObject.Types.Line.Lines.push(lineData);
+    setWordArrayInCurrentLine_LINE();
+  }
+
+  if (oppositeAligned) musicalLine.classList.add("OppositeAligned");
+
+  const dotGroup = document.createElement("div");
+  dotGroup.classList.add("dotGroup");
+
+  lineData._dotGroup = dotGroup;
+  lineData._dots = [];
+  lineData._dotAnchor = null;
+  lineData._dotActive = false;
+  lineData._lastDotPos = undefined;
+
+  const dotTime = totalTime / 3;
+  const ci = lyricsType === "Syllable"
+    ? LyricsObject.Types.Syllable.Lines.length - 1
+    : LyricsObject.Types.Line.Lines.length - 1;
+  const targetLines = lyricsType === "Syllable"
+    ? LyricsObject.Types.Syllable.Lines
+    : LyricsObject.Types.Line.Lines;
+
+  for (let d = 0; d < 3; d++) {
+    const dot = document.createElement("span");
+    dot.classList.add("word", "dot");
+    dot.textContent = "•";
+
+    if (targetLines[ci]?.Syllables?.Lead) {
+      targetLines[ci].Syllables.Lead.push({
+        HTMLElement: dot,
+        StartTime: startTime + dotTime * d,
+        EndTime: d === 2 ? endTime - 400 : startTime + dotTime * (d + 1),
+        TotalTime: dotTime,
+        Dot: true,
+      });
+    }
+    dotGroup.appendChild(dot);
+    lineData._dots.push(dot);
+  }
+
+  musicalLine.appendChild(dotGroup);
+  container.appendChild(musicalLine);
+}

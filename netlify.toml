@@ -1,0 +1,33 @@
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Permissions-Policy = "camera=(), microphone=(self), display-capture=(self), screen-wake-lock=(self), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://nurislamaibekuly.github.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://nurislamaibekuly.github.io; img-src 'self' data: blob: https://*.mzstatic.com https://*.apple.com https://*.scdn.co https://*.genius.com https://*.discordapp.com https://discord.com https://api.spicyamll.online; connect-src 'self' https://api.spicyamll.online https://amp-api-edge.music.apple.com https://amp-api.music.apple.com https://api.music.apple.com https://play.itunes.apple.com https://itunes.apple.com https://lrclib.net https://music.163.com https://api.genius.com https://genius.com https://apic-desktop.musixmatch.com https://cloudflareinsights.com https://static.cloudflareinsights.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' blob: data: https:; worker-src 'self' blob:; frame-src 'self' https://api.spicyamll.online; frame-ancestors 'self'; object-src 'none'; base-uri 'self';"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "https://spicyamll.online"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

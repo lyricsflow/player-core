@@ -608,6 +608,11 @@
   transform: none;
 }
 
+/* Dragging: fill goes fully opaque (opacity 1.0), relaxes back on release */
+.NowBarProgress .aero-elastic--dragging {
+  --elastic-fill-active: #fff;
+}
+
 /* ── Transport Buttons: AeroUI player-button (prev / play-pause / next) ──
    Frame is an invisible touch target; only the icon shows. Skip buttons keep
    the existing PNG glyphs (old sizing rules still apply to their <img>),

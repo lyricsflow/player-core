@@ -668,7 +668,7 @@
       if (!track.buffer && track.amTrackId) {
         showNotice(`⬇️ ${t('loading_download')}`);
         try {
-          const apiBase = window.API_BASE || 'http://api.spicyamll.online';
+          const apiBase = window.API_BASE || 'https://api.spicyamll.online';
           const audioUrl = `${apiBase}/download?song=${track.amTrackId}&l=${getCurrentLang()}`;
           const response = await fetch(audioUrl);
           if (!response.ok) throw new Error("HTTP " + response.status);

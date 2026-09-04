@@ -2749,10 +2749,11 @@ document.addEventListener('DOMContentLoaded', () => {
         artworkUrl100: cleanArtworkUrl(attr.artwork?.url, 100, 100)
       };
 
-      loadRemoteTrack(song);
+      await loadRemoteTrack(song);
+      if (prepOverlay) prepOverlay.classList.remove('active');
     } catch (err) {
       console.error("[ID Loader] Failed:", err);
-      prepOverlay.classList.remove('active');
+      if (prepOverlay) prepOverlay.classList.remove('active');
       showToast({ message: `Could not load track ${id}: ${err.message}` });
     }
   }

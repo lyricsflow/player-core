@@ -7,6 +7,7 @@
 import { showToast } from './toast.js';
 import { escapeHTML } from './security-utils.js';
 import { t } from './i18n.js';
+import { parseAudioMetadata } from './metadata-parser.js';
 
 function generateArtistInitial(name) {
   const letter = (name || '?').trim().charAt(0).toUpperCase();
@@ -328,6 +329,11 @@ export class PreviewPlayer {
       if (this.seekSlider) this.seekSlider.value = percent;
       if (this.currTimeEl) this.currTimeEl.textContent = this._formatTime(cur);
       if (this.durTimeEl) this.durTimeEl.textContent = this._formatTime(dur);
+
+      if (this.container) {
+        this.container.setAttribute('data-position', (cur * 1000).toString());
+        this.container.setAttribute('data-duration', (dur * 1000).toString());
+      }
     });
 
     this.audio.addEventListener('error', (err) => {
@@ -409,6 +415,7 @@ export class PreviewPlayer {
   _updatePlayButton(isPlaying) {
     if (!this.playIcon) this.playIcon = document.getElementById('am-preview-play-icon');
     if (this.playIcon) {
+      // In this app: icons/play.png is the 2-bars pause icon; icons/paused.png is the play triangle icon
       this.playIcon.src = isPlaying ? 'icons/play.png' : 'icons/paused.png';
       this.playIcon.alt = isPlaying ? 'Pause' : 'Play';
     }
@@ -509,11 +516,19 @@ export class PreviewPlayer {
     // Highlight row in active album grid
     this._highlightTrackRow(track.id);
 
-    // Show mini player
+    // Update MediaSession with song metadata
+    this._updateMediaSessionMetadata(track);
+
+    // Show mini player and update data attributes for presence detection
     if (this.container) {
       this.container.style.display = 'block';
       this.container.classList.remove('hidden');
       this.container.classList.add('visible');
+      this.container.setAttribute('data-preview-track-id', String(track.id || ''));
+      this.container.setAttribute('data-preview-title', track.title || '');
+      this.container.setAttribute('data-preview-artist', track.artist || '');
+      this.container.setAttribute('data-preview-album', track.album || '');
+      this.container.setAttribute('data-preview-art-url', track.artUrl || '');
     }
 
     // Hide or show "30s Preview" badge: if it's full streaming, don't show the badge!
@@ -624,6 +639,25 @@ export class PreviewPlayer {
     }
   }
 
+  /**
+   * Play an audio ArrayBuffer directly (using metadata-parser)
+   */
+  async playBuffer(buffer, filename = 'Audio Track') {
+    const meta = await parseAudioMetadata(buffer, filename);
+    const blob = new Blob([buffer], { type: 'audio/mpeg' });
+    const blobUrl = URL.createObjectURL(blob);
+    const trackObj = {
+      id: `local_${Date.now()}`,
+      title: meta.title || filename,
+      artist: meta.artist || 'Local Audio',
+      album: meta.album || '',
+      artUrl: meta.artUrl || 'favicon.svg',
+      previewUrl: blobUrl,
+      durationMs: 0
+    };
+    this.playTrack(trackObj);
+  }
+
   close() {
     this.pause();
     this.audio.src = '';
@@ -631,6 +665,11 @@ export class PreviewPlayer {
       this.container.classList.remove('visible');
       this.container.classList.add('hidden');
       this.container.style.display = 'none';
+      this.container.removeAttribute('data-preview-track-id');
+      this.container.removeAttribute('data-preview-title');
+      this.container.removeAttribute('data-preview-artist');
+      this.container.removeAttribute('data-preview-album');
+      this.container.removeAttribute('data-preview-art-url');
     }
     this._highlightTrackRow(null);
     this._updateMediaSessionState('none');
@@ -640,3 +679,4 @@ export class PreviewPlayer {
 
 // Global Singleton Instance
 export const previewPlayer = new PreviewPlayer();
+window.lyricsflowPreviewPlayer = previewPlayer;

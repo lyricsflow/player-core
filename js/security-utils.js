@@ -27,7 +27,12 @@ export function escapeHTML(str) {
  */
 export function cleanArtworkUrl(url, w = 300, h = 300) {
   if (!url || typeof url !== 'string') return '';
-  let cleaned = url
+  const trimmed = url.trim();
+  // Disallow javascript:, vbscript:, and non-image data URIs
+  if (/^(javascript|vbscript|data:(?!image\/))/i.test(trimmed)) {
+    return '';
+  }
+  let cleaned = trimmed
     .replace('{w}', String(w))
     .replace('{h}', String(h))
     .replace('{c}', '')
@@ -39,5 +44,24 @@ export function cleanArtworkUrl(url, w = 300, h = 300) {
     return '';
   }
   return cleaned.replace(/["'<>\s\\]/g, c => encodeURIComponent(c));
+}
+
+/**
+ * Validates and sanitizes generic URLs to prevent javascript:/data: injection.
+ * @param {string} url - Target URL
+ * @param {string[]} [allowedSchemes=['http:', 'https:', 'blob:']]
+ * @returns {string} Sanitized URL or empty string if invalid
+ */
+export function sanitizeUrl(url, allowedSchemes = ['http:', 'https:', 'blob:']) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/') || trimmed.startsWith('./')) return trimmed;
+  try {
+    const parsed = new URL(trimmed, window.location.origin);
+    if (allowedSchemes.includes(parsed.protocol)) {
+      return parsed.href;
+    }
+  } catch (_) {}
+  return '';
 }
 

@@ -61,7 +61,7 @@ document.addEventListener('error', function (e) {
 }, true);
 import { previewPlayer } from './preview-player.js';
 
-const API_BASE = "http://api.spicyamll.online";
+const API_BASE = "https://api.spicyamll.online";
 
 function cleanArtworkUrl(url, w = 300, h = 300) {
   if (!url || typeof url !== 'string') return '';
@@ -394,7 +394,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         setCurrentIndex(0);
-        window.location.href = 'player.html';
+        const drawer = document.getElementById('player-drawer');
+        const drawerIframe = document.getElementById('player-drawer-iframe');
+        if (drawer && drawerIframe) {
+          drawerIframe.src = 'player.html';
+          drawer.classList.add('open');
+          startBtn.disabled = false;
+          if (prepOverlay) prepOverlay.classList.remove('active');
+        } else {
+          window.location.href = 'player.html';
+        }
 
       } catch (err) {
         showError('Failed to prepare queue: ' + err.message);
@@ -404,12 +413,80 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ── Slug & URL Routing Helper ──
+  function toSlug(text) {
+    if (!text) return '';
+    return String(text)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[\s_]+/g, '-')
+      .replace(/[^\w-]+/g, '')
+      .replace(/--+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'item';
+  }
+
+  // Universal Share Helper using slug URLs & Web Share API
+  async function shareEntity({ title, text, url }) {
+    let clean = url || '';
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      try {
+        const u = new URL(clean);
+        clean = u.pathname + u.search;
+      } catch (_) {}
+    }
+    clean = clean.replace(/^#\/?/, '');
+    if (!clean.startsWith('/')) clean = '/' + clean;
+    const fullUrl = `${window.location.origin}${clean}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: title || 'Lyricsflow',
+          text: text || title || 'Check this out on Lyricsflow',
+          url: fullUrl
+        });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+    // Fallback: Copy to clipboard
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      showToast({ message: 'Link copied to clipboard!' });
+    } catch (_) {
+      showToast({ message: fullUrl });
+    }
+  }
+  window.lyricsflowShare = shareEntity;
+
+  let isHandlingPopState = false;
+
+  function syncUrl(pathname, search = '', replace = false) {
+    if (isHandlingPopState) return;
+    try {
+      let cleanPath = pathname.replace(/^#\/?/, '');
+      if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
+      const targetSearch = search ? (search.startsWith('?') ? search : `?${search}`) : '';
+      const targetFull = cleanPath + targetSearch;
+      const currentFull = window.location.pathname + window.location.search;
+      if (currentFull !== targetFull) {
+        if (replace) {
+          window.history.replaceState({ path: cleanPath, search: targetSearch }, '', targetFull);
+        } else {
+          window.history.pushState({ path: cleanPath, search: targetSearch }, '', targetFull);
+        }
+      }
+    } catch (_) { }
+  }
+
   // ── Navigation & Page Management ──
   const navItems = document.querySelectorAll('.am-sidebar-nav .am-nav-item');
   const mobNavBtns = document.querySelectorAll('.am-mob-nav-btn');
   const pages = document.querySelectorAll('.am-page');
 
-  function switchPage(pageId) {
+  function switchPage(pageId, options = {}) {
     if (!pageId) return;
 
     // Update sidebar nav items
@@ -428,6 +505,32 @@ document.addEventListener('DOMContentLoaded', () => {
     pages.forEach(p => p.classList.remove('active'));
     const targetPage = document.getElementById(`page-${pageId}`);
     if (targetPage) targetPage.classList.add('active');
+
+    // Sync URL slug for top-level pages
+    if (!options.skipUrlSync) {
+      if (pageId === 'home') {
+        syncUrl('/home', '', options.replaceUrl);
+      } else if (pageId === 'listen') {
+        const q = catalogSearch?.value?.trim() || '';
+        syncUrl('/search', q ? `q=${encodeURIComponent(q)}` : '', options.replaceUrl);
+      } else if (pageId === 'upload') {
+        syncUrl('/upload', '', options.replaceUrl);
+      } else if (pageId === 'playlists') {
+        syncUrl('/playlists', '', options.replaceUrl);
+      } else if (pageId === 'recently-added') {
+        syncUrl('/recently-added', '', options.replaceUrl);
+      } else if (pageId === 'library-hub') {
+        syncUrl('/library', '', options.replaceUrl);
+      } else if (pageId === 'library-artists') {
+        syncUrl('/library/artists', '', options.replaceUrl);
+      } else if (pageId === 'library-albums') {
+        syncUrl('/library/albums', '', options.replaceUrl);
+      } else if (pageId === 'songs') {
+        syncUrl('/library/songs', '', options.replaceUrl);
+      } else if (pageId === 'recent') {
+        syncUrl('/recently-listened', '', options.replaceUrl);
+      }
+    }
 
     // Page-specific loaders
     if (pageId === 'home') renderHomePage();
@@ -462,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── Show Detail Views Helpers (Clean View Transitions) ──
-  function showAlbumView(albumId) {
+  function showAlbumView(albumId, albumName = '', trackId = null, options = {}) {
     if (!albumId) return;
     pages.forEach(p => p.classList.remove('active'));
     const listenPage = document.getElementById('page-listen');
@@ -477,10 +580,16 @@ document.addEventListener('DOMContentLoaded', () => {
       else btn.classList.remove('am-mob-active');
     });
 
-    fetchAlbumDetails(albumId);
+    if (!options.skipUrlSync) {
+      const slug = toSlug(albumName || 'album');
+      const search = trackId ? `i=${trackId}` : '';
+      syncUrl(`/album/${slug}/${albumId}`, search, options.replaceUrl);
+    }
+
+    fetchAlbumDetails(albumId, albumName, trackId);
   }
 
-  function showArtistView(artistId, artistName) {
+  function showArtistView(artistId, artistName, options = {}) {
     if (!artistId) return;
     pages.forEach(p => p.classList.remove('active'));
     const listenPage = document.getElementById('page-listen');
@@ -495,10 +604,15 @@ document.addEventListener('DOMContentLoaded', () => {
       else btn.classList.remove('am-mob-active');
     });
 
+    if (!options.skipUrlSync) {
+      const slug = toSlug(artistName || 'artist');
+      syncUrl(`/artist/${slug}/${artistId}`, '', options.replaceUrl);
+    }
+
     openArtistView(artistId, artistName);
   }
 
-  function showRemotePlaylistView(playlistId, playlistName) {
+  function showRemotePlaylistView(playlistId, playlistName, options = {}) {
     if (!playlistId) return;
     pages.forEach(p => p.classList.remove('active'));
     const listenPage = document.getElementById('page-listen');
@@ -513,8 +627,54 @@ document.addEventListener('DOMContentLoaded', () => {
       else btn.classList.remove('am-mob-active');
     });
 
+    if (!options.skipUrlSync) {
+      const slug = toSlug(playlistName || 'playlist');
+      syncUrl(`/playlist/${slug}/${playlistId}`, '', options.replaceUrl);
+    }
+
     openRemotePlaylistView(playlistId, playlistName);
   }
+
+  // Global navigation helpers for player dialog
+  window.lyricsflowShowArtistByName = async (artistName) => {
+    if (!artistName) return;
+    showArtistView(artistName, artistName);
+  };
+
+  window.lyricsflowShowAlbumByName = async (albumName, amTrackId = null) => {
+    if (amTrackId) {
+      try {
+        const sRes = await fetch(`${API_BASE}/song?song=${amTrackId}&l=en-US`);
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          const songObj = sData.data?.[0] || sData.results?.songs?.data?.[0];
+          const albId = songObj?.relationships?.albums?.data?.[0]?.id || songObj?.attributes?.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1];
+          if (albId) {
+            showAlbumView(albId, albumName || songObj?.attributes?.albumName, amTrackId);
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (!albumName) return;
+    try {
+      const res = await fetch(`${API_BASE}/search?term=${encodeURIComponent(albumName)}&types=albums&limit=5&l=en-US`);
+      if (res.ok) {
+        const d = await res.json();
+        const alb = d.results?.albums?.data?.[0];
+        if (alb) {
+          showAlbumView(alb.id, alb.attributes?.name || albumName, amTrackId);
+          return;
+        }
+      }
+    } catch (_) {}
+    switchPage('listen');
+    if (catalogSearch) {
+      catalogSearch.value = albumName;
+      performCatalogSearch(albumName);
+    }
+  };
 
   // ── Smart Algorithm & Home Page ──
   function syncHomeNavVisibility() {
@@ -583,7 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   artworkUrl100: pick.artUrl
                 });
               } else if (type === 'album') {
-                showAlbumView(id);
+                showAlbumView(id, pick.title);
               } else if (type === 'artist') {
                 showArtistView(id, pick.title);
               }
@@ -684,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   artworkUrl100: item.artUrl
                 });
               } else if (item.type === 'album') {
-                showAlbumView(item.id);
+                showAlbumView(item.id, item.title);
               } else if (item.type === 'artist') {
                 showArtistView(item.id, item.title);
               }
@@ -743,7 +903,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 artworkUrl100: it.artUrl
               });
             } else if (it.itemType === 'album') {
-              showAlbumView(it.id);
+              showAlbumView(it.id, it.name);
             } else if (it.itemType === 'artist') {
               showArtistView(it.id, it.name);
             } else if (it.itemType === 'playlist') {
@@ -883,7 +1043,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (it.itemType === 'song') {
               loadRemoteTrack({ trackId: it.id, trackName: it.name, artistName: it.artist, collectionName: it.album || '', albumId: it.albumId || null, artistId: it.artistId || null, artworkUrl100: it.artUrl });
             } else if (it.itemType === 'album') {
-              showAlbumView(it.id);
+              showAlbumView(it.id, it.name);
             } else if (it.itemType === 'artist') {
               showArtistView(it.id, it.name);
             }
@@ -1003,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const idx = parseInt(card.dataset.idx, 10);
           const alb = albums[idx];
           if (alb) {
-            showAlbumView(alb.id);
+            showAlbumView(alb.id, alb.name);
           }
         };
       });
@@ -1138,7 +1298,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             return;
           } else if (type.includes('album')) {
-            showAlbumView(id);
+            showAlbumView(id, title);
             return;
           } else if (type.includes('artist')) {
             showArtistView(id, title);
@@ -1147,7 +1307,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showRemotePlaylistView(id, title);
             return;
           } else if (type.includes('video')) {
-            playMusicVideo(id);
+            playMusicVideo(id, title);
             return;
           } else if (type.includes('label')) {
             showRecordLabelView(id, title);
@@ -1244,8 +1404,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (listenInitialContent) listenInitialContent.classList.remove('hidden');
   }
 
-  async function performCatalogSearch(query) {
+  async function performCatalogSearch(query, options = {}) {
     if (!query) return;
+
+    if (!options.skipUrlSync) {
+      syncUrl('/search', `q=${encodeURIComponent(query)}`, options.replaceUrl);
+    }
 
     if (listenInitialContent) listenInitialContent.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
@@ -1351,13 +1515,13 @@ document.addEventListener('DOMContentLoaded', () => {
             artworkUrl100: cleanArtworkUrl(attr.artwork?.url, 100, 100)
           });
         } else if (type === 'albums') {
-          showAlbumView(id);
+          showAlbumView(id, title);
         } else if (type === 'artists') {
           showArtistView(id, title);
         } else if (type === 'playlists') {
           showRemotePlaylistView(id, title);
         } else if (type === 'music_video' || type === 'music-videos') {
-          playMusicVideo(id);
+          playMusicVideo(id, title);
         }
       };
     });
@@ -1484,7 +1648,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const artist = card.querySelector('.am-media-card-sub')?.textContent || '';
         const img = card.querySelector('img')?.src || '';
         addRecentSearch(title, title, 'albums', img, card.dataset.id, { artistName: artist });
-        showAlbumView(card.dataset.id);
+        showAlbumView(card.dataset.id, title);
       };
     });
   }
@@ -1540,7 +1704,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
 
     videosGrid.querySelectorAll('.am-standard-media-card').forEach(card => {
-      card.onclick = () => playMusicVideo(card.dataset.id);
+      card.onclick = () => {
+        const title = card.querySelector('.am-media-card-title')?.textContent || '';
+        const artist = card.querySelector('.am-media-card-sub')?.textContent || '';
+        playMusicVideo(card.dataset.id, title, artist);
+      };
     });
   }
 
@@ -1622,7 +1790,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  async function playMusicVideo(vidId) {
+  async function playMusicVideo(vidId, videoTitle = '', videoArtist = '', options = {}) {
     if (!prepOverlay) return;
     prepOverlay.classList.add('active');
     prepStatus.textContent = t('loading');
@@ -1635,9 +1803,13 @@ document.addEventListener('DOMContentLoaded', () => {
       prepOverlay.classList.remove('active');
 
       const videoUrl = data.video_url || data.preview_url || data.hls_url;
-      const title = data.title || data.name || 'Music Video';
-      const artist = data.artist || data.artist_name || '';
+      const title = data.title || data.name || videoTitle || 'Music Video';
+      const artist = data.artist || data.artist_name || videoArtist || '';
       const downloadUrl = `${API_BASE}/musicvideo/download?song=${vidId}&quality=4k&l=${getCurrentLang()}`;
+
+      if (!options.skipUrlSync) {
+        syncUrl(`/video/${toSlug(title)}/${vidId}`, '', options.replaceUrl);
+      }
 
       let videoModal = document.getElementById('music-video-modal');
       if (!videoModal) {
@@ -1704,7 +1876,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Album Detail View with "More by Artist" row in random order ──
-  async function fetchAlbumDetails(albumId) {
+  async function fetchAlbumDetails(albumId, preferredAlbumName = '', targetTrackId = null) {
     if (listenInitialContent) listenInitialContent.classList.add('hidden');
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
     if (artistViewContainer) artistViewContainer.classList.add('hidden');
@@ -1717,7 +1889,8 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       let data = null;
       try {
-        const res = await fetch(`${API_BASE}/album?album=${albumId}&l=${getCurrentLang()}`);
+        const albumApiUrl = `${API_BASE}/album?album=${albumId}&l=en-US&include=artists,tracks,record-labels,music-videos&views=appears-on,other-versions,related-albums,related-videos&extend=artistUrl,editorialArtwork,editorialNotes,editorialVideo,composerName`;
+        const res = await fetch(albumApiUrl);
         if (res.ok) {
           data = await res.json();
           if (data && data.error) data = null;
@@ -1727,7 +1900,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Fallback to iTunes lookup if /album endpoint returned an error or empty data
       if (!data || (!data.raw_data && !data.data && !data.results && !data.parsed_tracks)) {
         try {
-          const lRes = await fetch(`${API_BASE}/itunes/lookup?id=${albumId}&entity=song`);
+          const lRes = await fetch(`${API_BASE}/itunes/lookup?id=${albumId}&entity=song&l=en-US`);
           if (lRes.ok) {
             const lData = await lRes.json();
             const results = lData.results || [];
@@ -1799,9 +1972,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!albumObj || (!albumObj.attributes && !albumObj.name)) throw new Error('Album not found in response');
 
       const attr = albumObj.attributes || albumObj;
+      const albumDisplayName = attr.name || preferredAlbumName || 'Album';
+      const albumSlug = toSlug(albumDisplayName);
       const artUrl = cleanArtworkUrl(attr.artwork?.url || data.artwork_url, 600, 600);
       const artistId = albumObj.relationships?.artists?.data?.[0]?.id || data.artist_id || attr.artistId || null;
       const artistName = attr.artistName || data.artist_name || '';
+
+      // Update slug URL with actual album name if not already matching
+      const targetSearch = targetTrackId ? `i=${targetTrackId}` : '';
+      syncUrl(`/album/${albumSlug}/${albumId}`, targetSearch, true);
 
       let videoUrl = null;
       try {
@@ -1822,13 +2001,13 @@ document.addEventListener('DOMContentLoaded', () => {
           ${videoUrl ? `<video src="${cleanMediaUrl(videoUrl)}" autoplay loop muted playsinline class="am-album-cover"></video>` : `<img src="${cleanArtworkUrl(artUrl, 600, 600)}" referrerpolicy="no-referrer" class="am-album-cover" onerror="this.src='favicon.svg'">`}
         </div>
         <div class="am-album-details">
-          <h2 class="am-album-title">${escapeHTML(attr.name || 'Album')}</h2>
+          <h2 class="am-album-title">${escapeHTML(albumDisplayName)}</h2>
           <div class="am-album-artist" id="album-artist-link" style="${artistId || artistName ? 'cursor:pointer;' : ''}">${escapeHTML(artistName)}</div>
           <div class="am-album-meta">${escapeHTML(genre)} • ${year}</div>
           <div class="am-album-actions" style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
             <button class="premium-btn primary" id="album-play-btn" style="border-radius:100px; padding:0 28px; height:42px; display:inline-flex; align-items:center; gap:8px;">
               <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M8 5v14l11-7z"/></svg>
-              <span>${t('album_preview')}</span>
+              <span>Play</span>
             </button>
             <button class="premium-btn secondary" id="album-add-lib-btn" style="border-radius:100px; padding:0 22px; height:42px; display:inline-flex; align-items:center; gap:8px;">
               <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
@@ -1889,6 +2068,57 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `).join('');
 
+      // Play album / preview button
+      const playAlbumBtn = document.getElementById('album-play-btn');
+      if (playAlbumBtn && tracks.length > 0) {
+        playAlbumBtn.onclick = async () => {
+          const first = tracks[0];
+          const albumQueue = tracks.map(t => ({
+            id: t.id,
+            title: t.name,
+            artist: t.artistName || artistName,
+            album: attr.name,
+            artUrl: artUrl,
+            previewUrl: `${API_BASE}/stream?song=${t.id}&l=en-US`,
+            durationMs: t.durationInMillis || 180000
+          }));
+
+          // 1. Play first track immediately with full album queue
+          await loadRemoteTrack({
+            trackId: first.id,
+            trackName: first.name,
+            artistName: first.artistName || artistName,
+            collectionName: attr.name,
+            albumId: albumId,
+            artistId: artistId,
+            artworkUrl100: artUrl,
+            durationMs: first.durationInMillis
+          }, albumQueue);
+
+          // 2. Queue remaining tracks into IndexedDB in the background
+          if (tracks.length > 1) {
+            (async () => {
+              try {
+                const { addTrackToQueue } = await import('./router.js');
+                for (let i = 1; i < tracks.length; i++) {
+                  const tr = tracks[i];
+                  await addTrackToQueue(null, {
+                    name: tr.name,
+                    artist: tr.artistName || artistName,
+                    album: attr.name,
+                    artUrl: artUrl,
+                    type: 'audio/mp4',
+                    ttml: '__AUTO_FETCH__',
+                    amTrackId: tr.id
+                  });
+                }
+              } catch (_) {}
+            })();
+          }
+        };
+      }
+
+      // Track clicks: play full song like on homepage/search with full album queue
       albumTracksGrid.querySelectorAll('.am-track-row').forEach(row => {
         row.onclick = (e) => {
           const id = row.dataset.id;
@@ -1909,10 +2139,49 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
 
-          // Play preview starting from this track
-          previewPlayer.playAlbum(data, idx >= 0 ? idx : 0);
+          // Update URL to include ?i={trackId}
+          syncUrl(`/album/${albumSlug}/${albumId}`, `i=${id}`);
+
+          const albumQueue = tracks.map(t => ({
+            id: t.id,
+            title: t.name,
+            artist: t.artistName || artistName,
+            album: attr.name,
+            artUrl: artUrl,
+            previewUrl: `${API_BASE}/stream?song=${t.id}&l=en-US`,
+            durationMs: t.durationInMillis || 180000
+          }));
+
+          // Play full song directly with album queue
+          loadRemoteTrack({
+            trackId: id,
+            trackName: tItem?.name,
+            artistName: tItem?.artistName || artistName,
+            collectionName: attr.name,
+            albumId: albumId,
+            artistId: artistId,
+            artworkUrl100: artUrl,
+            durationMs: tItem?.durationInMillis
+          }, albumQueue);
         };
       });
+
+      // If initial targetTrackId was requested via ?i=, start playing that track
+      if (targetTrackId) {
+        const foundTrack = tracks.find(t => String(t.id) === String(targetTrackId));
+        if (foundTrack) {
+          loadRemoteTrack({
+            trackId: foundTrack.id,
+            trackName: foundTrack.name,
+            artistName: foundTrack.artistName || artistName,
+            collectionName: attr.name,
+            albumId: albumId,
+            artistId: artistId,
+            artworkUrl100: artUrl,
+            durationMs: foundTrack.durationInMillis
+          });
+        }
+      }
 
       // Footer info & Editorial Notes
       let footerContainer = document.getElementById('album-footer-info');
@@ -2060,7 +2329,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }).join('');
 
       moreGrid.querySelectorAll('.am-standard-media-card').forEach(card => {
-        card.onclick = () => showAlbumView(card.dataset.id);
+        card.onclick = () => {
+          const title = card.querySelector('.am-media-card-title')?.textContent || '';
+          showAlbumView(card.dataset.id, title);
+        };
       });
 
     } catch (e) {
@@ -2102,19 +2374,44 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { }
       }
 
-      // If we have a numeric artist ID, fetch artist details
+      // If we have a numeric artist ID, fetch artist details with the exact requested views, relationships, and extensions
+      let artistViews = {};
+      let artistRels = {};
+
       if (resolvedArtistId && /^\d+$/.test(String(resolvedArtistId))) {
         try {
-          const res = await fetch(`${API_BASE}/artist?artist=${resolvedArtistId}&l=${getCurrentLang()}`);
+          const artistApiUrl = `${API_BASE}/artist?id=${resolvedArtistId}&storefront=us&l=en-US&include=albums,music-videos,playlists,station&views=top-songs,full-albums,singles-eps,featured-playlists,latest-release,appears-on-albums,similar-artists&extend=editorialArtwork,editorialVideo,editorialNotes`;
+          const res = await fetch(artistApiUrl);
           if (res.ok) {
             const data = await res.json();
             const found = Array.isArray(data.data) ? data.data[0] : (data.data || data);
             if (found?.attributes) attr = { ...attr, ...found.attributes };
+            artistViews = found?.views || data.views || {};
+            artistRels = found?.relationships || data.relationships || {};
+
+            // 1. Top Songs view
+            if (artistViews['top-songs']?.data?.length > 0) {
+              songs = artistViews['top-songs'].data;
+            }
+
+            // 2. Full Albums & Singles/EPs view / relationships albums
+            if (artistViews['full-albums']?.data?.length > 0) {
+              albums = artistViews['full-albums'].data;
+            } else if (artistRels.albums?.data?.length > 0) {
+              albums = artistRels.albums.data;
+            }
           }
-        } catch (e) { }
+        } catch (e) {
+          console.warn("[Artist Fetch] Primary endpoint error:", e);
+        }
       }
 
       const displayName = attr.name || artistName || (isNumericId ? '' : artistId) || 'Artist';
+
+      // Update slug URL with resolved artist name
+      if (resolvedArtistId) {
+        syncUrl(`/artist/${toSlug(displayName)}/${resolvedArtistId}`, '', true);
+      }
 
       // If artist artwork is still missing, fallback to search by artist name to retrieve artwork
       if (!attr.artwork?.url && displayName) {
@@ -2131,38 +2428,30 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { }
       }
 
-      // Fan out parallel fetches for albums and top songs
-      const albumFetchPromises = [];
-      const songFetchPromises = [];
-
+      // Always fetch full artist discography (both full albums and singles/EPs)
       if (resolvedArtistId && /^\d+$/.test(String(resolvedArtistId))) {
-        albumFetchPromises.push(
-          fetch(`${API_BASE}/artist/albums?artist=${resolvedArtistId}&limit=100&l=${getCurrentLang()}`)
+        const discogFetches = [
+          fetch(`${API_BASE}/artist/albums?artist=${resolvedArtistId}&limit=100&l=en-US`)
             .then(r => r.ok ? r.json() : null)
-            .then(d => d?.data || [])
-            .catch(() => [])
-        );
-        songFetchPromises.push(
-          fetch(`${API_BASE}/artist/songs?artist=${resolvedArtistId}&limit=50&l=${getCurrentLang()}`)
-            .then(r => r.ok ? r.json() : null)
-            .then(d => d?.data || [])
-            .catch(() => [])
-        );
+            .then(d => { if (d?.data?.length > 0) albums = (albums || []).concat(d.data); })
+            .catch(() => {})
+        ];
+        if (songs.length === 0) {
+          discogFetches.push(
+            fetch(`${API_BASE}/artist/songs?artist=${resolvedArtistId}&limit=50&l=en-US`)
+              .then(r => r.ok ? r.json() : null)
+              .then(d => { if (d?.data?.length > 0) songs = d.data; })
+              .catch(() => {})
+          );
+        }
+        await Promise.all(discogFetches);
       }
 
-      const [albRes, songRes] = await Promise.all([
-        Promise.all(albumFetchPromises),
-        Promise.all(songFetchPromises)
-      ]);
-
-      albums = (albRes[0] || []);
-      songs = (songRes[0] || []);
-
-      // If albums are empty, fallback to searching albums for artist name or itunes lookup
+      // If albums are still empty, fallback to searching albums for artist name or itunes lookup
       if (albums.length === 0 && (displayName || resolvedArtistId)) {
         try {
           const [sData, lData] = await Promise.all([
-            displayName ? fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=albums&limit=50&l=${getCurrentLang()}`).then(r => r.ok ? r.json() : null).catch(() => null) : null,
+            displayName ? fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=albums&limit=50&l=en-US`).then(r => r.ok ? r.json() : null).catch(() => null) : null,
             resolvedArtistId ? fetch(`${API_BASE}/itunes/lookup?id=${resolvedArtistId}&entity=album&limit=50`).then(r => r.ok ? r.json() : null).catch(() => null) : null
           ]);
           if (sData?.results?.albums?.data?.length > 0) {
@@ -2183,10 +2472,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { }
       }
 
-      // If songs are few, search for artist name or itunes lookup to populate 4x7 grid (28 songs)
+      // If songs are few, search for artist name to populate top songs (up to 28)
       if (songs.length < 28 && (displayName || resolvedArtistId)) {
         try {
-          const sSearch = await fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=songs&limit=50&l=${getCurrentLang()}`);
+          const sSearch = await fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=songs&limit=50&l=en-US`);
           if (sSearch.ok) {
             const sData = await sSearch.json();
             const moreSongs = sData.results?.songs?.data || [];
@@ -2201,21 +2490,40 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { }
       }
 
-      // Determine artist photo (from artist attributes, or first album/song)
-      let rawArtistPhoto = attr.artwork?.url;
+      // Determine artist photo: prioritize the true artist portrait / identity artwork
+      let rawArtistPhoto = attr.artwork?.url || 
+        attr.editorialArtwork?.header?.url || 
+        attr.editorialArtwork?.bannerUber?.url || 
+        attr.editorialArtwork?.storeFlowcase?.url || 
+        attr.editorialArtwork?.bannerArtwork?.url;
       if (!rawArtistPhoto && albums.length > 0) {
         rawArtistPhoto = albums[0]?.attributes?.artwork?.url;
       }
       if (!rawArtistPhoto && songs.length > 0) {
         rawArtistPhoto = songs[0]?.attributes?.artwork?.url;
       }
-      const artistPhoto = rawArtistPhoto ? cleanArtworkUrl(rawArtistPhoto, 1200, 630) : '';
+      const artistPhoto = rawArtistPhoto ? cleanArtworkUrl(rawArtistPhoto, 1200, 1200) : '';
+
+      // Collect all album/single candidates combining views and relationships
+      const allReleasesMap = new Map();
+      const addRelease = (item) => {
+        if (!item || !item.id) return;
+        const idStr = String(item.id);
+        if (!allReleasesMap.has(idStr)) {
+          allReleasesMap.set(idStr, item);
+        }
+      };
+
+      (artistViews['full-albums']?.data || []).forEach(addRelease);
+      (artistViews['singles-eps']?.data || []).forEach(addRelease);
+      (artistRels.albums?.data || []).forEach(addRelease);
+      (albums || []).forEach(addRelease);
 
       // Separate into Full Albums vs Singles & EPs
       const fullAlbums = [];
       const singles = [];
 
-      albums.forEach(alb => {
+      allReleasesMap.forEach(alb => {
         const aAttr = alb.attributes || alb || {};
         const name = (aAttr.name || aAttr.collectionName || '').toLowerCase();
         const trackCount = aAttr.trackCount || 0;
@@ -2235,6 +2543,21 @@ document.addEventListener('DOMContentLoaded', () => {
       fullAlbums.sort((a, b) => new Date(b.attributes?.releaseDate || b.releaseDate || 0) - new Date(a.attributes?.releaseDate || a.releaseDate || 0));
       singles.sort((a, b) => new Date(b.attributes?.releaseDate || b.releaseDate || 0) - new Date(a.attributes?.releaseDate || a.releaseDate || 0));
 
+      // Featured Playlists
+      const artistPlaylists = artistViews['featured-playlists']?.data || artistRels.playlists?.data || [];
+
+      // Music Videos
+      const artistMusicVideos = artistRels['music-videos']?.data || [];
+
+      // Artist Station
+      const artistStation = artistRels.station?.data?.[0] || null;
+
+      // Appears On Albums
+      const appearsOnAlbums = artistViews['appears-on-albums']?.data || [];
+
+      // Similar Artists
+      const similarArtists = artistViews['similar-artists']?.data || [];
+
       const inLib = isArtistInLibrary(resolvedArtistId || displayName);
 
       const bioRaw = attr.artistBio || attr.editorialNotes?.standard || attr.editorialNotes?.short || '';
@@ -2248,108 +2571,422 @@ document.addEventListener('DOMContentLoaded', () => {
       const top28Songs = songs.slice(0, 28);
       const topSongsCardsHTML = top28Songs.map((s, i) => {
         const sAttr = s.attributes || s || {};
-        const art = cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100);
-        const dateStr = sAttr.releaseDate ? new Date(sAttr.releaseDate).getFullYear() : '';
+        const sArt = cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 120, 120);
         return `
-          <div class="am-artist-song-card" data-id="${s.id}" data-idx="${i}">
-            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-artist-card-art" alt="" onerror="this.src='favicon.svg'">
-            <div class="am-artist-card-meta">
-              <div class="am-artist-card-title">${escapeHTML(sAttr.name || sAttr.trackName || '')}</div>
-              <div class="am-artist-card-subline">
-                <span>${escapeHTML(sAttr.artistName || displayName)}</span>
-                ${dateStr ? `<span>• ${dateStr}</span>` : ''}
-              </div>
+          <div class="am-artist-song-card animate-fade" data-id="${s.id}" data-idx="${i}">
+            <img src="${sArt}" loading="lazy" referrerpolicy="no-referrer" class="am-artist-song-art" onerror="this.src='favicon.svg'">
+            <div class="am-artist-song-info">
+              <div class="am-artist-song-title">${escapeHTML(sAttr.name || sAttr.trackName || '')}</div>
+              <div class="am-artist-song-artist">${escapeHTML(sAttr.albumName || sAttr.collectionName || displayName)}</div>
             </div>
             <button class="am-song-more-btn" data-id="${s.id}" data-idx="${i}">•••</button>
           </div>
         `;
-      }).join('') || `<p class="am-empty-msg">${t('empty_picks')}</p>`;
+      }).join('') || `<p class="am-empty-msg">${t('empty_artist_songs')}</p>`;
 
-      const albumsHTML = fullAlbums.map(a => {
-        const aAttr = a.attributes || a || {};
+      const renderAlbumItem = (alb) => {
+        const aAttr = alb.attributes || alb || {};
         const art = cleanArtworkUrl(aAttr.artwork?.url || aAttr.artworkUrl100, 300, 300);
         const y = aAttr.releaseDate ? new Date(aAttr.releaseDate).getFullYear() : '';
         return `
-          <div class="am-standard-media-card" data-id="${a.id || a.collectionId}">
+          <div class="am-standard-media-card animate-fade" data-id="${alb.id}">
             <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
             <div class="am-media-card-title">${escapeHTML(aAttr.name || aAttr.collectionName || '')}</div>
             <div class="am-media-card-sub">${escapeHTML(y || t('badge_album'))}</div>
           </div>
         `;
-      }).join('') || `<p class="am-empty-msg">${t('empty_library')}</p>`;
+      };
 
-      const singlesHTML = singles.map(s => {
-        const sAttr = s.attributes || s || {};
-        const art = cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 300, 300);
-        const y = sAttr.releaseDate ? new Date(sAttr.releaseDate).getFullYear() : '';
+      const renderPlaylistItem = (pl) => {
+        const pAttr = pl.attributes || pl || {};
+        const art = cleanArtworkUrl(pAttr.artwork?.url, 300, 300);
         return `
-          <div class="am-standard-media-card" data-id="${s.id || s.collectionId}">
+          <div class="am-standard-media-card am-playlist-card animate-fade" data-id="${pl.id}">
             <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
-            <div class="am-media-card-title">${escapeHTML(sAttr.name || sAttr.collectionName || '')}</div>
-            <div class="am-media-card-sub">${escapeHTML(y || t('artist_singles'))}</div>
+            <div class="am-media-card-title">${escapeHTML(pAttr.name || '')}</div>
+            <div class="am-media-card-sub">${escapeHTML(pAttr.curatorName || 'Playlist')}</div>
           </div>
         `;
-      }).join('') || `<p class="am-empty-msg">${t('empty_library')}</p>`;
+      };
 
-      const heroBackgroundStyle = artistPhoto
-        ? `background-image: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(18,18,18,0.85) 60%, rgba(18,18,18,0.98) 100%), url('${artistPhoto}');`
-        : `background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);`;
+      const renderVideoItem = (vid) => {
+        const vAttr = vid.attributes || vid || {};
+        const art = cleanArtworkUrl(vAttr.artwork?.url, 480, 270);
+        return `
+          <div class="am-standard-media-card am-video-card-item animate-fade" data-id="${vid.id}">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" style="aspect-ratio: 16/9; object-fit: cover;" onerror="this.src='favicon.svg'">
+            <div class="am-media-card-title">${escapeHTML(vAttr.name || '')}</div>
+            <div class="am-media-card-sub">${escapeHTML(vAttr.artistName || displayName)}</div>
+          </div>
+        `;
+      };
 
-      artistViewContent.innerHTML = `
-        <div class="am-artist-header am-artist-hero" style="${heroBackgroundStyle}">
-          <div class="am-artist-name-row">
-            <h1 class="am-artist-name">${escapeHTML(displayName)}</h1>
-            <div style="display: flex; gap: 10px; align-items: center;">
-              <div class="am-artist-play-btn" data-i18n-title="artist_play_top" title="${t('artist_play_top')}"><svg viewBox="0 0 24 24" fill="#000" width="22" height="22"><path d="M8 5v14l11-7z"/></svg></div>
-              <button class="premium-btn secondary" id="artist-add-lib-btn" style="border-radius: 100px; padding: 0 20px; height: 42px; display: inline-flex; align-items: center; gap: 6px;">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                <span id="artist-lib-label">${inLib ? t('ctx_in_library') : t('ctx_add_library')}</span>
+      const renderArtistItem = (artItem) => {
+        const artAttr = artItem.attributes || artItem || {};
+        const artImg = cleanArtworkUrl(artAttr.artwork?.url, 300, 300);
+        return `
+          <div class="am-standard-media-card am-artist-card-item animate-fade" data-id="${artItem.id}" style="text-align: center;">
+            <img src="${artImg}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" style="border-radius: 50%; aspect-ratio: 1/1; object-fit: cover;" onerror="this.src='favicon.svg'">
+            <div class="am-media-card-title" style="margin-top: 8px;">${escapeHTML(artAttr.name || '')}</div>
+            <div class="am-media-card-sub">${escapeHTML(artAttr.genreNames?.[0] || t('badge_artist'))}</div>
+          </div>
+        `;
+      };
+
+      const albumsHTML = fullAlbums.map(renderAlbumItem).join('') || `<p class="am-empty-msg">${t('empty_artist_albums')}</p>`;
+      const singlesHTML = singles.map(renderAlbumItem).join('') || `<p class="am-empty-msg">${t('empty_artist_singles')}</p>`;
+      const playlistsHTML = artistPlaylists.map(renderPlaylistItem).join('') || '';
+      const videosHTML = artistMusicVideos.map(renderVideoItem).join('') || '';
+      const appearsOnHTML = appearsOnAlbums.map(renderAlbumItem).join('') || '';
+      const similarArtistsHTML = similarArtists.map(renderArtistItem).join('') || '';
+
+      const stationHTML = artistStation ? `
+        <div class="am-artist-station-card animate-fade" data-id="${artistStation.id}" style="display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: background 0.2s;">
+          <img src="${cleanArtworkUrl(artistStation.attributes?.artwork?.url || artistPhoto, 120, 120)}" style="width: 56px; height: 56px; border-radius: 10px; object-fit: cover;" onerror="this.src='favicon.svg'">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #fa586a; letter-spacing: 0.04em;">Artist Radio</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(artistStation.attributes?.name || `${displayName} Radio`)}</div>
+          </div>
+          <div style="width: 38px; height: 38px; border-radius: 50%; background: #fa586a; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>
+      ` : '';
+
+      const isMobile = window.innerWidth <= 768;
+      const latestReleaseObj = (artistViews?.['latest-release']?.data?.[0]) || (attr.views?.['latest-release']?.data?.[0]) || singles[0] || fullAlbums[0] || null;
+
+      let latestReleaseHTML = '';
+      if (latestReleaseObj) {
+        const lrAttr = latestReleaseObj.attributes || latestReleaseObj;
+        const lrArt = cleanArtworkUrl(lrAttr.artwork?.url || lrAttr.artworkUrl100, 200, 200);
+        const lrDate = lrAttr.releaseDate ? formatLocalizedDate(lrAttr.releaseDate) : '';
+        const lrTitle = lrAttr.name || lrAttr.collectionName || 'Latest Release';
+        const lrCount = lrAttr.trackCount ? (lrAttr.trackCount === 1 ? '1 song' : `${lrAttr.trackCount} songs`) : 'Single';
+        const lrInLib = isAlbumInLibrary(latestReleaseObj.id);
+
+        latestReleaseHTML = `
+          <div class="am-artist-latest-card" data-id="${latestReleaseObj.id}">
+            <img src="${lrArt}" class="am-artist-latest-art" onerror="this.src='favicon.svg'" alt="">
+            <div class="am-artist-latest-info">
+              <div class="am-artist-latest-date">${escapeHTML(lrDate)}</div>
+              <div class="am-artist-latest-title">${escapeHTML(lrTitle)}</div>
+              <div class="am-artist-latest-count">${escapeHTML(lrCount)}</div>
+            </div>
+            <button class="am-artist-latest-add-btn" data-id="${latestReleaseObj.id}" title="Add to Library">
+              ${lrInLib ? '✓' : '+'}
+            </button>
+          </div>
+        `;
+      }
+
+      if (isMobile) {
+        // Mobile 
+        artistViewContent.innerHTML = `
+          <div class="am-artist-mob-hero">
+            <div class="am-artist-mob-bg" style="background-image: url('${artistPhoto}');"></div>
+            <div class="am-artist-mob-overlay"></div>
+
+            <!-- Top Nav Controls -->
+            <div class="am-artist-mob-top-bar">
+              <button class="am-artist-mob-nav-btn" id="artist-mob-back-btn" aria-label="Back">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
               </button>
+              <div class="am-artist-mob-top-right">
+                <button class="am-artist-mob-nav-btn" id="artist-mob-share-btn" aria-label="Share">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </button>
+                <button class="am-artist-mob-nav-btn" id="artist-mob-more-btn" aria-label="More">•••</button>
+              </div>
+            </div>
+
+            <!-- Centered Artist Title & Action Pills -->
+            <div class="am-artist-mob-center-content">
+              <h1 class="am-artist-mob-title">${escapeHTML(displayName)}</h1>
+
+              <div class="am-artist-mob-actions-row">
+                <!-- Info (i) Button -->
+                <button class="am-artist-circle-btn" id="artist-mob-info-btn" title="About Artist" aria-label="About Artist">
+                  <span>i</span>
+                </button>
+
+                <!-- Large White Play Button -->
+                <button class="am-artist-play-circle-btn" id="artist-play-top-btn" title="Play Top Songs" aria-label="Play">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+
+                <!-- Favorite / Library (★) Button -->
+                <button class="am-artist-circle-btn ${inLib ? 'favorited' : ''}" id="artist-add-lib-btn" title="Add Artist to Library" aria-label="Favorite">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Top Songs Section (4 songs vertically x 7 horizontally scrollable) -->
-        <div class="am-search-section" style="margin-top: 24px;">
-          <h3 class="am-search-section-title">${t('artist_top_songs')}</h3>
-          <div class="am-artist-top-songs-grid">${topSongsCardsHTML}</div>
-        </div>
+          <!-- Featured Latest Release Card -->
+          ${latestReleaseHTML ? `
+            <div class="am-artist-mob-latest-section">
+              ${latestReleaseHTML}
+            </div>
+          ` : ''}
 
-        <!-- Albums Row (Latest to Oldest) -->
-        <div class="am-search-section" style="margin-top: 36px;">
-          <h3 class="am-search-section-title">${t('artist_albums')}</h3>
-          <div class="am-cards-horizontal-scroll">${albumsHTML}</div>
-        </div>
-
-        <!-- Singles Row (Latest to Oldest) -->
-        <div class="am-search-section" style="margin-top: 36px;">
-          <h3 class="am-search-section-title">${t('artist_singles')}</h3>
-          <div class="am-cards-horizontal-scroll">${singlesHTML}</div>
-        </div>
-
-        <!-- About Section -->
-        <div class="am-about-section" style="margin-top: 36px; margin-bottom: 40px;">
-          <h3 style="color: #fff; font-size: 18px; margin-bottom: 8px;">${t('artist_about')}</h3>
-          <div class="am-about-text-container" id="artist-about-text">
-            <p style="color: #d1d1d6; font-size: 14px;">${bioText || '...'}</p>
+          <!-- Top Songs Section (Vertical list on mobile with header arrow) -->
+          <div class="am-search-section" style="margin-top: 24px;">
+            <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 14px; padding: 0 4px;">
+              <h3 class="am-search-section-title" style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #fff;">${t('artist_top_songs')}</h3>
+              <span style="font-size: 1.25rem; color: rgba(255,255,255,0.4); font-weight: 600;">›</span>
+            </div>
+            <div class="am-artist-top-songs-list">${topSongsCardsHTML}</div>
           </div>
-          ${bioRaw ? `<button class="am-show-more-btn" id="about-toggle-btn">${t('artist_show_more')}</button>` : ''}
-          <div class="am-artist-meta-grid">
-            <div class="am-meta-item">
-              <label>${t('artist_genre')}</label>
-              <span>${escapeHTML(genre)}</span>
+
+          <!-- Albums Section -->
+          <div class="am-search-section" style="margin-top: 32px;">
+            <h3 class="am-search-section-title">${t('artist_albums')}</h3>
+            <div class="am-cards-horizontal-scroll">${albumsHTML}</div>
+          </div>
+
+          <!-- Singles Section -->
+          <div class="am-search-section" style="margin-top: 32px;">
+            <h3 class="am-search-section-title">${t('artist_singles')}</h3>
+            <div class="am-cards-horizontal-scroll">${singlesHTML}</div>
+          </div>
+
+          ${playlistsHTML ? `
+            <!-- Artist Playlists Section -->
+            <div class="am-search-section" style="margin-top: 32px;">
+              <h3 class="am-search-section-title">Playlists</h3>
+              <div class="am-cards-horizontal-scroll">${playlistsHTML}</div>
             </div>
-            <div class="am-meta-item">
-              <label>${t('artist_albums')}</label>
-              <span>${fullAlbums.length + singles.length}</span>
+          ` : ''}
+
+          ${videosHTML ? `
+            <!-- Music Videos Section -->
+            <div class="am-search-section" style="margin-top: 32px;">
+              <h3 class="am-search-section-title">Music Videos</h3>
+              <div class="am-cards-horizontal-scroll">${videosHTML}</div>
             </div>
-            <div class="am-meta-item">
-              <label>${t('artist_top_songs')}</label>
-              <span>${songs.length}</span>
+          ` : ''}
+
+          ${stationHTML ? `
+            <!-- Artist Station Section -->
+            <div class="am-search-section" style="margin-top: 32px;">
+              ${stationHTML}
+            </div>
+          ` : ''}
+
+          ${appearsOnHTML ? `
+            <!-- Appears On Section -->
+            <div class="am-search-section" style="margin-top: 32px;">
+              <h3 class="am-search-section-title">Appears On</h3>
+              <div class="am-cards-horizontal-scroll">${appearsOnHTML}</div>
+            </div>
+          ` : ''}
+
+          ${similarArtistsHTML ? `
+            <!-- Similar Artists Section -->
+            <div class="am-search-section" style="margin-top: 32px; margin-bottom: 40px;">
+              <h3 class="am-search-section-title">Similar Artists</h3>
+              <div class="am-cards-horizontal-scroll">${similarArtistsHTML}</div>
+            </div>
+          ` : ''}
+        `;
+      } else {
+        // Desktop / Tablet side-by-side header
+        artistViewContent.innerHTML = `
+          <div class="am-artist-header am-artist-side-header">
+            <div class="am-artist-art-container">
+              <img src="${cleanArtworkUrl(artistPhoto, 600, 600)}" referrerpolicy="no-referrer" class="am-artist-card-cover" onerror="this.src='favicon.svg'">
+            </div>
+            <div class="am-artist-details">
+              <h1 class="am-artist-title">${escapeHTML(displayName)}</h1>
+              <div class="am-artist-meta">${escapeHTML(genre)}</div>
+              <div class="am-artist-actions" style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+                <button class="premium-btn primary am-artist-play-btn" id="artist-play-top-btn" style="border-radius:100px; padding:0 28px; height:42px; display:inline-flex; align-items:center; gap:8px;">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M8 5v14l11-7z"/></svg>
+                  <span>Play</span>
+                </button>
+                <button class="premium-btn secondary" id="artist-add-lib-btn" style="border-radius:100px; padding:0 22px; height:42px; display:inline-flex; align-items:center; gap:8px;">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                  <span id="artist-lib-label">${inLib ? t('ctx_in_library') : t('ctx_add_library')}</span>
+                </button>
+                <button class="premium-btn secondary" id="artist-share-btn" style="border-radius:100px; padding:0 18px; height:42px; display:inline-flex; align-items:center; gap:8px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                  <span>Share</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      `;
+
+          ${latestReleaseHTML ? `
+            <div class="am-artist-latest-section-desktop" style="margin-top: 28px; max-width: 480px;">
+              <h3 class="am-search-section-title" style="margin-bottom: 12px;">Latest Release</h3>
+              ${latestReleaseHTML}
+            </div>
+          ` : ''}
+
+          <!-- Top Songs Section (4 songs vertically x 7 horizontally scrollable) -->
+          <div class="am-search-section" style="margin-top: 32px;">
+            <h3 class="am-search-section-title">${t('artist_top_songs')}</h3>
+            <div class="am-artist-top-songs-grid">${topSongsCardsHTML}</div>
+          </div>
+
+          <!-- Albums Row (Latest to Oldest) -->
+          <div class="am-search-section" style="margin-top: 36px;">
+            <h3 class="am-search-section-title">${t('artist_albums')}</h3>
+            <div class="am-cards-horizontal-scroll">${albumsHTML}</div>
+          </div>
+
+          <!-- Singles Row (Latest to Oldest) -->
+          <div class="am-search-section" style="margin-top: 36px;">
+            <h3 class="am-search-section-title">${t('artist_singles')}</h3>
+            <div class="am-cards-horizontal-scroll">${singlesHTML}</div>
+          </div>
+
+          ${playlistsHTML ? `
+            <!-- Artist Playlists Row -->
+            <div class="am-search-section" style="margin-top: 36px;">
+              <h3 class="am-search-section-title">Playlists</h3>
+              <div class="am-cards-horizontal-scroll">${playlistsHTML}</div>
+            </div>
+          ` : ''}
+
+          ${videosHTML ? `
+            <!-- Music Videos Row -->
+            <div class="am-search-section" style="margin-top: 36px;">
+              <h3 class="am-search-section-title">Music Videos</h3>
+              <div class="am-cards-horizontal-scroll">${videosHTML}</div>
+            </div>
+          ` : ''}
+
+          ${stationHTML ? `
+            <!-- Artist Station Row -->
+            <div class="am-search-section" style="margin-top: 36px; max-width: 480px;">
+              <h3 class="am-search-section-title" style="margin-bottom: 12px;">Radio Station</h3>
+              ${stationHTML}
+            </div>
+          ` : ''}
+
+          ${appearsOnHTML ? `
+            <!-- Appears On Row -->
+            <div class="am-search-section" style="margin-top: 36px;">
+              <h3 class="am-search-section-title">Appears On</h3>
+              <div class="am-cards-horizontal-scroll">${appearsOnHTML}</div>
+            </div>
+          ` : ''}
+
+          ${similarArtistsHTML ? `
+            <!-- Similar Artists Row -->
+            <div class="am-search-section" style="margin-top: 36px;">
+              <h3 class="am-search-section-title">Similar Artists</h3>
+              <div class="am-cards-horizontal-scroll">${similarArtistsHTML}</div>
+            </div>
+          ` : ''}
+
+          <!-- About Section -->
+          <div class="am-about-section" style="margin-top: 36px; margin-bottom: 40px;">
+            <h3 style="color: #fff; font-size: 18px; margin-bottom: 8px;">${t('artist_about')}</h3>
+            <div class="am-about-text-container" id="artist-about-text">
+              <p style="color: #d1d1d6; font-size: 14px;">${bioText || '...'}</p>
+            </div>
+            ${bioRaw ? `<button class="am-show-more-btn" id="about-toggle-btn">${t('artist_show_more')}</button>` : ''}
+            <div class="am-artist-meta-grid">
+              <div class="am-meta-item">
+                <label>${t('artist_genre')}</label>
+                <span>${escapeHTML(genre)}</span>
+              </div>
+              <div class="am-meta-item">
+                <label>${t('artist_albums')}</label>
+                <span>${fullAlbums.length + singles.length}</span>
+              </div>
+              <div class="am-meta-item">
+                <label>${t('artist_top_songs')}</label>
+                <span>${songs.length}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Share button listener
+      const shareBtn = artistViewContent.querySelector('#artist-mob-share-btn') || artistViewContent.querySelector('#artist-share-btn');
+      if (shareBtn) {
+        shareBtn.onclick = () => {
+          shareEntity({
+            title: displayName,
+            text: `Check out ${displayName} on Lyricsflow`,
+            url: `/artist/${toSlug(displayName)}/${resolvedArtistId || artistId}`
+          });
+        };
+      }
+
+      // Mobile Back button
+      const mobBackBtn = artistViewContent.querySelector('#artist-mob-back-btn');
+      if (mobBackBtn) {
+        mobBackBtn.onclick = () => {
+          window.history.back();
+        };
+      }
+
+      // Mobile Info (i) button — opens Bio modal
+      const mobInfoBtn = artistViewContent.querySelector('#artist-mob-info-btn');
+      if (mobInfoBtn) {
+        mobInfoBtn.onclick = () => {
+          let bioModal = document.getElementById('am-artist-bio-modal');
+          if (!bioModal) {
+            bioModal = document.createElement('div');
+            bioModal.id = 'am-artist-bio-modal';
+            bioModal.className = 'am-mobile-modal-overlay';
+            bioModal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background:rgba(0,0,0,0.72);backdrop-filter:blur(25px);display:flex;align-items:center;justify-content:center;padding:20px;';
+            document.body.appendChild(bioModal);
+          }
+          bioModal.innerHTML = `
+            <div class="am-mobile-modal-sheet" style="max-width: 440px; width: 90%; max-height: 80vh; overflow-y: auto; background: rgba(28,28,30,0.96); border: 1px solid rgba(255,255,255,0.12); border-radius: 24px; padding: 26px; box-shadow: 0 20px 50px rgba(0,0,0,0.7);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff;">About ${escapeHTML(displayName)}</h3>
+                <button id="close-bio-modal" style="background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 15px; cursor: pointer;">✕</button>
+              </div>
+              <div style="font-size: 0.95rem; line-height: 1.65; color: #e4e4e7;">${bioText || 'No editorial biography available.'}</div>
+            </div>
+          `;
+          bioModal.classList.remove('hidden');
+          bioModal.style.display = 'flex';
+          bioModal.querySelector('#close-bio-modal').onclick = () => {
+            bioModal.classList.add('hidden');
+            bioModal.style.display = 'none';
+          };
+          bioModal.onclick = (ev) => {
+            if (ev.target === bioModal) {
+              bioModal.classList.add('hidden');
+              bioModal.style.display = 'none';
+            }
+          };
+        };
+      }
+
+      // Latest release card click
+      artistViewContent.querySelectorAll('.am-artist-latest-card').forEach(card => {
+        card.onclick = (e) => {
+          if (e.target.closest('.am-artist-latest-add-btn')) return;
+          showAlbumView(card.dataset.id);
+        };
+      });
+
+      // Latest release add button
+      artistViewContent.querySelectorAll('.am-artist-latest-add-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const albId = btn.dataset.id;
+          if (isAlbumInLibrary(albId)) {
+            removeAlbumFromLibrary(albId);
+            btn.textContent = '+';
+            showToast({ message: t('ctx_removed_from_lib') });
+          } else {
+            addAlbumToLibrary({ id: albId, name: latestReleaseObj?.attributes?.name, artUrl: cleanArtworkUrl(latestReleaseObj?.attributes?.artwork?.url, 300, 300) });
+            btn.textContent = '✓';
+            showToast({ message: t('ctx_added_to_lib') });
+          }
+        };
+      });
 
       // About Toggle
       const toggleBtn = artistViewContent.querySelector('#about-toggle-btn');
@@ -2367,17 +3004,68 @@ document.addEventListener('DOMContentLoaded', () => {
         artistAddBtn.onclick = () => {
           if (isArtistInLibrary(resolvedArtistId || displayName)) {
             removeArtistFromLibrary(resolvedArtistId || displayName);
-            document.getElementById('artist-lib-label').textContent = t('ctx_add_library');
+            const lbl = document.getElementById('artist-lib-label');
+            if (lbl) lbl.textContent = t('ctx_add_library');
+            artistAddBtn.classList.remove('favorited');
           } else {
             addArtistToLibrary({ id: resolvedArtistId || displayName, name: displayName, artUrl: artistPhoto, genre });
-            document.getElementById('artist-lib-label').textContent = t('ctx_in_library');
+            const lbl = document.getElementById('artist-lib-label');
+            if (lbl) lbl.textContent = t('ctx_in_library');
+            artistAddBtn.classList.add('favorited');
           }
         };
       }
 
-      // Albums & Singles card click
-      artistViewContent.querySelectorAll('.am-standard-media-card').forEach(card => {
-        card.onclick = () => showAlbumView(card.dataset.id);
+      // Albums, Singles, and Appears-On card clicks
+      artistViewContent.querySelectorAll('.am-standard-media-card:not(.am-playlist-card):not(.am-artist-card-item):not(.am-video-card-item)').forEach(card => {
+        card.onclick = () => {
+          const title = card.querySelector('.am-media-card-title')?.textContent || '';
+          showAlbumView(card.dataset.id, title);
+        };
+      });
+
+      // Playlists card click
+      artistViewContent.querySelectorAll('.am-playlist-card').forEach(card => {
+        card.onclick = () => {
+          const title = card.querySelector('.am-media-card-title')?.textContent || '';
+          showRemotePlaylistView(card.dataset.id, title);
+        };
+      });
+
+      // Music Videos card click
+      artistViewContent.querySelectorAll('.am-video-card-item').forEach(card => {
+        card.onclick = () => {
+          const title = card.querySelector('.am-media-card-title')?.textContent || '';
+          const artist = card.querySelector('.am-media-card-sub')?.textContent || displayName;
+          playMusicVideo(card.dataset.id, title, artist);
+        };
+      });
+
+      // Station card click
+      artistViewContent.querySelectorAll('.am-artist-station-card').forEach(card => {
+        card.onclick = () => {
+          if (top28Songs.length > 0) {
+            const sAttr = top28Songs[0].attributes || top28Songs[0] || {};
+            const albumId = top28Songs[0]?.relationships?.albums?.data?.[0]?.id || sAttr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+            loadRemoteTrack({
+              trackId: top28Songs[0].id,
+              trackName: sAttr.name || sAttr.trackName,
+              artistName: sAttr.artistName || displayName,
+              collectionName: sAttr.albumName || sAttr.collectionName,
+              albumId: albumId,
+              artistId: resolvedArtistId || artistId,
+              artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100)
+            });
+          }
+        };
+      });
+
+      // Similar Artists card click
+      artistViewContent.querySelectorAll('.am-artist-card-item').forEach(card => {
+        card.onclick = () => {
+          const title = card.querySelector('.am-media-card-title')?.textContent || '';
+          showArtistView(card.dataset.id, title);
+        };
       });
 
       // Top songs card click & context menu
@@ -2440,7 +3128,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Record Label Detail View ──
-  async function showRecordLabelView(labelId, labelName) {
+  async function showRecordLabelView(labelId, labelName, options = {}) {
     if (listenInitialContent) listenInitialContent.classList.add('hidden');
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
@@ -2450,73 +3138,153 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayName = labelName || 'Record Label';
     playlistViewContent.innerHTML = `<div class="am-loading-msg">${t('loading')}</div>`;
 
+    if (!options.skipUrlSync) {
+      syncUrl(`/label/${toSlug(displayName)}/${labelId}`, '', options.replaceUrl);
+    }
+
     try {
-      let releases = [];
+      let latestReleases = [];
+      let topReleases = [];
       let labelBio = '';
       let labelArtwork = '';
 
       // Query official Apple Music record-labels endpoint
+      let resolvedLabelName = labelName;
       if (labelId) {
         try {
-          const res = await fetch(`${API_BASE}/record-labels/${labelId}?include=latest-releases,top-releases&l=${getCurrentLang()}`);
+          const res = await fetch(`${API_BASE}/record-labels/${labelId}?views=latest-releases,top-releases&l=${getCurrentLang()}`);
           if (res.ok) {
             const data = await res.json();
             const rlObj = data.data?.[0] || data;
             const attr = rlObj.attributes || {};
-            labelArtwork = cleanArtworkUrl(attr.artwork?.url, 600, 600);
+            if (attr.name) resolvedLabelName = attr.name;
+            const artUrl = attr.editorialArtwork?.bannerUber?.url || attr.artwork?.url;
+            labelArtwork = cleanArtworkUrl(artUrl, 2048, 1080);
             labelBio = (attr.editorialNotes?.standard || attr.editorialNotes?.short || '').replace(/<[^>]*>/g, '');
 
-            const rels = rlObj.relationships || {};
-            const rawLatest = rels['latest-releases']?.data || rels['top-releases']?.data || [];
             const views = rlObj.views || {};
-            const rawViews = views['latest-releases']?.data || views['top-releases']?.data || [];
-            releases = rawLatest.length > 0 ? rawLatest : rawViews;
+            const rels = rlObj.relationships || {};
+
+            latestReleases = views['latest-releases']?.data || rels['latest-releases']?.data || [];
+            topReleases = views['top-releases']?.data || rels['top-releases']?.data || [];
           }
         } catch (e) {
           console.error('[RecordLabelView] Failed to fetch label:', e);
         }
       }
 
-      const releasesHTML = releases.map(alb => {
+      const finalDisplayName = resolvedLabelName || displayName;
+      if (resolvedLabelName && resolvedLabelName !== labelName) {
+        syncUrl(`/label/${toSlug(finalDisplayName)}/${labelId}`, '', true);
+      }
+
+      const renderAlbumCard = (alb) => {
         const attr = alb.attributes || alb || {};
         const art = cleanArtworkUrl(attr.artwork?.url || attr.artworkUrl100, 300, 300);
-        const y = attr.releaseDate ? new Date(attr.releaseDate).getFullYear() : '';
         return `
-          <div class="am-standard-media-card animate-fade" data-id="${alb.id}">
+          <div class="am-standard-media-card animate-fade" data-id="${alb.id}" style="cursor: pointer;">
             <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
             <div class="am-media-card-title">${escapeHTML(attr.name || attr.collectionName || 'Album')}</div>
-            <div class="am-media-card-sub">${escapeHTML(attr.artistName || '')}${y ? ` • ${y}` : ''}</div>
+            <div class="am-media-card-sub">${escapeHTML(attr.artistName || '')}</div>
           </div>
         `;
-      }).join('') || `<p class="am-empty-msg">No official releases found for this record label.</p>`;
+      };
 
-      const heroBackgroundStyle = labelArtwork
-        ? `background-image: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(18,18,18,0.88) 60%, rgba(18,18,18,0.98) 100%), url('${labelArtwork}');`
-        : `background: linear-gradient(135deg, #1c2a38 0%, #0d131a 100%);`;
+      const formatReleaseDate = (dateStr) => {
+        if (!dateStr) return '';
+        try {
+          const d = new Date(dateStr);
+          return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
+        } catch (_) {
+          return dateStr.toUpperCase();
+        }
+      };
+
+      const renderLatestReleaseItem = (alb) => {
+        const attr = alb.attributes || alb || {};
+        const art = cleanArtworkUrl(attr.artwork?.url || attr.artworkUrl100, 160, 160);
+        const formattedDate = formatReleaseDate(attr.releaseDate);
+        return `
+          <div class="am-label-latest-item" data-id="${alb.id}" style="display: flex; align-items: center; gap: 14px; padding: 10px; border-radius: 10px; cursor: pointer; transition: background 0.2s ease; background: rgba(255, 255, 255, 0.03);">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" style="width: 54px; height: 54px; border-radius: 8px; object-fit: cover; flex-shrink: 0;" onerror="this.src='favicon.svg'">
+            <div style="flex: 1; min-width: 0;">
+              ${formattedDate ? `<div style="font-size: 0.68rem; font-weight: 700; color: rgba(255, 255, 255, 0.45); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 3px;">${formattedDate}</div>` : ''}
+              <div style="font-size: 0.92rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;">${escapeHTML(attr.name || attr.collectionName || '')}</div>
+              <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(attr.artistName || '')}</div>
+            </div>
+            <button class="am-label-more-btn" data-id="${alb.id}" style="background: none; border: none; color: #fa586a; font-size: 1.1rem; cursor: pointer; padding: 6px 10px; border-radius: 50%;">•••</button>
+          </div>
+        `;
+      };
+
+      let sectionsHTML = '';
+
+      if (topReleases.length > 0) {
+        sectionsHTML += `
+          <div class="am-search-section" style="margin-top: 28px; margin-bottom: 36px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              <h3 class="am-search-section-title" style="margin: 0; font-size: 1.35rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                Top Releases <span style="font-size: 1.1rem; color: rgba(255, 255, 255, 0.4); font-weight: 400;">›</span>
+              </h3>
+            </div>
+            <div class="am-cards-horizontal-scroll" style="display: flex; gap: 18px; overflow-x: auto; padding-bottom: 10px;">
+              ${topReleases.map(renderAlbumCard).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      if (latestReleases.length > 0) {
+        sectionsHTML += `
+          <div class="am-search-section" style="margin-top: 28px; margin-bottom: 40px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              <h3 class="am-search-section-title" style="margin: 0; font-size: 1.35rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                Latest Releases <span style="font-size: 1.1rem; color: rgba(255, 255, 255, 0.4); font-weight: 400;">›</span>
+              </h3>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
+              ${latestReleases.map(renderLatestReleaseItem).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      if (!latestReleases.length && !topReleases.length) {
+        sectionsHTML = `<p class="am-empty-msg" style="margin-top: 24px;">No official releases found for this record label.</p>`;
+      }
+
+      const bannerHTML = labelArtwork
+        ? `<div style="width: 100%; height: 260px; max-height: 32vw; min-height: 180px; border-radius: 14px; overflow: hidden; background: #000 url('${labelArtwork}') center center / cover no-repeat; margin-bottom: 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"></div>`
+        : ``;
 
       playlistViewContent.innerHTML = `
-        <div class="am-artist-header am-artist-hero" style="${heroBackgroundStyle}">
-          <div class="am-artist-name-row">
-            <h1 class="am-artist-name">${escapeHTML(displayName)}</h1>
-            <div style="font-size: 0.9rem; color: #fa586a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Record Label</div>
-          </div>
+        ${bannerHTML}
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <h1 style="font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800; margin: 0; color: #fff; letter-spacing: -0.02em;">
+            ${escapeHTML(finalDisplayName)}
+          </h1>
+          <button style="width: 36px; height: 36px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); border: none; color: #fa586a; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            •••
+          </button>
         </div>
 
         ${labelBio ? `
-          <div class="am-album-editorial-card" style="margin: 24px 0; padding: 18px 20px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
-            <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; margin-bottom: 8px;">About ${escapeHTML(displayName)}</div>
+          <div class="am-album-editorial-card" style="margin: 16px 0 28px 0; padding: 18px 20px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+            <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; margin-bottom: 8px;">About ${escapeHTML(finalDisplayName)}</div>
             <div style="font-size: 0.92rem; line-height: 1.6; color: #d1d1d6;">${escapeHTML(labelBio)}</div>
           </div>
         ` : ''}
 
-        <div class="am-search-section" style="margin-top: 30px; margin-bottom: 40px;">
-          <h3 class="am-search-section-title">Releases</h3>
-          <div class="am-cards-horizontal-scroll">${releasesHTML}</div>
-        </div>
+        ${sectionsHTML}
       `;
 
-      playlistViewContent.querySelectorAll('.am-standard-media-card').forEach(card => {
-        card.onclick = () => showAlbumView(card.dataset.id);
+      playlistViewContent.querySelectorAll('.am-standard-media-card, .am-label-latest-item').forEach(card => {
+        card.onclick = (e) => {
+          if (e.target.closest('.am-label-more-btn')) return;
+          const title = card.querySelector('.am-media-card-title')?.textContent || '';
+          showAlbumView(card.dataset.id, title);
+        };
       });
 
     } catch (err) {
@@ -2526,7 +3294,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Curator Detail View ──
-  async function showCuratorView(curatorId, curatorName) {
+  async function showCuratorView(curatorId, curatorName, options = {}) {
     if (listenInitialContent) listenInitialContent.classList.add('hidden');
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
@@ -2535,6 +3303,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const displayName = curatorName || 'Curator';
     playlistViewContent.innerHTML = `<div class="am-loading-msg">${t('loading')}</div>`;
+
+    if (!options.skipUrlSync) {
+      syncUrl(`/curator/${toSlug(displayName)}/${curatorId}`, '', options.replaceUrl);
+    }
 
     try {
       let playlists = [];
@@ -2617,7 +3389,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Remote Playlist View ──
-  async function showRemotePlaylistView(playlistId, playlistName) {
+  // ── Remote Playlist View ──
+  async function showRemotePlaylistView(playlistId, playlistName, options = {}) {
     if (listenInitialContent) listenInitialContent.classList.add('hidden');
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
@@ -2626,44 +3399,213 @@ document.addEventListener('DOMContentLoaded', () => {
 
     playlistViewContent.innerHTML = `<div class="am-loading-msg">${t('loading')}</div>`;
 
+    if (!options.skipUrlSync) {
+      syncUrl(`/playlist/${toSlug(playlistName || 'playlist')}/${playlistId}`, '', options.replaceUrl);
+    }
+
     try {
-      const res = await fetch(`${API_BASE}/playlist?playlist=${playlistId}&l=${getCurrentLang()}`);
+      const playlistUrl = `${API_BASE}/playlist?playlist=${playlistId}&storefront=us&l=en-US&extend=editorialVideo,editorialArtwork,editorialNotes,trackCount,extendedAssetUrls&include=tracks,curator&include[tracks]=artists,albums,composers&views=animated-artwork`;
+      const res = await fetch(playlistUrl);
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const data = await res.json();
 
-      const name = data.name || playlistName || 'Playlist';
-      const curator = data.curator_name || 'Apple Music';
-      const artUrl = cleanArtworkUrl(data.artwork_url, 600, 600);
-      const desc = data.description || '';
-      const tracks = data.parsed_tracks || [];
+      const plObj = Array.isArray(data.data) ? data.data[0] : (data.data || data);
+      const attr = plObj?.attributes || {};
+      const rels = plObj?.relationships || {};
 
-      playlistViewContent.innerHTML = `
-        <div class="am-album-header" style="display: flex; gap: 24px; align-items: flex-end; padding: 24px 0;">
-          <div class="am-album-art-container">
-            <img src="${artUrl}" class="am-album-cover" onerror="this.src='favicon.svg'">
-          </div>
-          <div class="am-album-details">
-            <h2 class="am-album-title">${escapeHTML(name)}</h2>
-            <div class="am-album-artist" style="color: #fa586a; font-weight: 600;">${escapeHTML(curator)}</div>
-            ${desc ? `<div style="margin-top: 8px; font-size: 0.88rem; color: #a1a1a6; max-height: 48px; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(desc)}</div>` : ''}
-            <div style="margin-top: 10px; font-size: 0.85rem; color: #6e6e73;">${tracks.length} Songs</div>
-          </div>
-        </div>
+      const name = attr.name || data.name || playlistName || 'Playlist';
+      const curator = attr.curatorName || rels.curator?.data?.[0]?.attributes?.name || data.curator_name || 'Apple Music';
+      const rawArt = attr.artwork?.url || data.artwork_url;
+      const artUrl = cleanArtworkUrl(rawArt, 600, 600);
+      const descRaw = attr.editorialNotes?.standard || attr.editorialNotes?.short || attr.description?.standard || attr.description?.short || data.description || '';
+      const desc = descRaw ? descRaw.replace(/<[^>]*>/g, '') : '';
+      
+      // Parse tracks from relationships.tracks.data
+      const rawTracks = rels.tracks?.data || data.parsed_tracks || [];
+      const tracks = rawTracks.map(tItem => {
+        const tAttr = tItem.attributes || tItem;
+        return {
+          id: tItem.id || tAttr.playParams?.id,
+          title: tAttr.name || tAttr.title || 'Unknown',
+          artist: tAttr.artistName || tAttr.artist || curator,
+          album: tAttr.albumName || tAttr.album || name,
+          album_id: tItem.relationships?.albums?.data?.[0]?.id || tAttr.albumId || null,
+          duration_ms: tAttr.durationInMillis || tAttr.duration_ms || 0,
+          artwork_url: cleanArtworkUrl(tAttr.artwork?.url || tAttr.artworkUrl100 || rawArt, 300, 300),
+          is_explicit: (tAttr.contentRating === 'explicit') || Boolean(tAttr.is_explicit)
+        };
+      });
 
-        <div class="am-album-tracks" style="margin-top: 20px;">
-          ${tracks.map((tItem, idx) => `
-            <div class="am-track-row animate-fade" data-id="${tItem.id}" data-idx="${idx}">
-              <div class="am-track-num">${idx + 1}</div>
-              <div class="am-track-title">
-                <span>${escapeHTML(tItem.title || 'Unknown')}</span>
-                ${tItem.is_explicit ? '<span class="am-explicit-tag">E</span>' : ''}
+      const trackCount = attr.trackCount || tracks.length;
+
+      if (attr.name && attr.name !== playlistName) {
+        syncUrl(`/playlist/${toSlug(name)}/${playlistId}`, '', true);
+      }
+
+      // Check for motion video artwork
+      const motionVideoUrl = attr.editorialVideo?.motionDetailTall?.video || attr.editorialVideo?.motionSquareVideo1x1?.video || attr.editorialVideo?.motionDetailSquare?.video || '';
+      const heroArt = cleanArtworkUrl(rawArt, 1200, 1200);
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile) {
+        playlistViewContent.innerHTML = `
+          <div class="am-artist-mob-hero">
+            ${motionVideoUrl ? `
+              <video src="${motionVideoUrl}" autoplay loop muted playsinline class="am-artist-mob-bg" style="object-fit: cover;" poster="${heroArt}"></video>
+            ` : `
+              <div class="am-artist-mob-bg" style="background-image: url('${heroArt}');"></div>
+            `}
+            <div class="am-artist-mob-overlay"></div>
+
+            <!-- Top Nav Controls -->
+            <div class="am-artist-mob-top-bar">
+              <button class="am-artist-mob-nav-btn" id="playlist-mob-back-btn" aria-label="Back">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+              </button>
+              <div class="am-artist-mob-top-right">
+                <button class="am-artist-mob-nav-btn" id="playlist-mob-share-btn" aria-label="Share">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </button>
+                <button class="am-artist-mob-nav-btn" id="playlist-mob-more-btn" aria-label="More">•••</button>
               </div>
-              <div class="am-track-duration">${formatDuration(tItem.duration_ms)}</div>
-              <button class="am-song-more-btn" data-id="${tItem.id}">•••</button>
             </div>
-          `).join('')}
-        </div>
-      `;
+
+            <!-- Centered Title & Action Buttons -->
+            <div class="am-artist-mob-center-content">
+              <h1 class="am-artist-mob-title" style="font-size: clamp(1.6rem, 5.5vw, 2.2rem);">${escapeHTML(name)}</h1>
+              <div style="font-size: 0.95rem; font-weight: 600; color: #fa586a; margin-top: 4px; margin-bottom: 2px;">${escapeHTML(curator)}</div>
+              <div style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 14px;">${trackCount} Songs</div>
+
+              <div class="am-artist-mob-actions-row">
+                <!-- Info (i) Button -->
+                <button class="am-artist-circle-btn" id="playlist-mob-info-btn" title="About Playlist" aria-label="About Playlist">
+                  <span>i</span>
+                </button>
+
+                <!-- Large Play Button -->
+                <button class="am-artist-play-circle-btn" id="playlist-mob-play-btn" title="Play All" aria-label="Play">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+
+                <!-- Share / More Button -->
+                <button class="am-artist-circle-btn" id="playlist-mob-fav-btn" title="Share" aria-label="Share">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="am-album-tracks" style="margin-top: 20px;">
+            ${tracks.map((tItem, idx) => `
+              <div class="am-track-row animate-fade" data-id="${tItem.id}" data-idx="${idx}">
+                <div class="am-track-num">${idx + 1}</div>
+                <div class="am-track-title">
+                  <span>${escapeHTML(tItem.title || 'Unknown')}</span>
+                  ${tItem.is_explicit ? '<span class="am-explicit-tag">E</span>' : ''}
+                </div>
+                <div class="am-track-duration">${formatDuration(tItem.duration_ms)}</div>
+                <button class="am-song-more-btn" data-id="${tItem.id}">•••</button>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        playlistViewContent.innerHTML = `
+          <div class="am-album-header" style="display: flex; gap: 24px; align-items: flex-end; padding: 24px 0; position: relative;">
+            <div class="am-album-art-container" style="position: relative; overflow: hidden; border-radius: 12px;">
+              ${motionVideoUrl ? `
+                <video src="${motionVideoUrl}" autoplay loop muted playsinline class="am-album-cover" style="object-fit: cover;" poster="${artUrl}"></video>
+              ` : `
+                <img src="${artUrl}" class="am-album-cover" onerror="this.src='favicon.svg'">
+              `}
+            </div>
+            <div class="am-album-details">
+              <h2 class="am-album-title">${escapeHTML(name)}</h2>
+              <div class="am-album-artist" style="color: #fa586a; font-weight: 600;">${escapeHTML(curator)}</div>
+              ${desc ? `<div style="margin-top: 8px; font-size: 0.88rem; color: #a1a1a6; max-height: 48px; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(desc)}</div>` : ''}
+              <div style="margin-top: 10px; font-size: 0.85rem; color: #6e6e73;">${trackCount} Songs</div>
+            </div>
+          </div>
+
+          <div class="am-album-tracks" style="margin-top: 20px;">
+            ${tracks.map((tItem, idx) => `
+              <div class="am-track-row animate-fade" data-id="${tItem.id}" data-idx="${idx}">
+                <div class="am-track-num">${idx + 1}</div>
+                <div class="am-track-title">
+                  <span>${escapeHTML(tItem.title || 'Unknown')}</span>
+                  ${tItem.is_explicit ? '<span class="am-explicit-tag">E</span>' : ''}
+                </div>
+                <div class="am-track-duration">${formatDuration(tItem.duration_ms)}</div>
+                <button class="am-song-more-btn" data-id="${tItem.id}">•••</button>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      // Mobile controls
+      const mobBack = playlistViewContent.querySelector('#playlist-mob-back-btn');
+      if (mobBack) mobBack.onclick = () => window.history.back();
+
+      const mobShare = playlistViewContent.querySelector('#playlist-mob-share-btn') || playlistViewContent.querySelector('#playlist-mob-fav-btn');
+      if (mobShare) {
+        mobShare.onclick = () => {
+          shareEntity({
+            title: name,
+            text: `Listen to ${name} on Lyricsflow`,
+            url: `/playlist/${toSlug(name)}/${playlistId}`
+          });
+        };
+      }
+
+      const mobPlay = playlistViewContent.querySelector('#playlist-mob-play-btn');
+      if (mobPlay && tracks.length > 0) {
+        mobPlay.onclick = () => {
+          loadRemoteTrack({
+            trackId: tracks[0].id,
+            trackName: tracks[0].title,
+            artistName: tracks[0].artist,
+            collectionName: tracks[0].album,
+            albumId: tracks[0].album_id,
+            artworkUrl100: tracks[0].artwork_url
+          });
+        };
+      }
+
+      const mobInfo = playlistViewContent.querySelector('#playlist-mob-info-btn');
+      if (mobInfo) {
+        mobInfo.onclick = () => {
+          let infoModal = document.getElementById('am-playlist-info-modal');
+          if (!infoModal) {
+            infoModal = document.createElement('div');
+            infoModal.id = 'am-playlist-info-modal';
+            infoModal.className = 'am-mobile-modal-overlay';
+            infoModal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background:rgba(0,0,0,0.72);backdrop-filter:blur(25px);display:flex;align-items:center;justify-content:center;padding:20px;';
+            document.body.appendChild(infoModal);
+          }
+          infoModal.innerHTML = `
+            <div class="am-mobile-modal-sheet" style="max-width: 440px; width: 90%; max-height: 80vh; overflow-y: auto; background: rgba(28,28,30,0.96); border: 1px solid rgba(255,255,255,0.12); border-radius: 24px; padding: 26px; box-shadow: 0 20px 50px rgba(0,0,0,0.7);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff;">${escapeHTML(name)}</h3>
+                <button id="close-playlist-info-modal" style="background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 15px; cursor: pointer;">✕</button>
+              </div>
+              <div style="font-size: 0.95rem; line-height: 1.65; color: #e4e4e7;">${desc || 'No description available for this playlist.'}</div>
+            </div>
+          `;
+          infoModal.classList.remove('hidden');
+          infoModal.style.display = 'flex';
+          infoModal.querySelector('#close-playlist-info-modal').onclick = () => {
+            infoModal.classList.add('hidden');
+            infoModal.style.display = 'none';
+          };
+          infoModal.onclick = (ev) => {
+            if (ev.target === infoModal) {
+              infoModal.classList.add('hidden');
+              infoModal.style.display = 'none';
+            }
+          };
+        };
+      }
 
       playlistViewContent.querySelectorAll('.am-track-row').forEach(row => {
         row.onclick = (e) => {
@@ -2702,9 +3644,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Remote Track Load & Playback (Plays in bottom mini player immediately) ──
-  async function loadRemoteTrack(song) {
+  async function loadRemoteTrack(song, queue = []) {
     addToRecent(song);
     syncHomeNavVisibility();
+
+    // 1. Seed into IndexedDB immediately so player.html has data ready
+    try {
+      const { clearQueue, addTrackToQueue, setCurrentIndex } = await import('./router.js');
+      await clearQueue();
+      await addTrackToQueue(null, {
+        name: song.trackName,
+        artist: song.artistName,
+        album: song.collectionName,
+        artUrl: cleanArtworkUrl(song.artworkUrl100 || song.artUrl, 600, 600),
+        type: 'audio/mp4',
+        ttml: '__AUTO_FETCH__',
+        amTrackId: song.trackId
+      });
+      setCurrentIndex(0);
+    } catch (e) {
+      console.warn('[upload.js] Failed to pre-seed queue for player:', e);
+    }
 
     const trackObj = {
       id: song.trackId,
@@ -2712,11 +3672,11 @@ document.addEventListener('DOMContentLoaded', () => {
       artist: song.artistName,
       album: song.collectionName,
       artUrl: cleanArtworkUrl(song.artworkUrl100 || song.artUrl, 600, 600),
-      previewUrl: `${API_BASE}/stream?song=${song.trackId}&l=${getCurrentLang()}`,
+      previewUrl: `${API_BASE}/stream?song=${song.trackId}&l=en-US`,
       durationMs: song.durationMs || 180000
     };
 
-    previewPlayer.playTrack(trackObj);
+    previewPlayer.playTrack(trackObj, queue);
   }
 
   async function loadTrackById(id) {
@@ -2726,16 +3686,66 @@ document.addEventListener('DOMContentLoaded', () => {
     prepStatus.textContent = t('loading_metadata');
 
     try {
-      const res = await fetch(`${API_BASE}/song?song=${id}&l=${getCurrentLang()}`);
-      if (!res.ok) throw new Error(`Status ${res.status}`);
-      const data = await res.json();
+      let songData = null;
+      let attr = null;
+      let albumId = null;
+      let artistId = null;
 
-      const songData = data.data?.[0] || data.results?.songs?.data?.[0];
-      if (!songData) throw new Error("Track ID not found");
+      try {
+        const res = await fetch(`${API_BASE}/song?song=${id}&l=${getCurrentLang()}`);
+        if (res.ok) {
+          const data = await res.json();
+          songData = data.data?.[0] || data.results?.songs?.data?.[0];
+          if (songData) {
+            attr = songData.attributes || {};
+            albumId = songData.relationships?.albums?.data?.[0]?.id || attr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+            artistId = songData.relationships?.artists?.data?.[0]?.id || null;
+          }
+        }
+      } catch (e) {
+        console.warn("[ID Loader] API_BASE fetch failed, falling back to iTunes API:", e);
+      }
 
-      const attr = songData.attributes || {};
-      const albumId = songData.relationships?.albums?.data?.[0]?.id || attr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
-      const artistId = songData.relationships?.artists?.data?.[0]?.id || null;
+      // Seamless fallback to Apple iTunes lookup API if spicyamll API returned 404
+      if (!songData) {
+        const itunesRes = await fetch(`https://itunes.apple.com/lookup?id=${id}`);
+        if (!itunesRes.ok) throw new Error(`Status ${itunesRes.status}`);
+        const itunesData = await itunesRes.json();
+        const itunesTrack = itunesData?.results?.[0];
+        if (!itunesTrack) throw new Error("Track ID not found");
+
+        const song = {
+          trackId: itunesTrack.trackId || id,
+          trackName: itunesTrack.trackName,
+          artistName: itunesTrack.artistName,
+          collectionName: itunesTrack.collectionName,
+          albumId: itunesTrack.collectionId || null,
+          artistId: itunesTrack.artistId || null,
+          releaseDate: itunesTrack.releaseDate || null,
+          year: itunesTrack.releaseDate ? new Date(itunesTrack.releaseDate).getFullYear().toString() : null,
+          artworkUrl100: itunesTrack.artworkUrl100 ? itunesTrack.artworkUrl100.replace('100x100', '600x600') : '',
+          durationMs: itunesTrack.trackTimeMillis || 180000,
+          previewUrl: itunesTrack.previewUrl || `${API_BASE}/stream?song=${id}&l=${getCurrentLang()}`
+        };
+
+        if (itunesTrack.previewUrl) {
+          previewPlayer.playTrack({
+            id: song.trackId,
+            title: song.trackName,
+            artist: song.artistName,
+            album: song.collectionName,
+            artUrl: song.artworkUrl100,
+            previewUrl: itunesTrack.previewUrl,
+            durationMs: itunesTrack.trackTimeMillis || 180000
+          });
+          if (prepOverlay) prepOverlay.classList.remove('active');
+          return;
+        }
+
+        await loadRemoteTrack(song);
+        if (prepOverlay) prepOverlay.classList.remove('active');
+        return;
+      }
 
       const song = {
         trackId: songData.id,
@@ -2746,45 +3756,157 @@ document.addEventListener('DOMContentLoaded', () => {
         artistId: artistId,
         releaseDate: attr.releaseDate || null,
         year: attr.releaseDate ? formatLocalizedYear(attr.releaseDate) : null,
-        artworkUrl100: cleanArtworkUrl(attr.artwork?.url, 100, 100)
+        artworkUrl100: cleanArtworkUrl(attr.artwork?.url, 100, 100),
+        durationMs: attr.durationInMillis || 180000
       };
 
-      loadRemoteTrack(song);
+      await loadRemoteTrack(song);
+      if (prepOverlay) prepOverlay.classList.remove('active');
     } catch (err) {
       console.error("[ID Loader] Failed:", err);
-      prepOverlay.classList.remove('active');
+      if (prepOverlay) prepOverlay.classList.remove('active');
       showToast({ message: `Could not load track ${id}: ${err.message}` });
     }
   }
 
-  // ── URL Routing for /song id or /#songid ──
+  // ── URL Routing for /album, /artist, /label, /playlist, /curator, /video, /search, /home, /song ──
   function checkUrlRouting() {
-    const hash = window.location.hash || '';
-    const search = window.location.search || '';
-    const path = window.location.pathname || '';
+    const rawHash = (window.location.hash || '').replace(/^#\/?/, '');
+    const [hashPath, hashQuery] = rawHash.split('?');
 
-    // Check query params: ?song=123 or ?id=123
+    // Prefer hash route if present; otherwise fall back to pathname
+    let path = '';
+    let search = '';
+    if (hashPath) {
+      path = '/' + hashPath;
+      search = hashQuery ? `?${hashQuery}` : '';
+    } else {
+      path = window.location.pathname || '';
+      search = window.location.search || '';
+    }
     const urlParams = new URLSearchParams(search);
+
+    // 1. Check entity routes: /label/[slug]/[id], /album/[slug]/[id], /artist/[slug]/[id], /playlist/[slug]/[id], /curator/[slug]/[id], /video/[slug]/[id]
+    // Record Label: /label/[slug]/[id] or /label/[id]
+    const labelMatch = path.match(/^\/label\/(?:([^/]+)\/)?([^/?#]+)/i);
+    if (labelMatch) {
+      const slugName = labelMatch[1] ? decodeURIComponent(labelMatch[1]).replace(/-/g, ' ') : '';
+      const labelId = labelMatch[2];
+      showRecordLabelView(labelId, slugName, { skipUrlSync: true });
+      return true;
+    }
+
+    // Album: /album/[slug]/[id] or /album/[id] (with optional ?i=[trackId])
+    const albumMatch = path.match(/^\/album\/(?:([^/]+)\/)?(\d+)/i);
+    if (albumMatch) {
+      const slugName = albumMatch[1] ? decodeURIComponent(albumMatch[1]).replace(/-/g, ' ') : '';
+      const albumId = albumMatch[2];
+      const trackId = urlParams.get('i') || null;
+      showAlbumView(albumId, slugName, trackId, { skipUrlSync: true });
+      return true;
+    }
+
+    // Artist: /artist/[slug]/[id] or /artist/[id]
+    const artistMatch = path.match(/^\/artist\/(?:([^/]+)\/)?([^/?#]+)/i);
+    if (artistMatch) {
+      const slugName = artistMatch[1] ? decodeURIComponent(artistMatch[1]).replace(/-/g, ' ') : '';
+      const artistId = artistMatch[2];
+      showArtistView(artistId, slugName, { skipUrlSync: true });
+      return true;
+    }
+
+    // Playlist: /playlist/[slug]/[id] or /playlist/[id]
+    const playlistMatch = path.match(/^\/playlist\/(?:([^/]+)\/)?([^/?#]+)/i);
+    if (playlistMatch) {
+      const slugName = playlistMatch[1] ? decodeURIComponent(playlistMatch[1]).replace(/-/g, ' ') : '';
+      const playlistId = playlistMatch[2];
+      showRemotePlaylistView(playlistId, slugName, { skipUrlSync: true });
+      return true;
+    }
+
+    // Curator: /curator/[slug]/[id] or /curator/[id]
+    const curatorMatch = path.match(/^\/curator\/(?:([^/]+)\/)?([^/?#]+)/i);
+    if (curatorMatch) {
+      const slugName = curatorMatch[1] ? decodeURIComponent(curatorMatch[1]).replace(/-/g, ' ') : '';
+      const curatorId = curatorMatch[2];
+      showCuratorView(curatorId, slugName, { skipUrlSync: true });
+      return true;
+    }
+
+    // Music Video: /video/[slug]/[id] or /video/[id]
+    const videoMatch = path.match(/^\/video\/(?:([^/]+)\/)?(\d+)/i);
+    if (videoMatch) {
+      const slugName = videoMatch[1] ? decodeURIComponent(videoMatch[1]).replace(/-/g, ' ') : '';
+      const videoId = videoMatch[2];
+      playMusicVideo(videoId, slugName, '', { skipUrlSync: true });
+      return true;
+    }
+
+    // 2. Check top-level page routes: /home, /search, /upload, /playlists, /recently-added, /library, /recently-listened
+    const cleanPath = path.replace(/\/+$/, '').toLowerCase();
+    if (cleanPath === '/home') {
+      switchPage('home', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/search') {
+      const q = urlParams.get('q') || urlParams.get('query') || '';
+      switchPage('listen', { skipUrlSync: true });
+      if (q && catalogSearch) {
+        catalogSearch.value = q;
+        if (searchClearBtn) searchClearBtn.classList.remove('hidden');
+        performCatalogSearch(q, { skipUrlSync: true });
+      }
+      return true;
+    }
+    if (cleanPath === '/upload') {
+      switchPage('upload', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/playlists') {
+      switchPage('playlists', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/recently-added') {
+      switchPage('recently-added', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/library') {
+      switchPage('library-hub', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/library/artists') {
+      switchPage('library-artists', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/library/albums') {
+      switchPage('library-albums', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/library/songs') {
+      switchPage('songs', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/recently-listened') {
+      switchPage('recent', { skipUrlSync: true });
+      return true;
+    }
+
+    // 3. Backwards-compatibility: Check query params ?song=123 or ?id=123
     const querySongId = urlParams.get('song') || urlParams.get('id');
     if (querySongId && /^\d+$/.test(querySongId)) {
       loadTrackById(querySongId);
       return true;
     }
 
-    // Check hash: #12345, #song/12345, #song=12345, #song12345, #/song/12345
-    if (hash) {
-      const cleaned = hash.replace(/^#\/?/, '');
-      const numMatch = cleaned.match(/\d{5,}/);
-      if (numMatch) {
-        loadTrackById(numMatch[0]);
-        return true;
-      }
-    }
-
-    // Check path: /song/12345
-    const pathMatch = path.match(/\/song\/(\d+)/);
+    // 4. Check song route or bare ID: /song/12345 or #12345
+    const pathMatch = path.match(/\/song\/(\d+)/i);
     if (pathMatch) {
       loadTrackById(pathMatch[1]);
+      return true;
+    }
+    const numMatch = (window.location.hash || '').match(/\d{5,}/);
+    if (numMatch) {
+      loadTrackById(numMatch[0]);
       return true;
     }
 
@@ -2792,6 +3914,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   window.addEventListener('hashchange', checkUrlRouting);
+  window.addEventListener('popstate', () => {
+    isHandlingPopState = true;
+    checkUrlRouting();
+    isHandlingPopState = false;
+  });
 
   // ── Context Menu (Desktop Dropdown & Mobile 76% Centered Modal) ──
   function showContextMenu(e, song) {
@@ -2976,6 +4103,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const handleCtxShare = () => {
+    if (!contextMenuTrack) return;
+    hideContextMenu();
+    const songId = contextMenuTrack.trackId || contextMenuTrack.id || '';
+    const title = contextMenuTrack.trackName || contextMenuTrack.name || 'Song';
+    const artist = contextMenuTrack.artistName || contextMenuTrack.artist || 'Artist';
+    const album = contextMenuTrack.collectionName || contextMenuTrack.album || '';
+    const albumId = contextMenuTrack.albumId;
+    let url = `/song/${songId}`;
+    if (albumId) {
+      url = `/album/${toSlug(album)}/${albumId}?i=${songId}`;
+    }
+    shareEntity({
+      title: `${title} - ${artist}`,
+      text: `Listen to "${title}" by ${artist} on Lyricsflow`,
+      url: url
+    });
+  };
+
+  const ctxShare = document.getElementById('ctx-share');
+  const mobCtxShare = document.getElementById('mob-ctx-share');
+
   // Wire desktop context menu items
   if (ctxPlay) ctxPlay.onclick = handleCtxPlay;
   if (ctxAddLib) ctxAddLib.onclick = handleCtxAddLib;
@@ -2983,6 +4132,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (ctxViewAlbum) ctxViewAlbum.onclick = handleCtxViewAlbum;
   if (ctxViewArtist) ctxViewArtist.onclick = handleCtxViewArtist;
   if (ctxFavorite) ctxFavorite.onclick = handleCtxFavorite;
+  if (ctxShare) ctxShare.onclick = handleCtxShare;
   if (ctxCopyId) ctxCopyId.onclick = handleCtxCopyId;
 
   // Wire mobile context modal items
@@ -2992,6 +4142,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (mobCtxViewAlbum) mobCtxViewAlbum.onclick = handleCtxViewAlbum;
   if (mobCtxViewArtist) mobCtxViewArtist.onclick = handleCtxViewArtist;
   if (mobCtxFavorite) mobCtxFavorite.onclick = handleCtxFavorite;
+  if (mobCtxShare) mobCtxShare.onclick = handleCtxShare;
   if (mobCtxCopyId) mobCtxCopyId.onclick = handleCtxCopyId;
 
   // ── Playlist Selection Modal ──
@@ -3244,7 +4395,15 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           setCurrentIndex(idx);
-          window.location.href = 'player.html';
+          const drawer = document.getElementById('player-drawer');
+          const drawerIframe = document.getElementById('player-drawer-iframe');
+          if (drawer && drawerIframe) {
+            drawerIframe.src = 'player.html';
+            drawer.classList.add('open');
+            if (prepOverlay) prepOverlay.classList.remove('active');
+          } else {
+            window.location.href = 'player.html';
+          }
         } catch (err) {
           console.error("Failed to load track grid:", err);
           if (prepOverlay) prepOverlay.classList.remove('active');
@@ -3254,7 +4413,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ── Remote Playlist View ──
+  // ── Remote Playlist View (Lady Gaga / Amr Diab design with Animated Artwork) ──
   async function openRemotePlaylistView(playlistId, playlistName) {
     if (!playlistViewContainer) return;
 
@@ -3267,14 +4426,25 @@ document.addEventListener('DOMContentLoaded', () => {
     playlistViewContent.innerHTML = `<div class="am-loading-msg">${t('loading_playlist')}</div>`;
 
     try {
-      const res = await fetch(`${API_BASE}/playlist?playlist=${playlistId}&limit=100&l=${getCurrentLang()}`);
+      const playlistApiUrl = `${API_BASE}/playlist?playlist=${playlistId}&storefront=us&l=en-US&extend=editorialVideo,editorialArtwork,editorialNotes,trackCount,extendedAssetUrls&include=tracks,curator&include[tracks]=artists,albums,composers&views=animated-artwork`;
+      const res = await fetch(playlistApiUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+
       const tracks = data.parsed_tracks || [];
       const name = data.name || playlistName;
       const curator = data.curator_name || 'Apple Music';
       const description = data.description || '';
       const art = cleanArtworkUrl(data.artwork_url, 600, 600);
+      const isMobile = window.innerWidth <= 768;
+
+      // Extract Animated Artwork videos
+      const rawData = data.raw_data?.data?.[0] || data.data?.[0] || data;
+      const editorialVideo = rawData?.attributes?.editorialVideo || rawData?.editorialVideo || {};
+      const animatedArtworkViews = rawData?.views?.['animated-artwork']?.data?.[0]?.attributes || {};
+
+      const motionDetailTallVideo = editorialVideo.motionDetailTall?.video || animatedArtworkViews.motionDetailTall?.video || null;
+      const motionSquareVideo = editorialVideo.motionSquareVideo1x1?.video || animatedArtworkViews.motionSquareVideo1x1?.video || null;
 
       const tracksHTML = tracks.map((t, i) => `
         <div class="am-track-row" data-id="${t.id}" data-idx="${i}">
@@ -3290,22 +4460,192 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `).join('') || `<p class="am-empty-msg">${t('playlists_empty_tracks')}</p>`;
 
-      playlistViewContent.innerHTML = `
-        <div class="am-album-header am-detail-header am-playlist-header">
-          <img src="${art}" class="am-album-art" loading="lazy" referrerpolicy="no-referrer" alt="">
-          <div class="am-album-meta am-detail-meta">
-            <div class="am-detail-kicker">${t('badge_playlist')}</div>
-            <h1 class="am-detail-title">${escapeHTML(name)}</h1>
-            <h2 class="am-detail-artist">${escapeHTML(curator)}</h2>
-            <p class="am-detail-sub">${t('lib_songs_count', { count: tracks.length })}</p>
-            ${description ? `<p class="am-detail-desc">${escapeHTML(description.replace(/<[^>]*>/g, ''))}</p>` : ''}
+      if (isMobile) {
+        // Mobile Layout matching screenshot
+        const hasTallVideo = !!motionDetailTallVideo;
+        playlistViewContent.innerHTML = `
+          <div class="am-playlist-mob-hero">
+            ${hasTallVideo ? `
+              <video class="am-playlist-mob-video-bg" autoplay loop muted playsinline poster="${art}">
+                <source src="${motionDetailTallVideo}" type="video/mp4">
+              </video>
+            ` : `
+              <div class="am-playlist-mob-img-bg" style="background-image: url('${art}');"></div>
+            `}
+            <div class="am-playlist-mob-overlay"></div>
+
+            <!-- Top Nav Bar -->
+            <div class="am-playlist-mob-top-bar">
+              <button class="am-artist-mob-nav-btn" id="playlist-mob-back-btn" aria-label="Back">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+              </button>
+              <div class="am-artist-mob-top-right">
+                <button class="am-artist-mob-nav-btn" id="playlist-mob-share-btn" aria-label="Share">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </button>
+                <button class="am-artist-mob-nav-btn" id="playlist-mob-more-btn" aria-label="More">•••</button>
+              </div>
+            </div>
+
+            <!-- Centered Header Content -->
+            <div class="am-playlist-mob-center">
+              <h1 class="am-playlist-mob-title">${escapeHTML(name)}</h1>
+              <div class="am-playlist-mob-curator">${escapeHTML(curator)}</div>
+              <div class="am-playlist-mob-meta">${tracks.length} songs</div>
+
+              <!-- Controls: Shuffle, Large Pill Play, Add -->
+              <div class="am-playlist-mob-actions-row">
+                <button class="am-playlist-circle-icon-btn" id="playlist-shuffle-btn" title="Shuffle">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+                </button>
+
+                <button class="am-playlist-pill-play-btn" id="playlist-play-all-btn">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  <span>Play</span>
+                </button>
+
+                <button class="am-playlist-circle-icon-btn" id="playlist-add-btn" title="Add to Library">
+                  <span>+</span>
+                </button>
+              </div>
+
+              ${description ? `
+                <div class="am-playlist-mob-desc">
+                  "${escapeHTML(description.replace(/<[^>]*>/g, ''))}"
+                </div>
+              ` : ''}
+            </div>
           </div>
-        </div>
-        <div class="am-tracklist">${tracksHTML}</div>
-        <div class="am-album-footer-info">
-          <p class="am-footer-date">${escapeHTML(curator)} • ${t('lib_songs_count', { count: tracks.length })}</p>
-        </div>
-      `;
+
+          <!-- Tracklist -->
+          <div class="am-tracklist am-playlist-mob-tracklist">${tracksHTML}</div>
+          <div class="am-album-footer-info" style="padding: 20px;">
+            <p class="am-footer-date">${escapeHTML(curator)} • ${t('lib_songs_count', { count: tracks.length })}</p>
+          </div>
+        `;
+      } else {
+        // Desktop / Tablet Layout matching screenshot
+        const hasSquareVideo = !!motionSquareVideo;
+        playlistViewContent.innerHTML = `
+          <div class="am-playlist-desktop-header">
+            <div class="am-playlist-art-wrap">
+              ${hasSquareVideo ? `
+                <video class="am-playlist-square-video" autoplay loop muted playsinline poster="${art}">
+                  <source src="${motionSquareVideo}" type="video/mp4">
+                </video>
+              ` : `
+                <img src="${art}" class="am-playlist-cover-art" onerror="this.src='favicon.svg'" alt="">
+              `}
+            </div>
+            <div class="am-playlist-desktop-info">
+              <h1 class="am-playlist-desktop-title">${escapeHTML(name)}</h1>
+              <h2 class="am-playlist-desktop-curator">${escapeHTML(curator)}</h2>
+              ${description ? `<p class="am-playlist-desktop-desc">${escapeHTML(description.replace(/<[^>]*>/g, ''))}</p>` : ''}
+              <div class="am-playlist-desktop-actions">
+                <button class="am-playlist-pill-play-btn" id="playlist-play-all-btn">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  <span>Play</span>
+                </button>
+                <button class="am-artist-mob-nav-btn" id="playlist-desktop-share-btn" title="Share" style="background: rgba(255,255,255,0.08); border-radius: 50%; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #fa586a;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="am-tracklist-table-header" style="display: flex; padding: 12px 18px; color: rgba(255,255,255,0.5); font-size: 0.82rem; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.08);">
+            <div style="flex: 2;">Song</div>
+            <div style="flex: 1.5;">Artist</div>
+            <div style="flex: 1.5;">Album</div>
+            <div style="width: 70px; text-align: right;">Time</div>
+          </div>
+
+          <div class="am-tracklist">${tracksHTML}</div>
+          <div class="am-album-footer-info">
+            <p class="am-footer-date">${escapeHTML(curator)} • ${t('lib_songs_count', { count: tracks.length })}</p>
+          </div>
+        `;
+      }
+
+      // Share button handler
+      const pShareBtn = playlistViewContent.querySelector('#playlist-mob-share-btn') || playlistViewContent.querySelector('#playlist-desktop-share-btn');
+      if (pShareBtn) {
+        pShareBtn.onclick = () => {
+          shareEntity({
+            title: name,
+            text: `Listen to "${name}" playlist on Lyricsflow`,
+            url: `/playlist/${toSlug(name)}/${playlistId}`
+          });
+        };
+      }
+
+      // Mobile Back button handler
+      const pBackBtn = playlistViewContent.querySelector('#playlist-mob-back-btn');
+      if (pBackBtn) {
+        pBackBtn.onclick = () => {
+          window.history.back();
+        };
+      }
+
+      // Play All / Play Playlist Button Handler — Starts stream directly through audio pipeline
+      const playAllBtn = playlistViewContent.querySelector('#playlist-play-all-btn');
+      if (playAllBtn && tracks.length > 0) {
+        playAllBtn.onclick = async () => {
+          const first = tracks[0];
+          const albumId = first.relationships?.albums?.data?.[0]?.id || first.artwork_url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+          const artistId = first.relationships?.artists?.data?.[0]?.id || null;
+
+          // 1. Play first track directly
+          loadRemoteTrack({
+            trackId: first.id,
+            trackName: first.title,
+            artistName: first.artist,
+            collectionName: first.album || name,
+            albumId: albumId,
+            artistId: artistId,
+            artworkUrl100: cleanArtworkUrl(first.artwork_url, 100, 100)
+          });
+
+          // 2. Asynchronously populate the remaining queue
+          if (tracks.length > 1) {
+            try {
+              const { addTrackToQueue } = await import('./router.js');
+              for (let i = 1; i < tracks.length; i++) {
+                const tr = tracks[i];
+                await addTrackToQueue(null, {
+                  name: tr.title,
+                  artist: tr.artist || 'Unknown Artist',
+                  album: tr.album || name,
+                  artUrl: cleanArtworkUrl(tr.artwork_url, 300, 300),
+                  type: 'audio/mp4',
+                  ttml: '__AUTO_FETCH__',
+                  amTrackId: tr.id
+                });
+              }
+            } catch (_) {}
+          }
+        };
+      }
+
+      // Shuffle Playlist Button
+      const shuffleBtn = playlistViewContent.querySelector('#playlist-shuffle-btn');
+      if (shuffleBtn && tracks.length > 0) {
+        shuffleBtn.onclick = () => {
+          const randIdx = Math.floor(Math.random() * tracks.length);
+          const tr = tracks[randIdx];
+          const albumId = tr.relationships?.albums?.data?.[0]?.id || tr.artwork_url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+          const artistId = tr.relationships?.artists?.data?.[0]?.id || null;
+          loadRemoteTrack({
+            trackId: tr.id,
+            trackName: tr.title,
+            artistName: tr.artist,
+            collectionName: tr.album || name,
+            albumId: albumId,
+            artistId: artistId,
+            artworkUrl100: cleanArtworkUrl(tr.artwork_url, 100, 100)
+          });
+        };
+      }
 
       playlistViewContent.querySelectorAll('.am-track-row').forEach((row, idx) => {
         row.onclick = (e) => {
@@ -3438,9 +4778,200 @@ document.addEventListener('DOMContentLoaded', () => {
     syncHomeNavVisibility();
   }
 
+  // ── System Health & Terminal Status Dialog ──
+  async function checkSystemHealthStatus() {
+    // Only query if not dismissed in the current session
+    if (sessionStorage.getItem('lyricsflow_status_dismissed')) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/status`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Only display the dialog if an issue or degradation is reported
+      if (data && (data.hasIssues || data.status !== 'operational')) {
+        renderTerminalStatusModal(data);
+      }
+    } catch (_) {
+      // Quiet fail if API server itself is completely offline or unreachable
+    }
+  }
+
+  function renderTerminalStatusModal(statusData) {
+    if (document.getElementById('lyricsflow-terminal-status-modal')) return;
+
+    const endpoints = statusData.endpoints || {};
+    const issues = statusData.issues || [];
+    const serverName = statusData.server || 'api.spicyamll.online';
+    const timestamp = statusData.timestamp ? new Date(statusData.timestamp * 1000).toUTCString() : new Date().toUTCString();
+
+    const lines = Object.entries(endpoints).map(([path, ep]) => {
+      const isUp = ep.status === 'up';
+      const statusTag = isUp 
+        ? '<span style="color: #30d158; font-weight: 700;">[UP]</span>' 
+        : '<span style="color: #ff453a; font-weight: 700; text-shadow: 0 0 6px rgba(255,69,58,0.5);">[DOWN]</span>';
+      const providerNote = ep.provider ? ` <span style="color: #8e8e93;">(${escapeHTML(ep.provider)})</span>` : '';
+      const detailNote = ep.details ? `<br>&nbsp;&nbsp;&nbsp;&nbsp;↳ <span style="color: #ffd60a;">${escapeHTML(ep.details)}</span>` : '';
+      return `<div style="margin-bottom: 8px;">
+        <span style="color: #64d2ff;">${escapeHTML(path.padEnd(14, ' '))}</span> 
+        ${statusTag} 
+        <span style="color: #e5e5ea;">${escapeHTML(ep.name || '')}</span>${providerNote}
+        ${detailNote}
+      </div>`;
+    }).join('');
+
+    const modal = document.createElement('div');
+    modal.id = 'lyricsflow-terminal-status-modal';
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      animation: lyricsflowFadeIn 0.25s ease forwards;
+    `;
+
+    modal.innerHTML = `
+      <div style="
+        background: rgba(18, 18, 20, 0.94);
+        border: 1px solid rgba(255, 69, 58, 0.35);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 69, 58, 0.18);
+        border-radius: 14px;
+        width: 100%;
+        max-width: 620px;
+        overflow: hidden;
+        color: #f2f2f7;
+        font-size: 13px;
+        line-height: 1.55;
+      ">
+        <!-- Terminal Header / Titlebar -->
+        <div style="
+          background: rgba(28, 28, 30, 0.95);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 10px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          user-select: none;
+        ">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 11px; height: 11px; border-radius: 50%; background: #ff5f56; display: inline-block;"></span>
+            <span style="width: 11px; height: 11px; border-radius: 50%; background: #ffbd2e; display: inline-block;"></span>
+            <span style="width: 11px; height: 11px; border-radius: 50%; background: #27c93f; display: inline-block;"></span>
+            <span style="margin-left: 8px; color: #98989d; font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em;">
+              spicyamll-daemon ~ endpoint-telemetry
+            </span>
+          </div>
+          <span style="background: rgba(255, 69, 58, 0.16); color: #ff453a; border: 1px solid rgba(255, 69, 58, 0.3); font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
+            ${escapeHTML(statusData.status || 'DEGRADED')}
+          </span>
+        </div>
+
+        <!-- Terminal Console Body -->
+        <div style="padding: 18px 20px; max-height: 60vh; overflow-y: auto;">
+          <div style="color: #98989d; margin-bottom: 12px; font-size: 11.5px;">
+            <div>$ check-system-status --host <span style="color: #fff;">${escapeHTML(serverName)}</span></div>
+            <div>Timestamp: ${escapeHTML(timestamp)}</div>
+          </div>
+
+          <div style="background: rgba(255, 69, 58, 0.08); border-left: 3px solid #ff453a; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; color: #ffd60a;">
+            ⚠ <strong>System Degradation Detected:</strong> One or more upstream services are temporarily offline or undergoing maintenance. Affected features may fail gracefully.
+          </div>
+
+          <!-- Endpoints Table -->
+          <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;">
+            <div style="color: #636366; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 4px;">
+              ENDPOINT&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;STATUS&nbsp;&nbsp;SERVICE NAME
+            </div>
+            ${lines}
+          </div>
+
+          <div style="color: #8e8e93; font-size: 11.5px;">
+            Type <span style="color: #64d2ff;">acknowledge</span> to continue using available endpoints, or re-run diagnostic check.
+          </div>
+        </div>
+
+        <!-- Terminal Action Footer -->
+        <div style="
+          background: rgba(28, 28, 30, 0.95);
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 12px 18px;
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+        ">
+          <button id="status-terminal-retry-btn" style="
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 7px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+          ">Re-check Status</button>
+          <button id="status-terminal-dismiss-btn" style="
+            background: #ff453a;
+            color: #fff;
+            border: none;
+            padding: 7px 18px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(255, 69, 58, 0.35);
+            transition: all 0.2s;
+          ">Acknowledge & Dismiss</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const dismissBtn = modal.querySelector('#status-terminal-dismiss-btn');
+    if (dismissBtn) {
+      dismissBtn.onclick = () => {
+        sessionStorage.setItem('lyricsflow_status_dismissed', '1');
+        modal.remove();
+      };
+    }
+
+    const retryBtn = modal.querySelector('#status-terminal-retry-btn');
+    if (retryBtn) {
+      retryBtn.onclick = async () => {
+        retryBtn.textContent = 'Checking...';
+        try {
+          const r = await fetch(`${API_BASE}/status`, { cache: 'no-store' });
+          if (r.ok) {
+            const fresh = await r.json();
+            modal.remove();
+            if (fresh && (fresh.hasIssues || fresh.status !== 'operational')) {
+              renderTerminalStatusModal(fresh);
+            }
+          } else {
+            retryBtn.textContent = 'Re-check Status';
+          }
+        } catch (_) {
+          retryBtn.textContent = 'Re-check Status';
+        }
+      };
+    }
+  }
+
   // ── Initial Start Sequence ──
   updateSidebarPlaylists();
   syncHomeNavVisibility();
+  checkSystemHealthStatus();
 
   // Check URL routing first (e.g. /song id or /#songid)
   const routed = checkUrlRouting();

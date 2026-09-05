@@ -9,37 +9,35 @@
   <meta name="description"
     content="Play and experience synchronized Apple Music lyrics with beautiful animations and high-fidelity graphics on Lyricsflow.">
 
-  <!-- AeroUI Design System -->
+  <!-- AeroUI Design System (no SRI pins: the CDN tracks a mutable branch,
+       so pinned hashes break on every upstream update — always load live) -->
   <link rel="stylesheet" href="https://nurislamaibekuly.github.io/aeroui/src/aeroui.css"
-    integrity="sha384-zYyqxGFYdEtrHXwPV0m9TH2JxGF3rXHlYlVtUlLv4jFd6TGsrJsa76GNxkWJlL6L" crossorigin="anonymous">
+    crossorigin="anonymous">
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/spinner/spinner.js"
-    integrity="sha384-FpIIxPCSBl6yk3Migps1iqvOqDy/UCOyDMZEY+KCW7OADUsf3c3TRe1wetu438g5"
     crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/button/button.js"
-    integrity="sha384-jkGKWvGyjuQqF9AoUZRtPobWOYfZL2dde9r298hEEd+LHA4Bm9pmHLmeBc2ZOXmX"
     crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/slider/slider.js"
-    integrity="sha384-JIILD/Fbuaz3KMO4UmGBSHscpCKV9sVYo2Dus2SXeBp1LM17LQ/9GjNEuGUIS9KY"
     crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/toggle/toggle.js"
-    integrity="sha384-Vu2ogO3oby87XgeXWmcmgKZsEkNY+m3DofpLapUFBoGzz51tWJrU5+1GgzyN4/xq"
     crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/tooltip/tooltip.js"
-    integrity="sha384-uVI2QiwjyCrpno+Y7cocRTZZ53xc1y0vZTOk5ROmtZ2N2zVAwfv4m4YU0QqXqmKE"
     crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/segmented/segmented.js"
-    integrity="sha384-1biUzTo5IWl0+pM/Cf7x2uaF4DpyJVc3jdC77gbDmI7cc5BTTo5fpklASJ1RMXgm"
     crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js"
     crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/modal/modal.js"
-    integrity="sha384-Rbl7iBFMLjBU8FepHnK2p48fEChl069rMkSf6ipBiBhwsQcjqL8DlwzNSgw6ezPn"
     crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/accordion/accordion.js"
-    integrity="sha384-wCc8UEqZvQS7/SRHKxFpnb4NfXWc9QBLRfrrPGhfm8LmORf0wcNMLWhORBSXb25/"
     crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/progress/progress.js"
-    integrity="sha384-Vmtto52V7mfSC7ANEN/NZQaP9IIDkXgkn/1sUdgFyRvRN6d0G9jQCgJPxl5RqZUJ"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/elastic-slider/elastic-slider.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/player-button/player-button.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/skip-label/skip-label.js"
     crossorigin="anonymous"></script>
 
   <!-- Stylesheets -->
@@ -179,15 +177,6 @@
     <!-- Dynamic Background -->
     <div class="lyricsflow-dynamic-bg" id="dynamic-bg"></div>
 
-
-
-
-
-    <!-- Back Button -->
-    <button class="back-button" id="back-button" title="Back to upload" data-i18n-title="player_btn_back">
-      <img src="icons/back.png" alt="Back">
-    </button>
-
     <!-- PC Desktop Top-Right Controls (AirPlay & Volume Slider) -->
     <div class="pc-top-right-bar" id="pc-top-right-bar">
       <button class="pc-airplay-btn" id="pc-btn-airplay" title="AirPlay / Audio Output">
@@ -239,14 +228,15 @@
               </div>
             </div>
 
-            <!-- Integrated Progress Bar -->
+            <!-- Integrated Progress Bar (AeroUI elastic slider) -->
             <div class="NowBarProgress">
-              <div class="progress-bar-wrapper" id="progress-bar">
-                <div class="progress-bar-fill" id="progress-fill"></div>
-              </div>
-              <div class="progress-times">
-                <span class="progress-time" id="time-current">0:00</span>
-                <span class="progress-time" id="time-total">-0:00</span>
+              <div class="aero-elastic" id="progress-elastic" data-min="0" data-max="1000" data-value="0"
+                data-step="1000" data-labels="bottom" data-stretch="0" style="--elastic-stretch: 0px;">
+                <span class="aero-elastic-label progress-time" id="time-current">0:00</span>
+                <div class="aero-elastic-track">
+                  <div class="aero-elastic-fill"></div>
+                </div>
+                <span class="aero-elastic-label progress-time" id="time-total">-0:00</span>
               </div>
             </div>
 
@@ -265,18 +255,18 @@
                 data-i18n-title="player_btn_shuffle">
                 <img src="icons/button_icon_shuffle.png" alt="Shuffle" id="shuffle-icon">
               </div>
-              <div class="playback-control skip-back" id="btn-backward" title="Previous"
-                data-i18n-title="player_btn_prev">
-                <img src="icons/rewind.png" alt="Previous">
-              </div>
-              <div class="playback-control play-pause" id="btn-play-pause" title="Play/Pause"
-                data-i18n-title="player_btn_play_pause">
-                <img src="icons/paused.png" alt="Play" id="play-pause-icon">
-              </div>
-              <div class="playback-control skip-forward" id="skip-forward" title="Next"
-                data-i18n-title="player_btn_next">
-                <img src="icons/forward.png" alt="Next">
-              </div>
+              <button class="playback-control aero-player skip-back" id="btn-backward" title="Previous"
+                data-i18n-title="player_btn_prev" aria-label="Previous">
+                <span class="aero-skip" data-direction="backward"></span>
+              </button>
+              <button class="playback-control aero-player play-pause" id="btn-play-pause" title="Play/Pause"
+                data-i18n-title="player_btn_play_pause" aria-label="Play">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6.8 4 17.2Q4 21 7.31 19.14L18.26 12.98Q20 12 18.26 11.02L7.31 4.86Q4 3 4 6.8Z"/></svg>
+              </button>
+              <button class="playback-control aero-player skip-forward" id="skip-forward" title="Next"
+                data-i18n-title="player_btn_next" aria-label="Next">
+                <span class="aero-skip" data-direction="forward"></span>
+              </button>
               <div class="playback-control repeat" id="btn-repeat" title="Repeat" data-i18n-title="player_btn_repeat">
                 <img src="icons/repeat.svg" alt="Repeat" id="repeat-icon">
               </div>
@@ -362,6 +352,15 @@
     import { generateTTML } from './js/ttml-parser.js';
     import isRtl from './js/is-rtl.js';
     import { t, getCurrentLang, applyDOMTranslations, formatLocalizedDate, formatLocalizedYear } from './js/i18n.js';
+    import {
+      initElasticSlider, setElasticValue, getElasticValue
+    } from 'https://nurislamaibekuly.github.io/aeroui/src/components/elastic-slider/elastic-slider.js';
+    import {
+      initPlayerButton, setPlayerIcon
+    } from 'https://nurislamaibekuly.github.io/aeroui/src/components/player-button/player-button.js';
+    import {
+      initSkipLabel, playSkip
+    } from 'https://nurislamaibekuly.github.io/aeroui/src/components/skip-label/skip-label.js';
 
     // ── Elements ──
     const lyricsContent = document.getElementById('lyrics-content');
@@ -372,7 +371,6 @@
     const dynamicBg = document.getElementById('dynamic-bg');
 
     const btnPlayPause = document.getElementById('btn-play-pause');
-    const playPauseIcon = document.getElementById('play-pause-icon');
     const btnBackward = document.getElementById('btn-backward');
     const btnForward = document.getElementById('skip-forward');
     const btnShuffle = document.getElementById('btn-shuffle');
@@ -388,8 +386,7 @@
     const queueClear = document.getElementById('queue-clear');
 
     const backButton = document.getElementById('back-button');
-    const progressBar = document.getElementById('progress-bar');
-    const progressFill = document.getElementById('progress-fill');
+    const progressElastic = document.getElementById('progress-elastic');
     const timeCurrent = document.getElementById('time-current');
     const timeTotal = document.getElementById('time-total');
     const volumeSlider = document.getElementById('volume-slider');
@@ -419,8 +416,8 @@
 
     const mediaSessionManager = new MediaSessionManager(
       player,
-      () => { if (btnForward.onclick) btnForward.onclick(); },
-      () => { if (btnBackward.onclick) btnBackward.onclick(); }
+      () => goNextTrack(),
+      () => goPrevTrack()
     );
     let lyricsType = 'None';
     let parsedLyrics = null;
@@ -480,9 +477,70 @@
         }
       }
 
+      const isIframe = window.self !== window.top;
       if (!(await hasPlayerData())) {
-        window.location.href = 'index.html';
-        return;
+        if (!isIframe) {
+          window.location.href = 'index.html';
+          return;
+        } else {
+          // Inside iframe drawer: Wait for queue data to arrive without redirecting
+          console.log('[Player] Inside iframe drawer, waiting for queue data...');
+          let retries = 0;
+          while (!(await hasPlayerData()) && retries < 15) {
+            await new Promise(r => setTimeout(r, 200));
+            retries++;
+          }
+          if (!(await hasPlayerData())) {
+            window.parent.postMessage({ action: 'closePlayerDrawer' }, '*');
+            return;
+          }
+        }
+      }
+
+      // Wire Grabber click & swipe down to close drawer
+      const grabber = document.querySelector('.Grabber');
+      if (grabber) {
+        grabber.onclick = (e) => {
+          e.stopPropagation();
+          if (isIframe) {
+            window.parent.postMessage({ action: 'closePlayerDrawer' }, '*');
+          }
+        };
+
+        // Mobile touch swipe down gesture
+        let touchStartY = 0;
+        grabber.addEventListener('touchstart', (e) => {
+          touchStartY = e.touches[0].clientY;
+          grabber.classList.add('touch-active');
+        }, { passive: true });
+
+        grabber.addEventListener('touchend', (e) => {
+          grabber.classList.remove('touch-active');
+          const touchEndY = e.changedTouches[0].clientY;
+          if (touchEndY - touchStartY > 35) { // Swiped down
+            if (isIframe) {
+              window.parent.postMessage({ action: 'closePlayerDrawer' }, '*');
+            }
+          }
+        }, { passive: true });
+      }
+
+      // Wire Artists text click: Slide down and trigger AeroUI dialog in parent
+      const artistsEl = document.getElementById('artists');
+      if (artistsEl) {
+        artistsEl.style.cursor = 'pointer';
+        artistsEl.title = 'View Album or Artist';
+        artistsEl.onclick = (e) => {
+          e.stopPropagation();
+          if (isIframe) {
+            window.parent.postMessage({
+              action: 'showArtistOrAlbumDialog',
+              artist: songMetadata.artist,
+              album: songMetadata.album,
+              amTrackId: currentQueue[getCurrentIndex()]?.amTrackId
+            }, '*');
+          }
+        };
       }
 
       await extensionManager.loadFromStorage();
@@ -610,12 +668,14 @@
       if (_currentLoader) return;
       const loader = document.createElement('div');
       loader.className = 'LyricsflowLoader active';
-      loader.innerHTML = '<div class="SlBounceLoader"></div>';
+      loader.innerHTML = '<div class="aero-spinner" style="width: 36px; height: 36px; border-width: 3px;"></div>';
       document.body.appendChild(loader);
       _currentLoader = loader;
+      setPlayButtonBuffering(true);
     }
 
     function hideTrackLoader() {
+      setPlayButtonBuffering(false);
       if (!_currentLoader) return;
       _currentLoader.classList.remove('active');
       setTimeout(() => {
@@ -626,7 +686,26 @@
       }, 400);
     }
 
-    async function loadTrack(index, isCrossfade = false) {
+    function setPlayButtonBuffering(isBuffering) {
+      if (!btnPlayPause) return;
+      let spinner = btnPlayPause.querySelector('.aero-spinner');
+      const iconEl = btnPlayPause.querySelector('svg, .aero-player-icon, [data-icon]');
+      if (isBuffering) {
+        if (!spinner) {
+          spinner = document.createElement('div');
+          spinner.className = 'aero-spinner';
+          spinner.style.cssText = 'width: 20px; height: 20px; border-width: 2.5px;';
+          btnPlayPause.appendChild(spinner);
+        }
+        spinner.style.display = 'block';
+        if (iconEl) iconEl.style.display = 'none';
+      } else {
+        if (spinner) spinner.style.display = 'none';
+        if (iconEl) iconEl.style.display = '';
+      }
+    }
+
+    async function loadTrack(index, isCrossfade = false, autoPlay = true) {
       if (index < 0 || index >= currentQueue.length) return;
 
       showTrackLoader();
@@ -668,51 +747,70 @@
       if (!track.buffer && track.amTrackId) {
         showNotice(`⬇️ ${t('loading_download')}`);
         try {
-          const apiBase = window.API_BASE || 'http://api.spicyamll.online';
-          const audioUrl = `${apiBase}/download?song=${track.amTrackId}&l=${getCurrentLang()}`;
-          const response = await fetch(audioUrl);
-          if (!response.ok) throw new Error("HTTP " + response.status);
-          const buf = await response.arrayBuffer();
+          const apiBase = window.API_BASE || 'https://api.spicyamll.online';
+          // Stream directly so playback begins instantaneously without waiting for full file download
+          const streamUrl = `${apiBase}/stream?song=${track.amTrackId}&l=en-US`;
+          
+          track.type = 'audio/mp4';
+          // Background download for IndexedDB caching while audio streams
+          fetch(`${apiBase}/download?song=${track.amTrackId}&l=en-US`)
+            .then(res => res.ok ? res.arrayBuffer() : null)
+            .then(async (buf) => {
+              if (buf && buf.byteLength > 1000) {
+                const db = await new Promise((res, rej) => {
+                  const req = indexedDB.open('LyricsflowDB');
+                  req.onsuccess = (e) => res(e.target.result);
+                  req.onerror = (e) => rej(e.target.error);
+                });
+                const tx = db.transaction('buffers', 'readwrite');
+                tx.objectStore('buffers').put(buf, track.id);
+                track.buffer = buf;
+              }
+            })
+            .catch(() => {});
 
-          // Diagnostic: log what we actually received
-          const hex = [...new Uint8Array(buf.slice(0, 32))].map(b => b.toString(16).padStart(2, '0')).join(' ');
-          const textPreview = new TextDecoder().decode(buf.slice(0, 128));
-          console.log(`[Download] ${track.amTrackId}: ${buf.byteLength} bytes, Content-Type: ${response.headers.get('content-type')}, first 32 bytes: ${hex}`);
-          if (buf.byteLength < 1000 || textPreview.includes('{') || textPreview.includes('<')) {
-            console.warn(`[Download] Suspicious content preview:`, textPreview.slice(0, 200));
-          }
+          // Reset UI
+          parsedLyrics = null;
+          window._lyricsflowCurrentLyrics = null;
+          lyricsContent.innerHTML = '';
+          lyricsType = 'None';
+          if (sourceBadge) sourceBadge.textContent = '';
+          showNotice(`⏳ ${t('player_loading_track')}`);
 
-          // Open DB and save the buffer to cache it
-          const db = await new Promise((res, rej) => {
-            const req = indexedDB.open('LyricsflowDB');
-            req.onsuccess = (e) => res(e.target.result);
-            req.onerror = (e) => rej(e.target.error);
-          });
-          await new Promise((res, rej) => {
-            const tx = db.transaction('buffers', 'readwrite');
-            const req = tx.objectStore('buffers').put(buf, track.id);
-            req.onsuccess = () => res();
-            req.onerror = () => rej(req.error);
-          });
+          albumArt.innerHTML = '';
+          albumArt.className = 'MediaImageContainer';
+          albumArt.style.backgroundImage = 'none';
 
-          track.buffer = buf;
-          // Prefer server Content-Type header over buffer sniffing for reliability
-          const serverType = (response.headers.get('content-type') || '').toLowerCase();
-          if (serverType.includes('mp4') || serverType.includes('m4a')) {
-            track.type = 'audio/mp4';
-          } else if (serverType.includes('mpeg') || serverType.includes('mp3')) {
-            track.type = 'audio/mpeg';
+          dynamicBg.innerHTML = '';
+          dynamicBg.className = 'lyricsflow-dynamic-bg';
+
+          songMetadata = {
+            title: track.name || '',
+            artist: track.artist || '',
+            album: track.album || '',
+            artUrl: track.artUrl || null
+          };
+          window._lyricsflowSongMetadata = songMetadata;
+          updateMetadataUI(songMetadata);
+          fetchAnimatedArt(songMetadata.artist, songMetadata.album, songMetadata.title);
+          autoFetchLyrics(songMetadata, track.amTrackId);
+
+          player.setSource(streamUrl);
+          if (autoPlay) {
+            player.play();
+            updatePlayPauseIcon(true);
           } else {
-            track.type = isMP4Buffer(buf) ? 'audio/mp4' : 'audio/mpeg';
+            updatePlayPauseIcon(false);
           }
+          refreshQueue();
+          queueForceScroll();
+          hideTrackLoader();
+          if (contentBox) contentBox.style.opacity = '1';
+          return;
         } catch (e) {
           console.error("Failed to stream track:", e);
           hideTrackLoader();
           showNotice(`❌ ${t('player_stream_failed')}: ${e.message}`);
-          setTimeout(() => {
-            const next = getCurrentIndex() + 1;
-            if (next < currentQueue.length) loadTrack(next);
-          }, 2000);
           return;
         }
       }
@@ -737,6 +835,11 @@
 
       const processMetadata = async (duration) => {
         timeTotal.textContent = AudioPlayer.formatTime(duration, true);
+        if (progressElastic) {
+          progressElastic.dataset.max = String(Math.max(1, Math.round(duration)));
+          progressElastic.dataset.step = '1000';
+          setElasticValue(progressElastic, 0);
+        }
         songMetadata = await parseAudioMetadata(track.buffer, track.name);
         window._lyricsflowSongMetadata = songMetadata;
 
@@ -1227,6 +1330,10 @@
     // ── Events ──
     player.onLoadedMetadata = (duration) => {
       timeTotal.textContent = AudioPlayer.formatTime(duration, true);
+      if (progressElastic) {
+        progressElastic.dataset.max = String(Math.max(1, Math.round(duration)));
+        setElasticValue(progressElastic, 0);
+      }
     };
 
     player.onCrossfadeTrigger = () => {
@@ -1236,6 +1343,17 @@
       } else if (player.repeatMode === 1) { // Repeat All
         loadTrack(0, true);
       }
+    };
+
+    player.onPlay = () => {
+      setPlayButtonBuffering(false);
+      updatePlayPauseIcon(true);
+      if (!animationFrameId) startAnimationLoop();
+    };
+
+    player.onPause = () => {
+      setPlayButtonBuffering(false);
+      updatePlayPauseIcon(false);
     };
 
     player.onEnded = () => {
@@ -1251,18 +1369,18 @@
       }
     };
 
-    btnPlayPause.onclick = () => {
+    function togglePlayback() {
       const playing = player.togglePlay();
       updatePlayPauseIcon(playing);
       if (playing && !animationFrameId) startAnimationLoop();
-    };
+    }
 
-    btnForward.onclick = () => {
+    function goNextTrack() {
       const next = getCurrentIndex() + 1;
       if (next < currentQueue.length) loadTrack(next);
-    };
+    }
 
-    btnBackward.onclick = () => {
+    function goPrevTrack() {
       const pos = player.getPosition();
       if (pos > 3000) {
         player.seek(0);
@@ -1270,7 +1388,34 @@
         const prev = getCurrentIndex() - 1;
         if (prev >= 0) loadTrack(prev);
       }
-    };
+    }
+
+    // AeroUI player-button owns the press gesture and suppresses the native
+    // click, so `pressend` (pointer / keyboard / assistive-tech) is the
+    // single source of truth — do NOT also bind onclick (double-fire).
+    if (btnPlayPause) {
+      initPlayerButton(btnPlayPause);
+      setPlayerIcon(btnPlayPause, 'play');
+      btnPlayPause.addEventListener('pressend', togglePlayback);
+    }
+    if (btnForward) {
+      initPlayerButton(btnForward);
+      const skipFwd = btnForward.querySelector('.aero-skip');
+      if (skipFwd) initSkipLabel(skipFwd);
+      btnForward.addEventListener('pressend', () => {
+        if (skipFwd) playSkip(skipFwd);
+        goNextTrack();
+      });
+    }
+    if (btnBackward) {
+      initPlayerButton(btnBackward);
+      const skipBack = btnBackward.querySelector('.aero-skip');
+      if (skipBack) initSkipLabel(skipBack);
+      btnBackward.addEventListener('pressend', () => {
+        if (skipBack) playSkip(skipBack);
+        goPrevTrack();
+      });
+    }
 
     btnRepeat.onclick = () => {
       player.repeatMode = (player.repeatMode + 1) % 3;
@@ -1349,7 +1494,66 @@
     });
 
     // ── Rest of the Player Utilities ──
-    backButton.onclick = async () => { player.pause(); await goToUpload(); };
+    const backBtn = document.getElementById('back-button');
+    if (backBtn) {
+      backBtn.onclick = async () => {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ action: 'closePlayerDrawer' }, '*');
+          return;
+        }
+        player.pause();
+        await goToUpload();
+      };
+    }
+
+    // Remote Control listener from parent window (mini preview player controls audio in player.html)
+    window.addEventListener('message', async (e) => {
+      // Validate origin to prevent cross-origin command spoofing
+      if (e.origin !== window.location.origin && e.origin !== 'null' && window.location.origin !== 'null') {
+        if (window.parent && e.source !== window.parent) return;
+      }
+      const data = e.data;
+      if (!data) return;
+      if (data.action === 'play') {
+        player.play();
+        updatePlayPauseIcon(true);
+      } else if (data.action === 'pause') {
+        player.pause();
+        updatePlayPauseIcon(false);
+      } else if (data.action === 'togglePlay') {
+        if (player.isPlaying) {
+          player.pause();
+          updatePlayPauseIcon(false);
+        } else {
+          player.play();
+          updatePlayPauseIcon(true);
+        }
+      } else if (data.action === 'seek' && typeof data.time === 'number') {
+        player.seek(data.time);
+      } else if (data.action === 'loadTrack') {
+        await refreshQueue();
+        const autoPlay = data.autoPlay !== undefined ? !!data.autoPlay : true;
+        await loadTrack(data.index || 0, false, autoPlay);
+      } else if (data.action === 'next') {
+        goNextTrack();
+      } else if (data.action === 'prev') {
+        goPrevTrack();
+      }
+    });
+
+    // Broadcast playback state to parent window for mini-player progress & controls sync
+    const parentTargetOrigin = (window.location.origin && window.location.origin !== 'null') ? window.location.origin : '*';
+    setInterval(() => {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'player-state',
+          isPlaying: player.isPlaying,
+          position: player.getPosition ? player.getPosition() : 0,
+          duration: player.duration || 0,
+          songMetadata: songMetadata
+        }, parentTargetOrigin);
+      }
+    }, 250);
 
     function updateVolumeSliderFill(val) {
       volumeSlider.style.background = `linear-gradient(to right, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.8) ${val * 100}%, rgba(255, 255, 255, 0.15) ${val * 100}%, rgba(255, 255, 255, 0.15) 100%)`;
@@ -1847,66 +2051,30 @@
     // Initialize volume slider fill
     updateVolumeSliderFill(parseFloat(volumeSlider.value));
 
-    function handleProgressBarDrag(clientX) {
-      const rect = progressBar.getBoundingClientRect();
-      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      progressFill.style.width = `${pct * 100}%`;
-      dragPosition = pct * player.duration;
-      timeCurrent.textContent = AudioPlayer.formatTime(dragPosition);
-      return pct;
+    // ── Song duration scrubber: AeroUI elastic slider ──
+    // <div class="aero-elastic" id="progress-elastic"> owns its fill + stretch.
+    // We only bridge: input (live preview) -> dragPosition, change (release) -> seek.
+    if (progressElastic) {
+      initElasticSlider(progressElastic);
+
+      progressElastic.addEventListener('input', (e) => {
+        const v = e.detail?.value ?? getElasticValue(progressElastic);
+        isDraggingProgress = true;
+        dragPosition = Math.max(0, Math.min(v, player.duration || v));
+        if (timeCurrent) timeCurrent.textContent = AudioPlayer.formatTime(dragPosition);
+        if (timeTotal && player.duration > 0) {
+          timeTotal.textContent = AudioPlayer.formatTime(player.duration - dragPosition, true);
+        }
+      });
+
+      progressElastic.addEventListener('change', (e) => {
+        const v = e.detail?.value ?? getElasticValue(progressElastic);
+        isDraggingProgress = false;
+        dragPosition = Math.max(0, Math.min(v, player.duration || v));
+        if (player.duration > 0) player.seek(dragPosition);
+        queueForceScroll();
+      });
     }
-
-    progressBar.addEventListener('mousedown', (e) => {
-      isDraggingProgress = true;
-      const pct = handleProgressBarDrag(e.clientX);
-
-      const onMouseMove = (moveEvent) => {
-        if (!isDraggingProgress) return;
-        handleProgressBarDrag(moveEvent.clientX);
-      };
-
-      const onMouseUp = (upEvent) => {
-        if (isDraggingProgress) {
-          isDraggingProgress = false;
-          const finalPct = handleProgressBarDrag(upEvent.clientX);
-          player.seek(finalPct * player.duration);
-          queueForceScroll();
-        }
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-      };
-
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-    });
-
-    progressBar.addEventListener('touchstart', (e) => {
-      isDraggingProgress = true;
-      const touch = e.touches[0];
-      const pct = handleProgressBarDrag(touch.clientX);
-
-      const onTouchMove = (moveEvent) => {
-        if (!isDraggingProgress) return;
-        const moveTouch = moveEvent.touches[0];
-        handleProgressBarDrag(moveTouch.clientX);
-      };
-
-      const onTouchEnd = (endEvent) => {
-        if (isDraggingProgress) {
-          isDraggingProgress = false;
-          const rect = progressBar.getBoundingClientRect();
-          const lastTouch = endEvent.changedTouches[0] || endEvent.touches[0];
-          const pct = Math.max(0, Math.min(1, (lastTouch.clientX - rect.left) / rect.width));
-          player.seek(pct * player.duration);
-          queueForceScroll();
-        }
-        document.removeEventListener('touchmove', onTouchMove);
-        document.removeEventListener('touchend', onTouchEnd);
-      };
-
-      document.addEventListener('touchmove', onTouchMove, { passive: true });
-      document.addEventListener('touchend', onTouchEnd);
-    });
 
     lyricsContent.onclick = (e) => {
       const target = e.target;
@@ -1974,7 +2142,7 @@
     };
 
     function updatePlayPauseIcon(playing) {
-      playPauseIcon.src = playing ? 'icons/play.png' : 'icons/paused.png';
+      if (btnPlayPause) setPlayerIcon(btnPlayPause, playing ? 'pause' : 'play');
       if (playing) {
         albumArt.classList.remove('paused');
       } else {
@@ -2020,11 +2188,16 @@
           nowBar.setAttribute('data-duration', (player.duration || 0).toString());
         }
         if (!document.hidden) {
-          if (player.duration > 0 && doUi) {
-            progressFill.style.width = `${Math.min((pos / player.duration) * 100, 100)}%`;
+          if (player.duration > 0 && doUi && !isDraggingProgress) {
+            if (progressElastic) {
+              if (String(Math.round(player.duration)) !== progressElastic.dataset.max) {
+                progressElastic.dataset.max = String(Math.max(1, Math.round(player.duration)));
+              }
+              setElasticValue(progressElastic, Math.max(0, Math.min(pos, player.duration)));
+            }
             timeTotal.textContent = AudioPlayer.formatTime(player.duration - pos, true);
           }
-          if (doUi) {
+          if (doUi && !isDraggingProgress) {
             timeCurrent.textContent = AudioPlayer.formatTime(pos);
           }
           animateLyrics(adjustedLyricsPos, lyricsType, false);
@@ -2105,14 +2278,15 @@
 
     // ── Keyboard Shortcuts ──
     window.addEventListener('keydown', (e) => {
-      // Don't trigger if typing in a text field
-      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+      // Don't trigger if typing in a text field, or if an AeroUI transport
+      // button has focus (it already handles Space/Enter via pressend —
+      // handling it here too would toggle twice).
+      const tag = document.activeElement ? document.activeElement.tagName : '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
 
       if (e.code === 'Space') {
         e.preventDefault();
-        const playing = player.togglePlay();
-        updatePlayPauseIcon(playing);
-        if (playing && !animationFrameId) startAnimationLoop();
+        togglePlayback();
       }
       if (e.code === 'ArrowLeft') {
         player.seek(Math.max(0, player.getPosition() - 5000));

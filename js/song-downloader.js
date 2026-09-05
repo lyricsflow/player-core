@@ -4,7 +4,7 @@
  */
 import { t, getCurrentLang } from './i18n.js';
 
-const API_BASE = 'http://api.spicyamll.online';
+const API_BASE = 'https://api.spicyamll.online';
 
 document.addEventListener('DOMContentLoaded', () => {
   const inputEl = document.getElementById('dl-song-input');

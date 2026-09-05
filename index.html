@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+  <base href="/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Lyricsflow</title>
@@ -14,17 +15,18 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+Georgian:wght@400;500;600;700;800;900&family=Vazirmatn:wght@400;500;600;700;800;900&family=Outfit:wght@700;900&display=swap"
     rel="stylesheet">
 
-  <link rel="stylesheet" href="https://nurislamaibekuly.github.io/aeroui/src/aeroui.css" integrity="sha384-zYyqxGFYdEtrHXwPV0m9TH2JxGF3rXHlYlVtUlLv4jFd6TGsrJsa76GNxkWJlL6L" crossorigin="anonymous">
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/spinner/spinner.js" integrity="sha384-FpIIxPCSBl6yk3Migps1iqvOqDy/UCOyDMZEY+KCW7OADUsf3c3TRe1wetu438g5" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/button/button.js" integrity="sha384-jkGKWvGyjuQqF9AoUZRtPobWOYfZL2dde9r298hEEd+LHA4Bm9pmHLmeBc2ZOXmX" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/slider/slider.js" integrity="sha384-JIILD/Fbuaz3KMO4UmGBSHscpCKV9sVYo2Dus2SXeBp1LM17LQ/9GjNEuGUIS9KY" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/toggle/toggle.js" integrity="sha384-Vu2ogO3oby87XgeXWmcmgKZsEkNY+m3DofpLapUFBoGzz51tWJrU5+1GgzyN4/xq" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/tooltip/tooltip.js" integrity="sha384-uVI2QiwjyCrpno+Y7cocRTZZ53xc1y0vZTOk5ROmtZ2N2zVAwfv4m4YU0QqXqmKE" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/segmented/segmented.js" integrity="sha384-1biUzTo5IWl0+pM/Cf7x2uaF4DpyJVc3jdC77gbDmI7cc5BTTo5fpklASJ1RMXgm" crossorigin="anonymous"></script>
+  <!-- AeroUI (no SRI pins: CDN tracks a mutable branch, pins break on upstream updates) -->
+  <link rel="stylesheet" href="https://nurislamaibekuly.github.io/aeroui/src/aeroui.css" crossorigin="anonymous">
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/spinner/spinner.js" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/button/button.js" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/slider/slider.js" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/toggle/toggle.js" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/tooltip/tooltip.js" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/segmented/segmented.js" crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/modal/modal.js" integrity="sha384-Rbl7iBFMLjBU8FepHnK2p48fEChl069rMkSf6ipBiBhwsQcjqL8DlwzNSgw6ezPn" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/accordion/accordion.js" integrity="sha384-wCc8UEqZvQS7/SRHKxFpnb4NfXWc9QBLRfrrPGhfm8LmORf0wcNMLWhORBSXb25/" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/progress/progress.js" integrity="sha384-Vmtto52V7mfSC7ANEN/NZQaP9IIDkXgkn/1sUdgFyRvRN6d0G9jQCgJPxl5RqZUJ" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/modal/modal.js" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/accordion/accordion.js" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/progress/progress.js" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/upload.css">
@@ -34,24 +36,24 @@
   <link rel="stylesheet" href="css/settings-ui.css">
 
   <!-- Favicon & Icons -->
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/icon.png">
 </head>
 
 <body>
   <!-- Update Cache Detector -->
   <script>
     (function() {
-      import('./js/router.js')
+      import('/js/router.js')
         .then(function(m) {
           if (!m.findTrackInPlaylist) {
             showCacheModal();
           }
         })
         .catch(function() {
-          showCacheModal();
+          // Do not falsely show modal on normal page loads
         });
 
       window.clearCacheAndReload = async function() {
@@ -818,6 +820,7 @@
     <div class="context-menu-item" id="ctx-view-album" data-i18n="ctx_view_album">View Entire Album</div>
     <div class="context-menu-item" id="ctx-view-artist" data-i18n="ctx_view_artist">View Artist</div>
     <div class="context-menu-item" id="ctx-favorite" data-i18n="ctx_favorite">Add to Favorites</div>
+    <div class="context-menu-item" id="ctx-share">Share...</div>
     <div class="context-menu-item" id="ctx-copy-id" data-i18n="ctx_copy_id">Copy Song ID</div>
   </div>
 
@@ -826,7 +829,7 @@
     <div class="am-mobile-modal-box">
       <div class="am-mobile-modal-header">
         <img id="mob-modal-art" src="favicon.svg" class="am-mob-modal-art" alt="">
-        <div class="am-mob-modal-info">
+        <div class="am-mobile-modal-info">
           <h4 id="mob-modal-title">Song Title</h4>
           <p id="mob-modal-sub">Artist Name</p>
         </div>
@@ -856,6 +859,10 @@
         <div class="am-mob-modal-item" id="mob-ctx-favorite">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
           <span id="mob-ctx-fav-label" data-i18n="ctx_favorite">Add to Favorites</span>
+        </div>
+        <div class="am-mob-modal-item" id="mob-ctx-share">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          <span>Share Song...</span>
         </div>
         <div class="am-mob-modal-item" id="mob-ctx-copy-id">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
@@ -925,8 +932,11 @@
     </div>
   </div>
 
+  <!-- Fullscreen Sliding Player Drawer (Slide up from down) -->
+  <div id="player-drawer" class="player-drawer">
+    <iframe id="player-drawer-iframe" class="player-drawer-iframe" src="/player.html" allow="autoplay"></iframe>
+  </div>
+
   <script type="module" src="js/upload.js"></script>
   <script type="module" src="js/song-downloader.js"></script>
 </body>
-
-</html>

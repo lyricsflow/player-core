@@ -170,7 +170,7 @@ async function fetchFromMusixmatch(songName, artistName, albumName, durationMs) 
       q_duration: durationSec
     });
 
-    const apiBase = window.API_BASE || 'http://api.spicyamll.online';
+    const apiBase = window.API_BASE || 'https://api.spicyamll.online';
     const res = await fetch(`${apiBase}/musixmatch?${params}`);
     if (!res.ok) return null;
 

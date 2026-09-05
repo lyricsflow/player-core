@@ -3,7 +3,7 @@
  * Provides a robust fetch implementation with proxy rotation and error handling.
  */
 
-const API_BASE = 'http://api.spicyamll.online';
+const API_BASE = 'https://api.spicyamll.online';
 
 const PROXIES = [
   (url) => `${API_BASE}/proxy?url=${encodeURIComponent(url)}`
@@ -19,13 +19,22 @@ export async function robustFetch(url, options = {}) {
   let lastError = null;
   const skipProxy = options.skipProxy || false;
 
+  // Security guard: Validate URL protocol to prevent javascript:, file:, or malicious data: schemes
+  if (typeof url !== 'string' || !url.trim()) {
+    throw new Error('Invalid URL provided to robustFetch');
+  }
+  const trimmedUrl = url.trim();
+  if (/^(javascript|vbscript|file):/i.test(trimmedUrl)) {
+    throw new Error(`Blocked insecure URL scheme: ${trimmedUrl.slice(0, 15)}`);
+  }
+
   // Strip custom properties before passing to native fetch
   const { skipProxy: _sp, ...fetchOptions } = options;
 
   // 1. Try Direct Fetch First
   try {
-    console.log(`[NetworkUtils] Trying direct fetch: ${url}`);
-    const directResponse = await fetch(url, fetchOptions);
+    console.log(`[NetworkUtils] Trying direct fetch: ${trimmedUrl}`);
+    const directResponse = await fetch(trimmedUrl, fetchOptions);
     if (directResponse.ok) return directResponse;
     lastError = new Error(`Direct fetch failed: ${directResponse.status} ${directResponse.statusText}`);
   } catch (e) {

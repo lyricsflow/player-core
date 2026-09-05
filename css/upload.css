@@ -1354,9 +1354,8 @@
   animation: amFadeIn 0.5s ease;
   display: flex;
   flex-direction: column;
-  align-items: center;
 }
-.am-artist-header {
+.am-artist-header:not(.am-artist-side-header) {
   display: flex;
   flex-direction: column;
   align-items: center;

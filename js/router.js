@@ -358,7 +358,14 @@ export async function playPlaylist(playlistId) {
     await addTrackToQueue(t.buffer, t);
   }
   setCurrentIndex(0);
-  window.location.href = 'player.html';
+  const drawer = document.getElementById('player-drawer');
+  const drawerIframe = document.getElementById('player-drawer-iframe');
+  if (drawer && drawerIframe) {
+    drawerIframe.src = 'player.html';
+    drawer.classList.add('open');
+  } else {
+    window.location.href = 'player.html';
+  }
   return true;
 }
 

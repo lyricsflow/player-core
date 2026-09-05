@@ -13,6 +13,7 @@
 }
 
 @media (min-width: 1024px) {
+
   /* Encase AirPlay and Volume together inside unified frosted glass capsule */
   .pc-top-right-bar {
     display: flex;
@@ -256,12 +257,57 @@
 }
 
 .Grabber {
-  width: 40px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.2);
+  width: 60px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 10px;
   margin-bottom: 1.5cqh;
   flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.25s ease,
+    border-radius 0.25s ease,
+    transform 0.2s ease;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+
+.Grabber::after {
+  content: 'X';
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1;
+}
+
+.Grabber:hover,
+.Grabber.touch-active {
+  width: 67px;
+  height: 67px;
+  border-radius: 20%;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.Grabber:hover::after,
+.Grabber.touch-active::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.Grabber:active {
+  transform: scale(0.92);
 }
 
 #LyricsflowPage .ContentBox .NowBar .Header {
@@ -664,6 +710,71 @@
   color: rgba(255, 255, 255, 0.5);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Progress Bar: AeroUI elastic slider (song duration scrubber) ──
+   Growth + stretch disabled: on drag ONLY the track height changes
+   (7px rest → 12px active). No widening, no fill recolor, no label shift. */
+.NowBarProgress .aero-elastic {
+  --elastic-inactive-h: 7px;
+  --elastic-active-h: 12px;
+  --elastic-growth: 0px;
+  --elastic-stretch: 0px;
+  --elastic-narrow: 0px;
+  --elastic-track: rgba(255, 255, 255, 0.15);
+  --elastic-fill-idle: rgba(255, 255, 255, 0.4);
+  --elastic-fill-active: rgba(255, 255, 255, 0.4);
+  width: 100%;
+}
+
+.NowBarProgress .aero-elastic-hit {
+  min-height: 28px;
+}
+
+.NowBarProgress .aero-elastic-labels {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.NowBarProgress .aero-elastic-label.progress-time {
+  transform: none;
+}
+
+/* Touched (hold or drag): fill goes fully opaque (opacity 1.0), relaxes back on release */
+.NowBarProgress .aero-elastic--active {
+  --elastic-fill-active: #fff;
+}
+
+/* ── Transport Buttons: AeroUI player-button (prev / play-pause / next) ──
+   Frame is an invisible touch target; only the icon shows. Skip buttons keep
+   the existing PNG glyphs (old sizing rules still apply to their <img>),
+   the play/pause glyph is AeroUI vector swapped via setPlayerIcon. */
+.NowBarControls .aero-player {
+  --player-size: 60px;
+  --player-label: #fff;
+  background: transparent;
+  border: none;
+}
+
+.NowBarControls #btn-play-pause {
+  --player-icon: 42px;
+}
+
+/* AeroUI skip-label glyphs inside the prev/next buttons */
+.NowBarControls #btn-backward .aero-skip,
+.NowBarControls #skip-forward .aero-skip {
+  --skip-size: 40px;
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+
+  .NowBarControls #btn-backward .aero-skip,
+  .NowBarControls #skip-forward .aero-skip {
+    --skip-size: 34px;
+  }
 }
 
 /* ── Quality Badge ── */
@@ -1157,6 +1268,7 @@ body.is-rendering .NowBar {
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1257,15 +1369,15 @@ body.is-rendering .NowBar {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
 }
 
-.lf-toggle input:checked + span {
+.lf-toggle input:checked+span {
   background-color: #ffffff;
 }
 
-.lf-toggle input:checked + span:before {
+.lf-toggle input:checked+span:before {
   background-color: #1c1c1e;
 }
 
-.lf-toggle input:checked + span:before {
+.lf-toggle input:checked+span:before {
   transform: translateX(21px);
 }
 
@@ -1644,6 +1756,7 @@ body.is-rendering .NowBar {
    ═══════════════════════════════════════════════ */
 
 @media (max-width: 768px) {
+
   /* Settings Mobile Revamp Overrides */
   .LyricsflowSettingsContainer {
     width: 100% !important;
@@ -1653,9 +1766,11 @@ body.is-rendering .NowBar {
     border-radius: 0 !important;
     border: none !important;
   }
+
   .LyricsflowSettingsMainBody {
     flex-direction: column !important;
   }
+
   .LyricsflowSettingsSidebar {
     width: 100% !important;
     border-right: none !important;
@@ -1668,35 +1783,43 @@ body.is-rendering .NowBar {
     white-space: nowrap !important;
     scrollbar-width: none !important;
   }
+
   .LyricsflowSettingsSidebar::-webkit-scrollbar {
     display: none !important;
   }
+
   .lf-sidebar-tab {
     padding: 8px 14px !important;
     border-radius: 8px !important;
     font-size: 0.85rem !important;
     flex-shrink: 0 !important;
   }
+
   .LyricsflowSettingsContent {
     padding: 16px 20px !important;
   }
+
   .lf-settings-row {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 12px !important;
   }
+
   .lf-input {
     width: 100% !important;
     max-width: 100% !important;
   }
+
   .lf-select {
     width: 100% !important;
     max-width: 100% !important;
   }
+
   .lf-slider-wrap {
     width: 100% !important;
     min-width: 0 !important;
   }
+
   .lf-range-slider {
     flex: 1 !important;
     width: auto !important;
@@ -1960,6 +2083,19 @@ body.is-rendering .NowBar {
     font-size: 0.75rem !important;
     color: rgba(255, 255, 255, 0.5) !important;
     font-weight: 600 !important;
+  }
+
+  .NowBarProgress .aero-elastic {
+    --elastic-inactive-h: 7px;
+    --elastic-active-h: 12px;
+    --elastic-growth: 0px;
+    --elastic-track: rgba(255, 255, 255, 0.2);
+    --elastic-fill-idle: rgba(255, 255, 255, 0.75);
+    --elastic-fill-active: rgba(255, 255, 255, 0.75);
+  }
+
+  .NowBarProgress .aero-elastic-labels {
+    margin-top: 6px !important;
   }
 
   /* Dolby Atmos / Lossless Badge Centered Under Playback Bar */

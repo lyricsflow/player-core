@@ -76,15 +76,28 @@ tmp_utf8.json
 test.html
 upload_cli.py
 panel
-server
-server2
-verify_token.py
-hf_upload_scratch.py
-deploy_temp
-output
-deploy_temp/PROMPTS
-discord-bot
-hf_upload_server2.py
-# Backend server
+# Backend server & scripts
 server-main/
 server-main
+server/
+server2/
+tmp/
+*.py
+*.bat
+
+# PreMiD Activities & external extensions
+Activities/
+Activities
+extensions-examples/
+
+# Temporary, scratch & testing files
+scratch*
+tmp*
+output/
+deploy_temp/
+backup/
+copyfromhereanimation/
+panel/
+discord-bot/
+test.html
+serve.json

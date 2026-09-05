@@ -86,9 +86,9 @@ tmp/
 *.bat
 
 # PreMiD Activities & external extensions
-Activities/
 Activities
-extensions-examples/
+
+
 
 # Temporary, scratch & testing files
 scratch*

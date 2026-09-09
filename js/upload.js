@@ -3852,12 +3852,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const bannerUrl = profile.banner || '';
     const avatarUrl = profile.pfp || 'icons/account_avatar.png';
     const nickname = profile.nickname || profile.username || 'Creator';
-    const username = profile.username || 'user';
-    const pronouns = profile.pronouns || 'he/him';
-    const bio = profile.bio || '';
-    const makesCount = profile.makes_count || (profile.songs ? profile.songs.length : 0);
-    const uploadsCount = profile.uploads_count || (profile.songs ? profile.songs.length : 0);
-    const totalViews = profile.total_views || (makesCount * 1785 + uploadsCount * 7420);
+    let username = profile.username || 'user';
+    if (username === 'yqa31_' || profile.userid === '1173360524591906817') {
+      username = 'y.qa31_';
+    }
+    const pronouns = profile.pronouns || 'Creator';
+    const bio = profile.bio || (username === 'y.qa31_' ? 'straight - editor on tt\nmuslim allahu akbar' : '');
+    const makesCount = typeof profile.makes_count === 'number' ? profile.makes_count : 0;
+    const uploadsCount = typeof profile.uploads_count === 'number' ? profile.uploads_count : (profile.songs ? profile.songs.length : 0);
+    const totalViews = typeof profile.total_views === 'number' ? profile.total_views : 0;
     const songs = profile.songs || [];
 
     const bannerStyle = bannerUrl
@@ -3874,14 +3877,40 @@ document.addEventListener('DOMContentLoaded', () => {
             <img src="${cleanArtworkUrl(avatarUrl, 260, 260)}" alt="${escapeHTML(nickname)}"
               style="width:116px;height:116px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.85);box-shadow:0 10px 32px rgba(0,0,0,0.5);background:#18181a;"
               onerror="this.src='icons/account_avatar.png';" />
+            <!-- Discord Online/DND Indicator badge -->
+            <div style="position:absolute;bottom:4px;right:6px;width:24px;height:24px;border-radius:50%;background:#1e1f22;display:flex;align-items:center;justify-content:center;">
+              <div style="width:14px;height:14px;border-radius:50%;background:#f23f43;display:flex;align-items:center;justify-content:center;">
+                <div style="width:8px;height:2px;background:#ffffff;border-radius:1px;"></div>
+              </div>
+            </div>
           </div>
           <h1 style="font-size:2rem;font-weight:750;color:#ffffff;margin:0 0 4px;letter-spacing:-0.025em;line-height:1.2;">${escapeHTML(nickname)}</h1>
-          <div style="font-size:0.95rem;color:#8e8e93;margin-bottom:10px;font-weight:500;">@${escapeHTML(username)}</div>
-          <div style="display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:4px 14px;border-radius:999px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;color:#d0d0d4;margin-bottom:14px;font-weight:550;">
-            ${escapeHTML(pronouns)}
+          <div style="font-size:0.95rem;color:#a3a3a8;margin-bottom:10px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span>@${escapeHTML(username)}</span>
+            <span style="opacity:0.4;">•</span>
+            <span style="color:#8e8e93;font-size:0.88rem;">Redmi Note 15 4G (spinel)</span>
           </div>
+
+          <!-- Badges Row: .flac, Discord badges, Pronouns -->
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <!-- .flac badge -->
+            <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:rgba(46,160,67,0.15);border:1px solid rgba(46,160,67,0.35);font-size:0.75rem;color:#3fb950;font-weight:600;">
+              <span>🍃</span>
+              <span>.flac</span>
+            </div>
+            <!-- Discord Badges -->
+            <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;color:#b5bac1;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#9b59b6"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#5865f2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            </div>
+            <!-- Role / Pronouns -->
+            <div style="display:inline-flex;align-items:center;padding:3px 12px;border-radius:999px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;color:#d0d0d4;font-weight:550;">
+              ${escapeHTML(pronouns)}
+            </div>
+          </div>
+
           ${bio ? `
-            <div style="max-width:540px;font-size:0.92rem;color:rgba(255,255,255,0.82);line-height:1.55;margin-bottom:16px;white-space:pre-wrap;">${escapeHTML(bio)}</div>
+            <div style="max-width:540px;font-size:0.92rem;color:rgba(255,255,255,0.85);line-height:1.55;margin-bottom:16px;white-space:pre-wrap;font-weight:450;">${escapeHTML(bio)}</div>
           ` : ''}
           <!-- Social Icons -->
           <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:8px;">

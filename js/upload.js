@@ -3823,13 +3823,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function showNotFoundView(slug) {
+  function showNotFoundView(slug = '') {
+    switchPage('listen', { skipUrlSync: true });
+    if (listenInitialContent) listenInitialContent.classList.add('hidden');
+    if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
+    if (albumViewContainer) albumViewContainer.classList.add('hidden');
+    if (artistViewContainer) artistViewContainer.classList.add('hidden');
     if (playlistViewContainer) playlistViewContainer.classList.remove('hidden');
+
+    const displayPath = (slug || window.location.pathname || '').replace(/^\/+/, '');
     playlistViewContent.innerHTML = `
       <div style="max-width:520px;margin:60px auto;padding:44px 28px;border-radius:24px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);-webkit-backdrop-filter:blur(32px);backdrop-filter:blur(32px);text-align:center;box-shadow:0 24px 60px rgba(0,0,0,0.6);">
         <div style="font-size:5rem;font-weight:800;background:-webkit-linear-gradient(315deg,#fc576b,#ff7b8b);background:linear-gradient(135deg,#fc576b,#ff7b8b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;line-height:1;margin-bottom:8px;font-family:var(--font-main, -apple-system);">404</div>
         <h2 style="font-size:1.45rem;font-weight:700;color:#f0f0f2;margin-bottom:10px;letter-spacing:-0.02em;">Page Not Found</h2>
-        <p style="color:#8e8e93;font-size:0.95rem;line-height:1.55;margin-bottom:28px;">The profile "${escapeHTML(slug)}" could not be found or has moved.</p>
+        <p style="color:#8e8e93;font-size:0.95rem;line-height:1.55;margin-bottom:28px;">${displayPath ? `The page or profile "/${escapeHTML(displayPath)}" could not be found or does not exist.` : 'The requested page could not be found or has moved.'}</p>
         <button id="profile-404-home-btn" class="am-btn-primary" style="padding:12px 26px;border-radius:12px;font-size:0.92rem;font-weight:650;background:#fc576b;color:#fff;border:none;cursor:pointer;-webkit-transition:all 0.18s ease;transition:all 0.18s ease;">
           Back to Home
         </button>
@@ -4159,6 +4166,12 @@ document.addEventListener('DOMContentLoaded', () => {
         showCommunityProfileView(slug, { skipUrlSync: true });
         return true;
       }
+    }
+
+    // 6. If path is non-empty and not root, it's an unrecognized URL -> display 404 page
+    if (cleanPath && cleanPath !== '/' && cleanPath !== '/index.html') {
+      showNotFoundView(path);
+      return true;
     }
 
     return false;

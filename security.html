@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Policy — Lyricsflow</title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <style>
+    :root {
+      --bg: #0d0d0f;
+      --card-bg: rgba(255, 255, 255, 0.035);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #fc576b;
+      --text: #f5f5f7;
+      --text-muted: #8e8e93;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.6;
+      padding: 48px 24px 80px;
+    }
+    .wrapper {
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(252, 87, 107, 0.12);
+      border: 1px solid rgba(252, 87, 107, 0.25);
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+    p.lead {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 20px;
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    }
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    p {
+      color: #c7c7cc;
+      font-size: 0.94rem;
+      margin-bottom: 12px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0;
+    }
+    li {
+      position: relative;
+      padding-left: 20px;
+      font-size: 0.92rem;
+      color: #b0b0b5;
+      margin-bottom: 8px;
+    }
+    li::before {
+      content: "•";
+      position: absolute;
+      left: 6px;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-top: 24px;
+      transition: all 0.15s ease;
+    }
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="badge">Security Architecture</div>
+    <h1>Security Policy</h1>
+    <p class="lead">How Lyricsflow protects community data, restricts network perimeters, and isolates sensitive identifiers.</p>
+
+    <div class="card">
+      <h2>1. Maximum Security CORS Boundary</h2>
+      <p>Cross-Origin Resource Sharing (CORS) is strictly locked down across all server endpoints. The API gateway permits origins exclusively matching verified domains:</p>
+      <ul>
+        <li>Allowed Origin Pattern: <code>https://(*.)spicyamll.online</code></li>
+        <li>Wildcard origins (<code>*</code>) are strictly denied. Unverified third-party origins are rejected at the edge.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>2. Zero User ID Leakage Architecture</h2>
+      <p>Lyricsflow treats third-party user identifiers (including Discord User IDs) as private system keys:</p>
+      <ul>
+        <li>Client responses never include raw user IDs or account identifiers.</li>
+        <li>Public creator pages and audio links use sanitized usernames (<code>/:username</code>), not account numbers.</li>
+        <li>Profile metadata in transit is obscured against client network inspections.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>3. Header-Isolated Bot Authentication</h2>
+      <p>Bot-level ingestion routes are concealed from public schema docs (<code>include_in_schema=False</code>):</p>
+      <ul>
+        <li>Authentication requires private cryptographic keys supplied via secure request headers (<code>X-Bot-Key</code>).</li>
+        <li>Sensitive tokens and secrets are stored strictly within environment variables and never logged or serialized into client responses.</li>
+      </ul>
+    </div>
+
+    <a href="/" class="nav-btn">← Back to Player</a>
+  </div>
+</body>
+</html>

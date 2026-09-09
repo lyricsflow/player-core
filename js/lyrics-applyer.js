@@ -987,8 +987,8 @@ function renderCredits(data, container) {
     makerCredits.appendChild(label);
 
     const badgeContainer = document.createElement("a");
-    badgeContainer.href = `https://api.spicyamll.online/user/@${data.makerHandle}`;
-    badgeContainer.target = "_blank";
+    const cleanHandle = String(data.makerHandle || '').replace(/^@/, '');
+    badgeContainer.href = `https://spicyamll.online/${cleanHandle}`;
     badgeContainer.classList.add("maker-link");
     badgeContainer.style.cssText = `
       display: flex;
@@ -1017,7 +1017,11 @@ function renderCredits(data, container) {
     });
     badgeContainer.addEventListener("click", (e) => {
       e.preventDefault();
-      showUserProfileIframe(data.makerHandle);
+      if (typeof window.showCommunityProfileView === "function") {
+        window.showCommunityProfileView(cleanHandle);
+      } else {
+        window.location.href = `/${cleanHandle}`;
+      }
     });
 
     // PFP

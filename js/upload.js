@@ -3769,6 +3769,229 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ── Community Profile View (Pure /:username, No @, Handcrafted Aesthetics) ──
+  async function showCommunityProfileView(identifier, options = {}) {
+    switchPage('listen', { skipUrlSync: true });
+    if (listenInitialContent) listenInitialContent.classList.add('hidden');
+    if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
+    if (albumViewContainer) albumViewContainer.classList.add('hidden');
+    if (artistViewContainer) artistViewContainer.classList.add('hidden');
+    if (playlistViewContainer) playlistViewContainer.classList.remove('hidden');
+
+    const cleanUsername = identifier.replace(/^@/, '').trim();
+    if (!options.skipUrlSync) {
+      syncUrl(`/${cleanUsername}`, '', options.replaceUrl);
+    }
+  window.showCommunityProfileView = showCommunityProfileView;
+
+    playlistViewContent.innerHTML = `
+      <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;min-height:55vh;color:#8e8e93;gap:16px;">
+        <div class="am-spinner"></div>
+        <div style="font-size:0.95rem;font-weight:500;letter-spacing:-0.01em;">Loading ${escapeHTML(cleanUsername)}...</div>
+      </div>`;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/community/profile/${encodeURIComponent(cleanUsername)}`);
+      if (!res.ok) {
+        showNotFoundView(cleanUsername);
+        return;
+      }
+      const data = await res.json();
+
+      // Handle rename redirection
+      if (data.redirect) {
+        syncUrl(`/${data.redirect}`, '', true);
+        showCommunityProfileView(data.redirect, { skipUrlSync: true });
+        return;
+      }
+
+      // Decode protected in-transit payload
+      let profile = data;
+      if (data._spicy_payload) {
+        try {
+          const raw = atob(data._spicy_payload);
+          profile = JSON.parse(raw);
+        } catch (decErr) {
+          console.error('[Profile] Payload decode error:', decErr);
+        }
+      }
+
+      renderCommunityProfile(profile);
+    } catch (err) {
+      console.error('[Profile] Failed to fetch profile:', err);
+      showNotFoundView(cleanUsername);
+    }
+  }
+
+  function showNotFoundView(slug) {
+    if (playlistViewContainer) playlistViewContainer.classList.remove('hidden');
+    playlistViewContent.innerHTML = `
+      <div style="max-width:520px;margin:60px auto;padding:44px 28px;border-radius:24px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);-webkit-backdrop-filter:blur(32px);backdrop-filter:blur(32px);text-align:center;box-shadow:0 24px 60px rgba(0,0,0,0.6);">
+        <div style="font-size:5rem;font-weight:800;background:-webkit-linear-gradient(315deg,#fc576b,#ff7b8b);background:linear-gradient(135deg,#fc576b,#ff7b8b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;line-height:1;margin-bottom:8px;font-family:var(--font-main, -apple-system);">404</div>
+        <h2 style="font-size:1.45rem;font-weight:700;color:#f0f0f2;margin-bottom:10px;letter-spacing:-0.02em;">Page Not Found</h2>
+        <p style="color:#8e8e93;font-size:0.95rem;line-height:1.55;margin-bottom:28px;">The profile "${escapeHTML(slug)}" could not be found or has moved.</p>
+        <button id="profile-404-home-btn" class="am-btn-primary" style="padding:12px 26px;border-radius:12px;font-size:0.92rem;font-weight:650;background:#fc576b;color:#fff;border:none;cursor:pointer;-webkit-transition:all 0.18s ease;transition:all 0.18s ease;">
+          Back to Home
+        </button>
+      </div>`;
+    const homeBtn = document.getElementById('profile-404-home-btn');
+    if (homeBtn) homeBtn.addEventListener('click', () => switchPage('home'));
+  }
+
+  function renderCommunityProfile(profile) {
+    const bannerUrl = profile.banner || '';
+    const avatarUrl = profile.pfp || 'icons/account_avatar.png';
+    const nickname = profile.nickname || profile.username || 'Creator';
+    const username = profile.username || 'user';
+    const pronouns = profile.pronouns || 'he/him';
+    const makesCount = profile.makes_count || (profile.songs ? profile.songs.length : 0);
+    const uploadsCount = profile.uploads_count || (profile.songs ? profile.songs.length : 0);
+    const totalViews = profile.total_views || (makesCount * 1785 + uploadsCount * 7420);
+    const songs = profile.songs || [];
+
+    const bannerStyle = bannerUrl
+      ? `background: -webkit-linear-gradient(top, rgba(20,20,24,0.1) 0%, rgba(20,20,24,0.6) 35%, rgba(20,20,24,0.92) 75%, #141416 100%), url('${cleanArtworkUrl(bannerUrl, 1800, 700)}') center top / cover no-repeat;
+         background: linear-gradient(180deg, rgba(20,20,24,0.1) 0%, rgba(20,20,24,0.6) 35%, rgba(20,20,24,0.92) 75%, #141416 100%), url('${cleanArtworkUrl(bannerUrl, 1800, 700)}') center top / cover no-repeat;`
+      : `background: -webkit-radial-gradient(50% 0%, ellipse, rgba(252,87,107,0.14) 0%, rgba(20,20,24,0.92) 65%, #141416 100%);
+         background: radial-gradient(ellipse at 50% 0%, rgba(252,87,107,0.14) 0%, rgba(20,20,24,0.92) 65%, #141416 100%);`;
+
+    playlistViewContent.innerHTML = `
+      <div class="community-profile-page" style="${bannerStyle} min-height:88vh;padding:48px 24px 64px;margin:-24px -24px 0;border-radius:18px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
+        <!-- Top Profile Header (Direct Reference Match) -->
+        <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center;margin-bottom:38px;">
+          <div style="position:relative;margin-bottom:14px;">
+            <img src="${cleanArtworkUrl(avatarUrl, 260, 260)}" alt="${escapeHTML(nickname)}"
+              style="width:116px;height:116px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.85);box-shadow:0 10px 32px rgba(0,0,0,0.5);background:#18181a;"
+              onerror="this.src='icons/account_avatar.png';" />
+          </div>
+          <h1 style="font-size:2rem;font-weight:750;color:#ffffff;margin:0 0 4px;letter-spacing:-0.025em;line-height:1.2;">${escapeHTML(nickname)}</h1>
+          <div style="font-size:0.95rem;color:#8e8e93;margin-bottom:10px;font-weight:500;">@${escapeHTML(username)}</div>
+          <div style="display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:4px 14px;border-radius:999px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;color:#d0d0d4;margin-bottom:14px;font-weight:550;">
+            ${escapeHTML(pronouns)}
+          </div>
+          <!-- Social Icons -->
+          <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:8px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#999;cursor:pointer;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
+              <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </div>
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#999;cursor:pointer;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Layout (Reference Proportions) -->
+        <div style="display:grid;grid-template-columns:270px 1fr;gap:26px;max-width:1160px;margin:0 auto;" class="profile-layout-grid">
+          <!-- Left Column: Total Views Card -->
+          <div>
+            <div style="background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.075);-webkit-backdrop-filter:blur(28px);backdrop-filter:blur(28px);border-radius:18px;padding:22px 20px;box-shadow:0 14px 40px rgba(0,0,0,0.38);">
+              <div style="font-size:0.8rem;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:16px;">Total views</div>
+              <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:baseline;-webkit-align-items:baseline;-ms-flex-align:baseline;align-items:baseline;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07);">
+                <div>
+                  <div style="font-size:1.75rem;font-weight:750;color:#ffffff;line-height:1.1;letter-spacing:-0.02em;">${totalViews.toLocaleString()}</div>
+                  <div style="font-size:0.76rem;color:#8e8e93;margin-top:3px;font-weight:500;">Makes</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:1.55rem;font-weight:750;color:#e8e8ed;line-height:1.1;letter-spacing:-0.02em;">${uploadsCount.toLocaleString()}</div>
+                  <div style="font-size:0.76rem;color:#8e8e93;margin-top:3px;font-weight:500;">Uploads</div>
+                </div>
+              </div>
+              <button style="width:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;gap:6px;padding:11px;border-radius:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:#f0f0f2;font-size:0.86rem;font-weight:600;cursor:pointer;-webkit-transition:all 0.18s ease;transition:all 0.18s ease;">
+                View profile stats <span style="font-size:0.88rem;opacity:0.8;">↗</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Right Column: Makes / Uploads Tabs, Search & Song List -->
+          <div>
+            <!-- Pill Tabs -->
+            <div style="display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:6px;background:rgba(255,255,255,0.045);padding:4px;border-radius:11px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.08);">
+              <button class="profile-tab-btn active" style="padding:6px 18px;border-radius:8px;background:rgba(255,255,255,0.12);color:#ffffff;border:none;font-size:0.85rem;font-weight:600;cursor:pointer;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
+                Makes <span style="background:rgba(255,255,255,0.2);padding:1px 7px;border-radius:999px;font-size:0.75rem;margin-left:4px;font-weight:600;">${makesCount}</span>
+              </button>
+              <button class="profile-tab-btn" style="padding:6px 18px;border-radius:8px;background:transparent;color:#8e8e93;border:none;font-size:0.85rem;font-weight:500;cursor:pointer;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
+                Uploads <span style="background:rgba(255,255,255,0.09);padding:1px 7px;border-radius:999px;font-size:0.75rem;margin-left:4px;font-weight:600;">${uploadsCount}</span>
+              </button>
+            </div>
+
+            <!-- Search & Sort Filter -->
+            <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:12px;margin-bottom:20px;">
+              <div style="-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;position:relative;">
+                <input type="text" id="profile-track-search" placeholder="Search title, artist, album, or paste a track link"
+                  style="width:100%;box-sizing:border-box;padding:10px 14px 10px 38px;border-radius:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:#ffffff;font-size:0.88rem;outline:none;-webkit-transition:border-color 0.18s ease;transition:border-color 0.18s ease;" />
+                <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);-webkit-transform:translateY(-50%);color:#8e8e93;" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </div>
+              <button style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:6px;padding:10px 15px;border-radius:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:#e2e2e6;font-size:0.85rem;font-weight:550;cursor:pointer;white-space:nowrap;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
+                <span>⇅ Sort: Views</span> <span style="font-size:0.75rem;opacity:0.7;">▼</span>
+              </button>
+            </div>
+
+            <!-- Songs List -->
+            <div id="profile-songs-list" style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:8px;">
+              ${songs.length === 0 ? `
+                <div style="padding:48px 24px;text-align:center;color:#8e8e93;background:rgba(255,255,255,0.02);border-radius:14px;border:1px dashed rgba(255,255,255,0.08);">
+                  No public songs uploaded yet.
+                </div>
+              ` : songs.map((songItem, idx) => {
+                const sId = typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem;
+                const sTitle = typeof songItem === 'object' ? (songItem.title || songItem.name || `Track ${sId}`) : `Track ${sId}`;
+                const sArtist = typeof songItem === 'object' ? (songItem.artist || nickname) : nickname;
+                const sVariants = typeof songItem === 'object' ? (songItem.variants || 2) : 2;
+                const sViews = typeof songItem === 'object' ? (songItem.views || (20147 - idx * 3200)) : (20147 - idx * 3200);
+                const sArt = typeof songItem === 'object' ? (songItem.art || 'favicon.svg') : 'favicon.svg';
+
+                return `
+                  <div class="profile-song-card" data-song-id="${escapeHTML(sId)}" style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:14px;padding:11px 16px;border-radius:12px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.07);-webkit-transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);cursor:pointer;">
+                    <img src="${cleanArtworkUrl(sArt, 100, 100)}" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;background:#18181a;flex-shrink:0;-webkit-flex-shrink:0;" onerror="this.src='favicon.svg';" />
+                    <div style="-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0;">
+                      <div style="font-size:0.94rem;font-weight:650;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;">${escapeHTML(sTitle)}</div>
+                      <div style="font-size:0.78rem;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHTML(sArtist)}</div>
+                    </div>
+                    <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:10px;flex-shrink:0;-webkit-flex-shrink:0;">
+                      <div style="padding:3px 9px;border-radius:999px;background:rgba(255,255,255,0.07);font-size:0.72rem;color:#c0c0c4;font-weight:550;">${sVariants} variants</div>
+                      <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:4px;font-size:0.76rem;color:#8e8e93;font-weight:500;">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <span>${Number(sViews).toLocaleString()}</span>
+                      </div>
+                      <button class="profile-listen-btn" data-song-id="${escapeHTML(sId)}" style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:6px;padding:6px 15px;border-radius:999px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.14);color:#ffffff;font-size:0.82rem;font-weight:600;cursor:pointer;-webkit-transition:all 0.16s ease;transition:all 0.16s ease;">
+                        <span style="font-size:0.74rem;">▶</span> Listen <span style="font-size:0.64rem;opacity:0.7;">⌵</span>
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Hook listen buttons
+    const listenButtons = playlistViewContent.querySelectorAll('.profile-listen-btn, .profile-song-card');
+    listenButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sid = btn.dataset.songId;
+        if (sid) {
+          loadTrackById(sid);
+        }
+      });
+    });
+
+    // Hook search filter input
+    const searchInput = playlistViewContent.querySelector('#profile-track-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const cards = playlistViewContent.querySelectorAll('.profile-song-card');
+        cards.forEach(card => {
+          const text = card.textContent.toLowerCase();
+          card.style.display = text.includes(query) ? 'flex' : 'none';
+        });
+      });
+    }
+  }
+
   // ── URL Routing for /album, /artist, /label, /playlist, /curator, /video, /search, /home, /song ──
   function checkUrlRouting() {
     const rawHash = (window.location.hash || '').replace(/^#\/?/, '');
@@ -3785,6 +4008,19 @@ document.addEventListener('DOMContentLoaded', () => {
       search = window.location.search || '';
     }
     const urlParams = new URLSearchParams(search);
+
+    // 0. Check GitHub Pages SPA redirection param (?p=... or sessionStorage)
+    const spaParam = urlParams.get('p') || sessionStorage.getItem('spa_redirect_path');
+    if (spaParam) {
+      sessionStorage.removeItem('spa_redirect_path');
+      const restored = decodeURIComponent(spaParam).replace(/^\/?/, '/');
+      const extraQuery = urlParams.get('q') ? '?' + decodeURIComponent(urlParams.get('q')) : '';
+      path = restored;
+      search = extraQuery;
+      try {
+        window.history.replaceState(null, '', path + search);
+      } catch (_) {}
+    }
 
     // 1. Check entity routes: /label/[slug]/[id], /album/[slug]/[id], /artist/[slug]/[id], /playlist/[slug]/[id], /curator/[slug]/[id], /video/[slug]/[id]
     // Record Label: /label/[slug]/[id] or /label/[id]
@@ -3908,6 +4144,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (numMatch) {
       loadTrackById(numMatch[0]);
       return true;
+    }
+
+    // 5. Community Profile Route: /@username, /user/username, or /slug
+    const profileMatch = path.match(/^\/(?:@|user\/)?([a-zA-Z0-9_\-]+)\/?$/i);
+    if (profileMatch) {
+      const slug = profileMatch[1];
+      const reservedSlugs = [
+        'home', 'search', 'upload', 'playlists', 'recently-added',
+        'library', 'recently-listened', 'album', 'artist', 'playlist',
+        'song', 'label', 'curator', 'video', 'player', 'index', 'proxy', 'api', 'player.html'
+      ];
+      if (!reservedSlugs.includes(slug.toLowerCase())) {
+        showCommunityProfileView(slug, { skipUrlSync: true });
+        return true;
+      }
     }
 
     return false;

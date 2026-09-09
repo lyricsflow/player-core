@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Lyricsflow</title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <style>
+    :root {
+      --bg: #0d0d0f;
+      --card-bg: rgba(255, 255, 255, 0.035);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #fc576b;
+      --text: #f5f5f7;
+      --text-muted: #8e8e93;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.6;
+      padding: 48px 24px 80px;
+    }
+    .wrapper {
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(252, 87, 107, 0.12);
+      border: 1px solid rgba(252, 87, 107, 0.25);
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+    p.lead {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 20px;
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    }
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #ffffff;
+    }
+    p {
+      color: #c7c7cc;
+      font-size: 0.94rem;
+      margin-bottom: 12px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0;
+    }
+    li {
+      position: relative;
+      padding-left: 20px;
+      font-size: 0.92rem;
+      color: #b0b0b5;
+      margin-bottom: 8px;
+    }
+    li::before {
+      content: "•";
+      position: absolute;
+      left: 6px;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-top: 24px;
+      transition: all 0.15s ease;
+    }
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="badge">Privacy First</div>
+    <h1>Privacy Policy</h1>
+    <p class="lead">Transparency regarding what information Lyricsflow processes, retains, and displays.</p>
+
+    <div class="card">
+      <h2>1. Information We Collect</h2>
+      <p>When you sync lyrics or manage your community profile through our Discord integration:</p>
+      <ul>
+        <li><strong>Public Profile Information:</strong> We store your chosen public handle, display name, avatar, banner, and pronouns to render creator attribution.</li>
+        <li><strong>Uploaded Content:</strong> TTML or JSON lyrics files you contribute for songs.</li>
+        <li><strong>Private IDs:</strong> Your raw numeric Discord user ID is kept strictly server-side for author verification and is never published or exposed to browser clients.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>2. What We Never Do</h2>
+      <ul>
+        <li>We do not sell, rent, or monetize your personal data.</li>
+        <li>We do not track cross-site activities or store behavioral cookies.</li>
+        <li>We do not expose internal user IDs or account tokens in network payloads or URLs.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>3. Data Removal & Updates</h2>
+      <p>If you update your Discord username, Lyricsflow automatically routes requests to your new username slug. To request complete removal of synced lyrics or profile data, contact the project maintainers via the Discord server.</p>
+    </div>
+
+    <a href="/" class="nav-btn">← Back to Player</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lyricsflow - Redirecting...</title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <script>
+    // GitHub Pages SPA router redirection:
+    // Captures deep URLs and slugs like /@username or /userid and redirects cleanly to index.html
+    (function () {
+      var l = window.location;
+      var pathSegmentsToKeep = (l.hostname.indexOf('github.io') > -1) ? 1 : 0;
+      var segments = l.pathname.split('/');
+      var repoBase = segments.slice(0, 1 + pathSegmentsToKeep).join('/');
+      var route = segments.slice(1 + pathSegmentsToKeep).join('/');
+
+      if (route) {
+        sessionStorage.setItem('spa_redirect_path', '/' + route + l.search + l.hash);
+        var target = l.protocol + '//' + l.host + repoBase + '/?p=' + encodeURIComponent(route) +
+          (l.search ? '&q=' + encodeURIComponent(l.search.slice(1)) : '') +
+          l.hash;
+        l.replace(target);
+      }
+    })();
+  </script>
+  <style>
+    :root {
+      --bg: #121214;
+      --card: rgba(255, 255, 255, 0.05);
+      --accent: #fc576b;
+      --text: #f0f0f2;
+      --text-muted: #8e8e93;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+    }
+    .container {
+      max-width: 480px;
+      padding: 40px 32px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+    }
+    .error-code {
+      font-size: 5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fc576b 0%, #ff8a9a 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      margin-bottom: 8px;
+      line-height: 1;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+    p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+    .btn:hover {
+      background: #ff6b7d;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="error-code">404</div>
+    <h1>Page Not Found</h1>
+    <p>The profile, song, or page you were looking for doesn't exist or has moved.</p>
+    <a href="./" class="btn">Back to Home</a>
+  </div>
+</body>
+</html>

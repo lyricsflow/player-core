@@ -5,7 +5,7 @@ import { GetExpireStore } from './stores.js';
 
 export const LyricsStore = GetExpireStore("SL:lyrics", 1, { Duration: 3, Unit: "Days" });
 
-const CUSTOM_LYRICS_API = 'https://api.spicyamll.online/community';
+const CUSTOM_LYRICS_API = 'https://api.spicyamll.online/api/community';
 
 /** Source label mapping */
 const SOURCE_LABELS = {
@@ -21,6 +21,7 @@ const SOURCE_LABELS = {
   genius: 'Genius',
   apple: 'Apple Music',
   lfcommunity: "Lyricsflow Community",
+  custom: "Lyricsflow Community",
 };
 
 /** Fetch from Better Lyrics API */
@@ -66,30 +67,38 @@ function normalizeText(text) {
     .trim();
 }
 
-/** Fetch from custom TTML API */
+/** Fetch from custom Lyricsflow Community API */
 async function fetchFromCustomAPI(songId) {
   try {
     const res = await fetch(`${CUSTOM_LYRICS_API}/lyrics/${songId}`);
     if (!res.ok) return null;
 
     const data = await res.json();
-    if (!data || !data.ttml) return null;
+    const available = data?.available;
+    if (!Array.isArray(available) || available.length === 0) return null;
 
-    let lyricsData = parseTTMLToLyrics(data.ttml);
+    // Pick latest or first community entry
+    const entry = available[0];
+    const streamUrl = entry.stream_url.startsWith('http') ? entry.stream_url : `https://api.spicyamll.online${entry.stream_url}`;
+    const ttmlRes = await fetch(streamUrl);
+    if (!ttmlRes.ok) return null;
+    const ttmlText = await ttmlRes.text();
+
+    let lyricsData = parseTTMLToLyrics(ttmlText);
     if (lyricsData?.Type) {
       return {
         lyricsData,
         source: 'custom',
-        sourceDisplayName: data.sourceDisplayName || `Synced by ${data.makerHandle || 'Community'}`,
-        makerHandle: data.makerHandle,
-        makerId: data.makerId,
-        makerDisplayName: data.makerDisplayName,
-        makerNickname: data.makerNickname,
-        makerAvatar: data.makerAvatar
+        sourceDisplayName: `Synced by @${entry.author}`,
+        makerHandle: entry.author,
+        makerId: 'community',
+        makerDisplayName: entry.nickname || entry.author,
+        makerNickname: entry.nickname || entry.author,
+        makerAvatar: entry.pfp || ''
       };
     }
   } catch (e) {
-    console.warn('[TTMLRetriever] Custom API fetch error:', e);
+    console.warn('[TTMLRetriever] Community API fetch error:', e);
   }
   return null;
 }

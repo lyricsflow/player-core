@@ -3805,13 +3805,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Decode protected in-transit payload
+      // Decode protected in-transit payload with multi-byte UTF-8 support (emojis, accents)
       let profile = data;
       const payloadB64 = data._lyricsflow_payload || data._spicy_payload;
       if (payloadB64) {
         try {
-          const raw = atob(payloadB64);
-          profile = JSON.parse(raw);
+          const binStr = atob(payloadB64);
+          const bytes = Uint8Array.from(binStr, c => c.charCodeAt(0));
+          const decodedText = new TextDecoder('utf-8').decode(bytes);
+          profile = JSON.parse(decodedText);
         } catch (decErr) {
           console.error('[Profile] Payload decode error:', decErr);
         }
@@ -3852,6 +3854,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nickname = profile.nickname || profile.username || 'Creator';
     const username = profile.username || 'user';
     const pronouns = profile.pronouns || 'he/him';
+    const bio = profile.bio || '';
     const makesCount = profile.makes_count || (profile.songs ? profile.songs.length : 0);
     const uploadsCount = profile.uploads_count || (profile.songs ? profile.songs.length : 0);
     const totalViews = profile.total_views || (makesCount * 1785 + uploadsCount * 7420);
@@ -3877,6 +3880,9 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;padding:4px 14px;border-radius:999px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;color:#d0d0d4;margin-bottom:14px;font-weight:550;">
             ${escapeHTML(pronouns)}
           </div>
+          ${bio ? `
+            <div style="max-width:540px;font-size:0.92rem;color:rgba(255,255,255,0.82);line-height:1.55;margin-bottom:16px;white-space:pre-wrap;">${escapeHTML(bio)}</div>
+          ` : ''}
           <!-- Social Icons -->
           <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:8px;">
             <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#999;cursor:pointer;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
@@ -3941,19 +3947,19 @@ document.addEventListener('DOMContentLoaded', () => {
                   No public songs uploaded yet.
                 </div>
               ` : songs.map((songItem, idx) => {
-      const sId = typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem;
-      const sTitle = typeof songItem === 'object' ? (songItem.title || songItem.name || `Track ${sId}`) : `Track ${sId}`;
-      const sArtist = typeof songItem === 'object' ? (songItem.artist || nickname) : nickname;
-      const sVariants = typeof songItem === 'object' ? (songItem.variants || 2) : 2;
-      const sViews = typeof songItem === 'object' ? (songItem.views || (20147 - idx * 3200)) : (20147 - idx * 3200);
-      const sArt = typeof songItem === 'object' ? (songItem.art || 'favicon.svg') : 'favicon.svg';
+                const sId = typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem;
+                const sTitle = typeof songItem === 'object' ? (songItem.title || songItem.name || `Track ${sId}`) : `Track ${sId}`;
+                const sArtist = typeof songItem === 'object' ? (songItem.artist || nickname) : nickname;
+                const sVariants = typeof songItem === 'object' ? (songItem.variants || 2) : 2;
+                const sViews = typeof songItem === 'object' ? (songItem.views || (20147 - idx * 3200)) : (20147 - idx * 3200);
+                const sArt = typeof songItem === 'object' ? (songItem.art || 'favicon.svg') : 'favicon.svg';
 
-      return `
+                return `
                   <div class="profile-song-card" data-song-id="${escapeHTML(sId)}" style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:14px;padding:11px 16px;border-radius:12px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.07);-webkit-transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);cursor:pointer;">
-                    <img src="${cleanArtworkUrl(sArt, 100, 100)}" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;background:#18181a;flex-shrink:0;-webkit-flex-shrink:0;" onerror="this.src='favicon.svg';" />
+                    <img src="${cleanArtworkUrl(sArt, 100, 100)}" alt="" class="profile-song-art" style="width:46px;height:46px;border-radius:8px;object-fit:cover;background:#18181a;flex-shrink:0;-webkit-flex-shrink:0;" onerror="this.src='favicon.svg';" />
                     <div style="-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0;">
-                      <div style="font-size:0.94rem;font-weight:650;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;">${escapeHTML(sTitle)}</div>
-                      <div style="font-size:0.78rem;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHTML(sArtist)}</div>
+                      <div class="profile-song-title" style="font-size:0.94rem;font-weight:650;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;">${escapeHTML(sTitle)}</div>
+                      <div class="profile-song-artist" style="font-size:0.78rem;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHTML(sArtist)}</div>
                     </div>
                     <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:10px;flex-shrink:0;-webkit-flex-shrink:0;">
                       <div style="padding:3px 9px;border-radius:999px;background:rgba(255,255,255,0.07);font-size:0.72rem;color:#c0c0c4;font-weight:550;">${sVariants} variants</div>
@@ -3967,12 +3973,64 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                   </div>
                 `;
-    }).join('')}
+              }).join('')}
             </div>
           </div>
         </div>
       </div>
     `;
+
+    // Asynchronously hydrate track metadata (title, artist, artwork) for bare numeric song IDs
+    songs.forEach(async (songItem) => {
+      const sId = typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem;
+      if (!sId || typeof songItem === 'object' && songItem.title) return;
+
+      const card = playlistViewContent.querySelector(`.profile-song-card[data-song-id="${sId}"]`);
+      if (!card) return;
+
+      try {
+        let title = '';
+        let artist = '';
+        let art = '';
+
+        // Try primary song lookup
+        try {
+          const r = await fetch(`${API_BASE}/song?song=${sId}&l=${getCurrentLang()}`);
+          if (r.ok) {
+            const d = await r.json();
+            const s = d.data?.[0] || d.results?.songs?.data?.[0];
+            if (s && s.attributes) {
+              title = s.attributes.name;
+              artist = s.attributes.artistName;
+              art = s.attributes.artwork?.url ? cleanArtworkUrl(s.attributes.artwork.url, 200, 200) : '';
+            }
+          }
+        } catch (_) {}
+
+        // Fallback to iTunes API
+        if (!title) {
+          const itR = await fetch(`https://itunes.apple.com/lookup?id=${sId}`);
+          if (itR.ok) {
+            const itD = await itR.json();
+            const itT = itD.results?.[0];
+            if (itT) {
+              title = itT.trackName;
+              artist = itT.artistName;
+              art = itT.artworkUrl100 ? itT.artworkUrl100.replace('100x100', '200x200') : '';
+            }
+          }
+        }
+
+        if (title) {
+          const titleEl = card.querySelector('.profile-song-title');
+          const artistEl = card.querySelector('.profile-song-artist');
+          const artEl = card.querySelector('.profile-song-art');
+          if (titleEl) titleEl.textContent = title;
+          if (artistEl) artistEl.textContent = artist || nickname;
+          if (artEl && art) artEl.src = art;
+        }
+      } catch (_) {}
+    });
 
     // Hook listen buttons
     const listenButtons = playlistViewContent.querySelectorAll('.profile-listen-btn, .profile-song-card');

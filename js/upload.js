@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const u = new URL(clean);
         clean = u.pathname + u.search;
-      } catch (_) {}
+      } catch (_) { }
     }
     clean = clean.replace(/^#\/?/, '');
     if (!clean.startsWith('/')) clean = '/' + clean;
@@ -654,7 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     if (!albumName) return;
@@ -668,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
     switchPage('listen');
     if (catalogSearch) {
       catalogSearch.value = albumName;
@@ -2112,7 +2112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     amTrackId: tr.id
                   });
                 }
-              } catch (_) {}
+              } catch (_) { }
             })();
           }
         };
@@ -2434,14 +2434,14 @@ document.addEventListener('DOMContentLoaded', () => {
           fetch(`${API_BASE}/artist/albums?artist=${resolvedArtistId}&limit=100&l=en-US`)
             .then(r => r.ok ? r.json() : null)
             .then(d => { if (d?.data?.length > 0) albums = (albums || []).concat(d.data); })
-            .catch(() => {})
+            .catch(() => { })
         ];
         if (songs.length === 0) {
           discogFetches.push(
             fetch(`${API_BASE}/artist/songs?artist=${resolvedArtistId}&limit=50&l=en-US`)
               .then(r => r.ok ? r.json() : null)
               .then(d => { if (d?.data?.length > 0) songs = d.data; })
-              .catch(() => {})
+              .catch(() => { })
           );
         }
         await Promise.all(discogFetches);
@@ -2491,10 +2491,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Determine artist photo: prioritize the true artist portrait / identity artwork
-      let rawArtistPhoto = attr.artwork?.url || 
-        attr.editorialArtwork?.header?.url || 
-        attr.editorialArtwork?.bannerUber?.url || 
-        attr.editorialArtwork?.storeFlowcase?.url || 
+      let rawArtistPhoto = attr.artwork?.url ||
+        attr.editorialArtwork?.header?.url ||
+        attr.editorialArtwork?.bannerUber?.url ||
+        attr.editorialArtwork?.storeFlowcase?.url ||
         attr.editorialArtwork?.bannerArtwork?.url;
       if (!rawArtistPhoto && albums.length > 0) {
         rawArtistPhoto = albums[0]?.attributes?.artwork?.url;
@@ -3419,7 +3419,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const artUrl = cleanArtworkUrl(rawArt, 600, 600);
       const descRaw = attr.editorialNotes?.standard || attr.editorialNotes?.short || attr.description?.standard || attr.description?.short || data.description || '';
       const desc = descRaw ? descRaw.replace(/<[^>]*>/g, '') : '';
-      
+
       // Parse tracks from relationships.tracks.data
       const rawTracks = rels.tracks?.data || data.parsed_tracks || [];
       const tracks = rawTracks.map(tItem => {
@@ -3782,7 +3782,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!options.skipUrlSync) {
       syncUrl(`/${cleanUsername}`, '', options.replaceUrl);
     }
-  window.showCommunityProfileView = showCommunityProfileView;
+    window.showCommunityProfileView = showCommunityProfileView;
 
     playlistViewContent.innerHTML = `
       <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;min-height:55vh;color:#8e8e93;gap:16px;">
@@ -3807,9 +3807,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Decode protected in-transit payload
       let profile = data;
-      if (data._spicy_payload) {
+      const payloadB64 = data._lyricsflow_payload || data._spicy_payload;
+      if (payloadB64) {
         try {
-          const raw = atob(data._spicy_payload);
+          const raw = atob(payloadB64);
           profile = JSON.parse(raw);
         } catch (decErr) {
           console.error('[Profile] Payload decode error:', decErr);
@@ -3940,14 +3941,14 @@ document.addEventListener('DOMContentLoaded', () => {
                   No public songs uploaded yet.
                 </div>
               ` : songs.map((songItem, idx) => {
-                const sId = typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem;
-                const sTitle = typeof songItem === 'object' ? (songItem.title || songItem.name || `Track ${sId}`) : `Track ${sId}`;
-                const sArtist = typeof songItem === 'object' ? (songItem.artist || nickname) : nickname;
-                const sVariants = typeof songItem === 'object' ? (songItem.variants || 2) : 2;
-                const sViews = typeof songItem === 'object' ? (songItem.views || (20147 - idx * 3200)) : (20147 - idx * 3200);
-                const sArt = typeof songItem === 'object' ? (songItem.art || 'favicon.svg') : 'favicon.svg';
+      const sId = typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem;
+      const sTitle = typeof songItem === 'object' ? (songItem.title || songItem.name || `Track ${sId}`) : `Track ${sId}`;
+      const sArtist = typeof songItem === 'object' ? (songItem.artist || nickname) : nickname;
+      const sVariants = typeof songItem === 'object' ? (songItem.variants || 2) : 2;
+      const sViews = typeof songItem === 'object' ? (songItem.views || (20147 - idx * 3200)) : (20147 - idx * 3200);
+      const sArt = typeof songItem === 'object' ? (songItem.art || 'favicon.svg') : 'favicon.svg';
 
-                return `
+      return `
                   <div class="profile-song-card" data-song-id="${escapeHTML(sId)}" style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:14px;padding:11px 16px;border-radius:12px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.07);-webkit-transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);cursor:pointer;">
                     <img src="${cleanArtworkUrl(sArt, 100, 100)}" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;background:#18181a;flex-shrink:0;-webkit-flex-shrink:0;" onerror="this.src='favicon.svg';" />
                     <div style="-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0;">
@@ -3966,7 +3967,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                   </div>
                 `;
-              }).join('')}
+    }).join('')}
             </div>
           </div>
         </div>
@@ -4026,7 +4027,7 @@ document.addEventListener('DOMContentLoaded', () => {
       search = extraQuery;
       try {
         window.history.replaceState(null, '', path + search);
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // 1. Check entity routes: /label/[slug]/[id], /album/[slug]/[id], /artist/[slug]/[id], /playlist/[slug]/[id], /curator/[slug]/[id], /video/[slug]/[id]
@@ -4154,7 +4155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 5. Community Profile Route: /@username, /user/username, or /slug
-    const profileMatch = path.match(/^\/(?:@|user\/)?([a-zA-Z0-9_\-]+)\/?$/i);
+    const profileMatch = path.match(/^\/(?:@|user\/)?([a-zA-Z0-9_\-.]+)\/?$/i);
     if (profileMatch) {
       const slug = profileMatch[1];
       const reservedSlugs = [
@@ -4886,7 +4887,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   amTrackId: tr.id
                 });
               }
-            } catch (_) {}
+            } catch (_) { }
           }
         };
       }
@@ -5071,8 +5072,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const lines = Object.entries(endpoints).map(([path, ep]) => {
       const isUp = ep.status === 'up';
-      const statusTag = isUp 
-        ? '<span style="color: #30d158; font-weight: 700;">[UP]</span>' 
+      const statusTag = isUp
+        ? '<span style="color: #30d158; font-weight: 700;">[UP]</span>'
         : '<span style="color: #ff453a; font-weight: 700; text-shadow: 0 0 6px rgba(255,69,58,0.5);">[DOWN]</span>';
       const providerNote = ep.provider ? ` <span style="color: #8e8e93;">(${escapeHTML(ep.provider)})</span>` : '';
       const detailNote = ep.details ? `<br>&nbsp;&nbsp;&nbsp;&nbsp;↳ <span style="color: #ffd60a;">${escapeHTML(ep.details)}</span>` : '';

@@ -3858,10 +3858,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const pronouns = profile.pronouns || 'Creator';
     const bio = profile.bio || (username === 'y.qa31_' ? 'straight - editor on tt\nmuslim allahu akbar' : '');
-    const makesCount = typeof profile.makes_count === 'number' ? profile.makes_count : 0;
-    const uploadsCount = typeof profile.uploads_count === 'number' ? profile.uploads_count : (profile.songs ? profile.songs.length : 0);
+    
+    const makesList = Array.isArray(profile.makes) ? profile.makes : (Array.isArray(profile.songs) ? profile.songs : []);
+    const uploadsList = Array.isArray(profile.uploads) ? profile.uploads : (Array.isArray(profile.songs) ? profile.songs : []);
+    const makesCount = typeof profile.makes_count === 'number' ? profile.makes_count : makesList.length;
+    const uploadsCount = typeof profile.uploads_count === 'number' ? profile.uploads_count : uploadsList.length;
     const totalViews = typeof profile.total_views === 'number' ? profile.total_views : 0;
-    const songs = profile.songs || [];
+
+    let currentTab = 'makes';
+    let sortField = 'views';
+    let sortAsc = false; // false = descending (down arrow), true = ascending (up arrow)
 
     const bannerStyle = bannerUrl
       ? `background: -webkit-linear-gradient(top, rgba(20,20,24,0.1) 0%, rgba(20,20,24,0.6) 35%, rgba(20,20,24,0.92) 75%, #141416 100%), url('${cleanArtworkUrl(bannerUrl, 1800, 700)}') center top / cover no-repeat;
@@ -3871,217 +3877,373 @@ document.addEventListener('DOMContentLoaded', () => {
 
     playlistViewContent.innerHTML = `
       <div class="community-profile-page" style="${bannerStyle} min-height:88vh;padding:48px 24px 64px;margin:-24px -24px 0;border-radius:18px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
-        <!-- Top Profile Header (Direct Reference Match) -->
-        <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center;margin-bottom:38px;">
-          <div style="position:relative;margin-bottom:14px;">
-            <img src="${cleanArtworkUrl(avatarUrl, 260, 260)}" alt="${escapeHTML(nickname)}"
-              style="width:116px;height:116px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.85);box-shadow:0 10px 32px rgba(0,0,0,0.5);background:#18181a;"
-              onerror="this.src='icons/account_avatar.png';" />
-            <!-- Discord Online/DND Indicator badge -->
-            <div style="position:absolute;bottom:4px;right:6px;width:24px;height:24px;border-radius:50%;background:#1e1f22;display:flex;align-items:center;justify-content:center;">
-              <div style="width:14px;height:14px;border-radius:50%;background:#f23f43;display:flex;align-items:center;justify-content:center;">
-                <div style="width:8px;height:2px;background:#ffffff;border-radius:1px;"></div>
-              </div>
-            </div>
-          </div>
-          <h1 style="font-size:2rem;font-weight:750;color:#ffffff;margin:0 0 4px;letter-spacing:-0.025em;line-height:1.2;">${escapeHTML(nickname)}</h1>
-          <div style="font-size:0.95rem;color:#a3a3a8;margin-bottom:10px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px;">
-            <span>@${escapeHTML(username)}</span>
-            <span style="opacity:0.4;">•</span>
-            <span style="color:#8e8e93;font-size:0.88rem;">Redmi Note 15 4G (spinel)</span>
-          </div>
-
-          <!-- Badges Row: .flac, Discord badges, Pronouns -->
-          <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-            <!-- .flac badge -->
-            <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:rgba(46,160,67,0.15);border:1px solid rgba(46,160,67,0.35);font-size:0.75rem;color:#3fb950;font-weight:600;">
-              <span>🍃</span>
-              <span>.flac</span>
-            </div>
-            <!-- Discord Badges -->
-            <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;color:#b5bac1;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#9b59b6"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#5865f2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-            </div>
-            <!-- Role / Pronouns -->
-            <div style="display:inline-flex;align-items:center;padding:3px 12px;border-radius:999px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;color:#d0d0d4;font-weight:550;">
-              ${escapeHTML(pronouns)}
-            </div>
-          </div>
-
-          ${bio ? `
-            <div style="max-width:540px;font-size:0.92rem;color:rgba(255,255,255,0.85);line-height:1.55;margin-bottom:16px;white-space:pre-wrap;font-weight:450;">${escapeHTML(bio)}</div>
-          ` : ''}
-          <!-- Social Icons -->
-          <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;gap:8px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#999;cursor:pointer;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
-              <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            </div>
-            <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;color:#999;cursor:pointer;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
-              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Layout (Reference Proportions) -->
-        <div style="display:grid;grid-template-columns:270px 1fr;gap:26px;max-width:1160px;margin:0 auto;" class="profile-layout-grid">
-          <!-- Left Column: Total Views Card -->
-          <div>
-            <div style="background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.075);-webkit-backdrop-filter:blur(28px);backdrop-filter:blur(28px);border-radius:18px;padding:22px 20px;box-shadow:0 14px 40px rgba(0,0,0,0.38);">
-              <div style="font-size:0.8rem;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:16px;">Total views</div>
-              <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:baseline;-webkit-align-items:baseline;-ms-flex-align:baseline;align-items:baseline;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07);">
-                <div>
-                  <div style="font-size:1.75rem;font-weight:750;color:#ffffff;line-height:1.1;letter-spacing:-0.02em;">${totalViews.toLocaleString()}</div>
-                  <div style="font-size:0.76rem;color:#8e8e93;margin-top:3px;font-weight:500;">Makes</div>
-                </div>
-                <div style="text-align:right;">
-                  <div style="font-size:1.55rem;font-weight:750;color:#e8e8ed;line-height:1.1;letter-spacing:-0.02em;">${uploadsCount.toLocaleString()}</div>
-                  <div style="font-size:0.76rem;color:#8e8e93;margin-top:3px;font-weight:500;">Uploads</div>
+        
+        <!-- Two Column Layout: Left Column Sticky, Entire Page Scrolls -->
+        <div style="display:grid;grid-template-columns:300px 1fr;gap:40px;max-width:1200px;margin:0 auto;align-items:start;" class="profile-layout-grid">
+          
+          <!-- Sticky Left Column (Profile, Cover, Avatar, Badges) -->
+          <div style="position:-webkit-sticky;position:sticky;top:32px;display:flex;flex-direction:column;align-items:center;text-align:center;">
+            <div style="position:relative;margin-bottom:16px;">
+              <img src="${cleanArtworkUrl(avatarUrl, 300, 300)}" alt="${escapeHTML(nickname)}"
+                style="width:130px;height:130px;border-radius:50%;object-fit:cover;border:3.5px solid rgba(255,255,255,0.85);box-shadow:0 12px 36px rgba(0,0,0,0.6);background:#18181a;"
+                onerror="this.src='icons/account_avatar.png';" />
+              <!-- Discord Online/DND Indicator badge -->
+              <div style="position:absolute;bottom:6px;right:8px;width:26px;height:26px;border-radius:50%;background:#1e1f22;display:flex;align-items:center;justify-content:center;">
+                <div style="width:15px;height:15px;border-radius:50%;background:#f23f43;display:flex;align-items:center;justify-content:center;">
+                  <div style="width:9px;height:2.5px;background:#ffffff;border-radius:1px;"></div>
                 </div>
               </div>
-              <button style="width:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;gap:6px;padding:11px;border-radius:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:#f0f0f2;font-size:0.86rem;font-weight:600;cursor:pointer;-webkit-transition:all 0.18s ease;transition:all 0.18s ease;">
-                View profile stats <span style="font-size:0.88rem;opacity:0.8;">↗</span>
-              </button>
+            </div>
+
+            <h1 style="font-size:2.1rem;font-weight:750;color:#ffffff;margin:0 0 4px;letter-spacing:-0.025em;line-height:1.2;">${escapeHTML(nickname)}</h1>
+            <div style="font-size:0.95rem;color:#8e8e93;margin-bottom:10px;font-weight:500;">@${escapeHTML(username)}</div>
+
+            <!-- Pronouns & Badges -->
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+              <!-- .flac badge -->
+              <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:rgba(46,160,67,0.15);border:1px solid rgba(46,160,67,0.35);font-size:0.75rem;color:#3fb950;font-weight:600;">
+                <span>🍃</span>
+                <span>.flac</span>
+              </div>
+              <!-- Role / Pronouns -->
+              <div style="display:inline-flex;align-items:center;padding:3px 12px;border-radius:999px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;color:#d0d0d4;font-weight:550;">
+                ${escapeHTML(pronouns)}
+              </div>
+            </div>
+
+            <!-- Device Handle -->
+            <div style="font-size:0.85rem;color:#8e8e93;margin-bottom:14px;">Redmi Note 15 4G (spinel)</div>
+
+            ${bio ? `
+              <div style="max-width:280px;font-size:0.88rem;color:rgba(255,255,255,0.85);line-height:1.55;margin-bottom:18px;white-space:pre-wrap;">${escapeHTML(bio)}</div>
+            ` : ''}
+
+            <!-- Total Plays Indicator -->
+            <div style="padding:8px 16px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);font-size:0.82rem;color:#8e8e93;">
+              <span style="font-weight:700;color:#ffffff;font-size:1rem;">${totalViews.toLocaleString()}</span> total plays
             </div>
           </div>
 
-          <!-- Right Column: Makes / Uploads Tabs, Search & Song List -->
+          <!-- Right Column: Tabs, Search, Sort & Song List -->
           <div>
-            <!-- Pill Tabs -->
-            <div style="display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:6px;background:rgba(255,255,255,0.045);padding:4px;border-radius:11px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.08);">
-              <button class="profile-tab-btn active" style="padding:6px 18px;border-radius:8px;background:rgba(255,255,255,0.12);color:#ffffff;border:none;font-size:0.85rem;font-weight:600;cursor:pointer;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
-                Makes <span style="background:rgba(255,255,255,0.2);padding:1px 7px;border-radius:999px;font-size:0.75rem;margin-left:4px;font-weight:600;">${makesCount}</span>
+            <!-- Pill Tabs (Reference Exact Style) -->
+            <div style="display:flex;align-items:center;background:rgba(255,255,255,0.06);padding:5px;border-radius:14px;margin-bottom:18px;border:1px solid rgba(255,255,255,0.08);width:fit-content;">
+              <button id="profile-tab-makes" class="profile-tab-btn" style="padding:8px 24px;border-radius:10px;background:rgba(255,255,255,0.14);color:#ffffff;border:none;font-size:0.9rem;font-weight:650;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s ease;">
+                <span>Makes</span>
+                <span style="background:rgba(255,255,255,0.22);padding:2px 8px;border-radius:999px;font-size:0.76rem;font-weight:650;">${makesCount}</span>
               </button>
-              <button class="profile-tab-btn" style="padding:6px 18px;border-radius:8px;background:transparent;color:#8e8e93;border:none;font-size:0.85rem;font-weight:500;cursor:pointer;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
-                Uploads <span style="background:rgba(255,255,255,0.09);padding:1px 7px;border-radius:999px;font-size:0.75rem;margin-left:4px;font-weight:600;">${uploadsCount}</span>
+              <button id="profile-tab-uploads" class="profile-tab-btn" style="padding:8px 24px;border-radius:10px;background:transparent;color:#8e8e93;border:none;font-size:0.9rem;font-weight:550;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s ease;">
+                <span>Uploads</span>
+                <span style="background:rgba(255,255,255,0.09);padding:2px 8px;border-radius:999px;font-size:0.76rem;font-weight:650;">${uploadsCount}</span>
               </button>
             </div>
 
-            <!-- Search & Sort Filter -->
-            <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:12px;margin-bottom:20px;">
-              <div style="-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;position:relative;">
+            <!-- Search Bar & Sort Dropdown -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;position:relative;">
+              <div style="flex:1;position:relative;">
                 <input type="text" id="profile-track-search" placeholder="Search title, artist, album, or paste a track link"
-                  style="width:100%;box-sizing:border-box;padding:10px 14px 10px 38px;border-radius:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:#ffffff;font-size:0.88rem;outline:none;-webkit-transition:border-color 0.18s ease;transition:border-color 0.18s ease;" />
-                <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);-webkit-transform:translateY(-50%);color:#8e8e93;" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  style="width:100%;box-sizing:border-box;padding:12px 14px 12px 42px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:#ffffff;font-size:0.9rem;outline:none;transition:border-color 0.18s ease;" />
+                <svg style="position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#8e8e93;" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               </div>
-              <button style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:6px;padding:10px 15px;border-radius:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:#e2e2e6;font-size:0.85rem;font-weight:550;cursor:pointer;white-space:nowrap;-webkit-transition:all 0.15s ease;transition:all 0.15s ease;">
-                <span>⇅ Sort: Views</span> <span style="font-size:0.75rem;opacity:0.7;">▼</span>
-              </button>
-            </div>
 
-            <!-- Songs List -->
-            <div id="profile-songs-list" style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:8px;">
-              ${songs.length === 0 ? `
-                <div style="padding:48px 24px;text-align:center;color:#8e8e93;background:rgba(255,255,255,0.02);border-radius:14px;border:1px dashed rgba(255,255,255,0.08);">
-                  No public songs uploaded yet.
+              <!-- Sort Dropdown Trigger -->
+              <div style="position:relative;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <button id="profile-sort-btn" style="display:flex;align-items:center;gap:6px;padding:11px 16px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);color:#e2e2e6;font-size:0.88rem;font-weight:550;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">
+                    <span style="opacity:0.7;">⇅</span>
+                    <span>Sort: <strong id="current-sort-label" style="font-weight:600;">Views</strong></span>
+                    <span style="font-size:0.75rem;opacity:0.6;">▼</span>
+                  </button>
+                  
+                  <!-- Ascending / Descending Toggle Arrow -->
+                  <button id="profile-sort-dir-btn" title="Toggle Ascending/Descending" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);color:#ffffff;cursor:pointer;font-size:1.1rem;transition:all 0.15s ease;">
+                    <span id="sort-dir-icon">↓</span>
+                  </button>
                 </div>
-              ` : songs.map((songItem, idx) => {
-                const sId = typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem;
-                const sTitle = typeof songItem === 'object' ? (songItem.title || songItem.name || `Track ${sId}`) : `Track ${sId}`;
-                const sArtist = typeof songItem === 'object' ? (songItem.artist || nickname) : nickname;
-                const sVariants = typeof songItem === 'object' ? (songItem.variants || 2) : 2;
-                const sViews = typeof songItem === 'object' ? (songItem.views || (20147 - idx * 3200)) : (20147 - idx * 3200);
-                const sArt = typeof songItem === 'object' ? (songItem.art || 'favicon.svg') : 'favicon.svg';
 
-                return `
-                  <div class="profile-song-card" data-song-id="${escapeHTML(sId)}" style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:14px;padding:11px 16px;border-radius:12px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.07);-webkit-transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);cursor:pointer;">
-                    <img src="${cleanArtworkUrl(sArt, 100, 100)}" alt="" class="profile-song-art" style="width:46px;height:46px;border-radius:8px;object-fit:cover;background:#18181a;flex-shrink:0;-webkit-flex-shrink:0;" onerror="this.src='favicon.svg';" />
-                    <div style="-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:0;">
-                      <div class="profile-song-title" style="font-size:0.94rem;font-weight:650;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;">${escapeHTML(sTitle)}</div>
-                      <div class="profile-song-artist" style="font-size:0.78rem;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHTML(sArtist)}</div>
-                    </div>
-                    <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:10px;flex-shrink:0;-webkit-flex-shrink:0;">
-                      <div style="padding:3px 9px;border-radius:999px;background:rgba(255,255,255,0.07);font-size:0.72rem;color:#c0c0c4;font-weight:550;">${sVariants} variants</div>
-                      <div style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:4px;font-size:0.76rem;color:#8e8e93;font-weight:500;">
-                        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        <span>${Number(sViews).toLocaleString()}</span>
-                      </div>
-                      <button class="profile-listen-btn" data-song-id="${escapeHTML(sId)}" style="display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:6px;padding:6px 15px;border-radius:999px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.14);color:#ffffff;font-size:0.82rem;font-weight:600;cursor:pointer;-webkit-transition:all 0.16s ease;transition:all 0.16s ease;">
-                        <span style="font-size:0.74rem;">▶</span> Listen <span style="font-size:0.64rem;opacity:0.7;">⌵</span>
-                      </button>
-                    </div>
+                <!-- Custom Dropdown Menu -->
+                <div id="profile-sort-menu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);width:170px;background:#262428;border:1px solid rgba(255,255,255,0.12);border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,0.6);padding:6px;z-index:100;">
+                  <div class="sort-option" data-sort="views" style="padding:9px 14px;border-radius:8px;font-size:0.86rem;color:#ffffff;cursor:pointer;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.08);">
+                    <span>Views</span> <span class="sort-check">✓</span>
                   </div>
-                `;
-              }).join('')}
+                  <div class="sort-option" data-sort="title" style="padding:9px 14px;border-radius:8px;font-size:0.86rem;color:#b0b0b6;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+                    <span>Title</span> <span class="sort-check" style="display:none;">✓</span>
+                  </div>
+                  <div class="sort-option" data-sort="artist" style="padding:9px 14px;border-radius:8px;font-size:0.86rem;color:#b0b0b6;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+                    <span>Artist</span> <span class="sort-check" style="display:none;">✓</span>
+                  </div>
+                  <div class="sort-option" data-sort="date" style="padding:9px 14px;border-radius:8px;font-size:0.86rem;color:#b0b0b6;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+                    <span>Upload date</span> <span class="sort-check" style="display:none;">✓</span>
+                  </div>
+                  <div class="sort-option" data-sort="length" style="padding:9px 14px;border-radius:8px;font-size:0.86rem;color:#b0b0b6;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+                    <span>Song length</span> <span class="sort-check" style="display:none;">✓</span>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            <!-- Songs List Container -->
+            <div id="profile-songs-list" style="display:flex;flex-direction:column;gap:14px;"></div>
           </div>
+
         </div>
       </div>
     `;
 
-    // Asynchronously hydrate track metadata (title, artist, artwork) for bare numeric song IDs
-    songs.forEach(async (songItem) => {
-      const sId = typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem;
-      if (!sId || typeof songItem === 'object' && songItem.title) return;
+    // Process & group song list
+    const activeSongIds = makesList.length > 0 ? makesList : (profile.songs || []);
+    
+    // Function to render song cards with stacked layers (max 3) & 9+ cap
+    function renderSongs(list) {
+      const listContainer = playlistViewContent.querySelector('#profile-songs-list');
+      if (!listContainer) return;
 
-      const card = playlistViewContent.querySelector(`.profile-song-card[data-song-id="${sId}"]`);
-      if (!card) return;
+      if (!list || list.length === 0) {
+        listContainer.innerHTML = `
+          <div style="padding:48px 24px;text-align:center;color:#8e8e93;background:rgba(255,255,255,0.02);border-radius:14px;border:1px dashed rgba(255,255,255,0.08);">
+            No songs found in this section.
+          </div>`;
+        return;
+      }
 
-      try {
-        let title = '';
-        let artist = '';
-        let art = '';
+      listContainer.innerHTML = list.map((songItem, idx) => {
+        const sId = typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem;
+        const sTitle = typeof songItem === 'object' ? (songItem.title || songItem.name || `Track ${sId}`) : `Track ${sId}`;
+        const sArtist = typeof songItem === 'object' ? (songItem.artist || nickname) : nickname;
+        const rawVariants = typeof songItem === 'object' ? (songItem.variants || 2) : 2;
+        const variantsDisplay = rawVariants > 9 ? '9+' : String(rawVariants);
+        const stackLayers = Math.min(3, Math.max(1, rawVariants)); // max 3 layers
+        const sViews = typeof songItem === 'object' ? (songItem.views || (24200 - idx * 3100)) : (24200 - idx * 3100);
+        const sArt = typeof songItem === 'object' ? (songItem.art || 'favicon.svg') : 'favicon.svg';
 
-        // Try primary song lookup
+        // Stacked visual card borders/shadows for 2 or 3 layers
+        const stackStyle = stackLayers === 3
+          ? 'box-shadow: 0 4px 0 -2px rgba(255,255,255,0.05), 0 5px 0 -1px rgba(0,0,0,0.5), 0 8px 0 -4px rgba(255,255,255,0.03), 0 9px 0 -3px rgba(0,0,0,0.6);'
+          : (stackLayers === 2 ? 'box-shadow: 0 4px 0 -2px rgba(255,255,255,0.05), 0 5px 0 -1px rgba(0,0,0,0.5);' : '');
+
+        return `
+          <div class="profile-song-group" data-song-id="${escapeHTML(sId)}" style="position:relative;">
+            <!-- Main Parent Track Card -->
+            <div class="profile-song-card" data-song-id="${escapeHTML(sId)}" style="${stackStyle} position:relative;z-index:2;display:flex;align-items:center;gap:14px;padding:12px 18px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);cursor:pointer;">
+              <img src="${cleanArtworkUrl(sArt, 100, 100)}" alt="" class="profile-song-art" style="width:48px;height:48px;border-radius:10px;object-fit:cover;background:#18181a;flex-shrink:0;" onerror="this.src='favicon.svg';" />
+              <div style="flex:1;min-width:0;">
+                <div class="profile-song-title" style="font-size:0.96rem;font-weight:650;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;">${escapeHTML(sTitle)}</div>
+                <div class="profile-song-artist" style="font-size:0.8rem;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHTML(sArtist)}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+                ${rawVariants > 1 ? `
+                  <div class="profile-variants-pill" style="padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;color:#c0c0c4;font-weight:600;">
+                    ${variantsDisplay} variants
+                  </div>
+                ` : ''}
+                <button class="profile-listen-btn" data-song-id="${escapeHTML(sId)}" style="display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:999px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.14);color:#ffffff;font-size:0.84rem;font-weight:600;cursor:pointer;transition:all 0.16s ease;">
+                  <span style="font-size:0.74rem;">▶</span> Listen
+                </button>
+                ${rawVariants > 1 ? `
+                  <div class="profile-expand-trigger" style="color:#8e8e93;padding:4px;cursor:pointer;font-size:0.88rem;transition:transform 0.2s ease;">
+                    ⌵
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- Expandable Tree Branch Variant (Direct Match to Reference) -->
+            ${rawVariants > 1 ? `
+              <div class="profile-variant-branch" style="display:none;position:relative;margin-top:10px;padding-left:44px;">
+                <!-- Connecting elbow line -->
+                <div style="position:absolute;left:24px;top:-10px;bottom:24px;width:2px;background:rgba(255,255,255,0.15);"></div>
+                <div style="position:absolute;left:24px;top:50%;width:18px;height:2px;background:rgba(255,255,255,0.15);"></div>
+
+                <div class="profile-song-card variant-subcard" data-song-id="${escapeHTML(sId)}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
+                  <img src="${cleanArtworkUrl(sArt, 80, 80)}" alt="" class="profile-song-art" style="width:38px;height:38px;border-radius:8px;object-fit:cover;background:#18181a;flex-shrink:0;" onerror="this.src='favicon.svg';" />
+                  <div style="flex:1;min-width:0;">
+                    <div class="profile-song-title" style="font-size:0.88rem;font-weight:600;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(sTitle)} (Variant)</div>
+                    <div class="profile-song-artist" style="font-size:0.75rem;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(sArtist)}</div>
+                  </div>
+                  <button class="profile-listen-btn" data-song-id="${escapeHTML(sId)}" style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#ffffff;font-size:0.78rem;font-weight:600;cursor:pointer;">
+                    <span style="font-size:0.7rem;">▶</span> Listen
+                  </button>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      // Wire up accordion expand/collapse
+      listContainer.querySelectorAll('.profile-song-group').forEach(group => {
+        const trigger = group.querySelector('.profile-expand-trigger');
+        const branch = group.querySelector('.profile-variant-branch');
+        if (trigger && branch) {
+          trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = branch.style.display === 'block';
+            branch.style.display = isOpen ? 'none' : 'block';
+            trigger.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+          });
+        }
+      });
+
+      // Wire up listen buttons
+      listContainer.querySelectorAll('.profile-listen-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const sid = btn.dataset.songId;
+          if (sid) loadTrackById(sid);
+        });
+      });
+
+      // Hydrate metadata asynchronously
+      list.forEach(async (songItem) => {
+        const sId = typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem;
+        if (!sId || typeof songItem === 'object' && songItem.title) return;
+
+        const group = listContainer.querySelector(`.profile-song-group[data-song-id="${sId}"]`);
+        if (!group) return;
+
         try {
-          const r = await fetch(`${API_BASE}/song?song=${sId}&l=${getCurrentLang()}`);
-          if (r.ok) {
-            const d = await r.json();
-            const s = d.data?.[0] || d.results?.songs?.data?.[0];
-            if (s && s.attributes) {
-              title = s.attributes.name;
-              artist = s.attributes.artistName;
-              art = s.attributes.artwork?.url ? cleanArtworkUrl(s.attributes.artwork.url, 200, 200) : '';
+          let title = '';
+          let artist = '';
+          let art = '';
+
+          try {
+            const r = await fetch(`${API_BASE}/song?song=${sId}&l=${getCurrentLang()}`);
+            if (r.ok) {
+              const d = await r.json();
+              const s = d.data?.[0] || d.results?.songs?.data?.[0];
+              if (s && s.attributes) {
+                title = s.attributes.name;
+                artist = s.attributes.artistName;
+                art = s.attributes.artwork?.url ? cleanArtworkUrl(s.attributes.artwork.url, 200, 200) : '';
+              }
+            }
+          } catch (_) {}
+
+          if (!title) {
+            const itR = await fetch(`https://itunes.apple.com/lookup?id=${sId}`);
+            if (itR.ok) {
+              const itD = await itR.json();
+              const itT = itD.results?.[0];
+              if (itT) {
+                title = itT.trackName;
+                artist = itT.artistName;
+                art = itT.artworkUrl100 ? itT.artworkUrl100.replace('100x100', '200x200') : '';
+              }
+            }
+          }
+
+          if (title) {
+            group.querySelectorAll('.profile-song-title').forEach(el => {
+              if (el.textContent.includes('(Variant)')) {
+                el.textContent = `${title} (Variant)`;
+              } else {
+                el.textContent = title;
+              }
+            });
+            group.querySelectorAll('.profile-song-artist').forEach(el => el.textContent = artist || nickname);
+            if (art) {
+              group.querySelectorAll('.profile-song-art').forEach(el => el.src = art);
             }
           }
         } catch (_) {}
-
-        // Fallback to iTunes API
-        if (!title) {
-          const itR = await fetch(`https://itunes.apple.com/lookup?id=${sId}`);
-          if (itR.ok) {
-            const itD = await itR.json();
-            const itT = itD.results?.[0];
-            if (itT) {
-              title = itT.trackName;
-              artist = itT.artistName;
-              art = itT.artworkUrl100 ? itT.artworkUrl100.replace('100x100', '200x200') : '';
-            }
-          }
-        }
-
-        if (title) {
-          const titleEl = card.querySelector('.profile-song-title');
-          const artistEl = card.querySelector('.profile-song-artist');
-          const artEl = card.querySelector('.profile-song-art');
-          if (titleEl) titleEl.textContent = title;
-          if (artistEl) artistEl.textContent = artist || nickname;
-          if (artEl && art) artEl.src = art;
-        }
-      } catch (_) {}
-    });
-
-    // Hook listen buttons
-    const listenButtons = playlistViewContent.querySelectorAll('.profile-listen-btn, .profile-song-card');
-    listenButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const sid = btn.dataset.songId;
-        if (sid) {
-          loadTrackById(sid);
-        }
       });
-    });
+    }
 
-    // Hook search filter input
+    // Initial render
+    renderSongs(activeSongIds);
+
+    // Tab switcher events
+    const makesBtn = playlistViewContent.querySelector('#profile-tab-makes');
+    const uploadsBtn = playlistViewContent.querySelector('#profile-tab-uploads');
+
+    if (makesBtn && uploadsBtn) {
+      makesBtn.addEventListener('click', () => {
+        currentTab = 'makes';
+        makesBtn.style.background = 'rgba(255,255,255,0.14)';
+        makesBtn.style.color = '#ffffff';
+        uploadsBtn.style.background = 'transparent';
+        uploadsBtn.style.color = '#8e8e93';
+        renderSongs(makesList);
+      });
+
+      uploadsBtn.addEventListener('click', () => {
+        currentTab = 'uploads';
+        uploadsBtn.style.background = 'rgba(255,255,255,0.14)';
+        uploadsBtn.style.color = '#ffffff';
+        makesBtn.style.background = 'transparent';
+        makesBtn.style.color = '#8e8e93';
+        renderSongs(uploadsList);
+      });
+    }
+
+    // Sort Dropdown & Direction Toggle
+    const sortBtn = playlistViewContent.querySelector('#profile-sort-btn');
+    const sortMenu = playlistViewContent.querySelector('#profile-sort-menu');
+    const sortDirBtn = playlistViewContent.querySelector('#profile-sort-dir-btn');
+    const sortDirIcon = playlistViewContent.querySelector('#sort-dir-icon');
+    const sortLabel = playlistViewContent.querySelector('#current-sort-label');
+
+    if (sortBtn && sortMenu) {
+      sortBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sortMenu.style.display = sortMenu.style.display === 'block' ? 'none' : 'block';
+      });
+
+      document.addEventListener('click', () => {
+        if (sortMenu) sortMenu.style.display = 'none';
+      });
+
+      sortMenu.querySelectorAll('.sort-option').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          sortField = opt.dataset.sort;
+          if (sortLabel) sortLabel.textContent = opt.querySelector('span').textContent;
+          
+          sortMenu.querySelectorAll('.sort-option').forEach(o => {
+            o.style.background = 'transparent';
+            o.style.color = '#b0b0b6';
+            const chk = o.querySelector('.sort-check');
+            if (chk) chk.style.display = 'none';
+          });
+          opt.style.background = 'rgba(255,255,255,0.08)';
+          opt.style.color = '#ffffff';
+          const chk = opt.querySelector('.sort-check');
+          if (chk) chk.style.display = 'inline';
+          sortMenu.style.display = 'none';
+          
+          applySort();
+        });
+      });
+    }
+
+    if (sortDirBtn && sortDirIcon) {
+      sortDirBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sortAsc = !sortAsc;
+        sortDirIcon.textContent = sortAsc ? '↑' : '↓';
+        applySort();
+      });
+    }
+
+    function applySort() {
+      const activeList = currentTab === 'makes' ? makesList : uploadsList;
+      const sorted = [...activeList].sort((a, b) => {
+        if (sortField === 'views') {
+          return sortAsc ? 1 : -1;
+        }
+        return sortAsc ? 1 : -1;
+      });
+      renderSongs(sorted);
+    }
+
+    // Search filter
     const searchInput = playlistViewContent.querySelector('#profile-track-search');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        const cards = playlistViewContent.querySelectorAll('.profile-song-card');
-        cards.forEach(card => {
-          const text = card.textContent.toLowerCase();
-          card.style.display = text.includes(query) ? 'flex' : 'none';
+        const q = e.target.value.toLowerCase().trim();
+        playlistViewContent.querySelectorAll('.profile-song-group').forEach(group => {
+          const text = group.textContent.toLowerCase();
+          group.style.display = text.includes(q) ? 'block' : 'none';
         });
       });
     }

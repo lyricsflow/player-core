@@ -351,7 +351,7 @@ async function fetchFromLyricsPlus(songName, artistName, albumName, durationSec)
       if (albumName) params.append('album', albumName);
       if (durationSec) params.append('duration', String(Math.round(durationSec)));
 
-      const res = await fetch(`https://lyrics.geeked.wtf/v2/lyrics/get?${params}`, {
+      const res = await fetch(`https://lyricsplus.prjktla.my.id/v2/lyrics/get?${params}`, {
         headers: {
           'User-Agent': 'lyricsflow-amll-player/1.0'
         }

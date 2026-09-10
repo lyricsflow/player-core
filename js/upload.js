@@ -3807,9 +3807,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Decode protected in-transit payload
       let profile = data;
-      if (data._spicy_payload) {
+      const encodedPayload = data._lyricsflow_payload || data._spicy_payload;
+      if (encodedPayload) {
         try {
-          const raw = atob(data._spicy_payload);
+          const raw = atob(encodedPayload);
           profile = JSON.parse(raw);
         } catch (decErr) {
           console.error('[Profile] Payload decode error:', decErr);
@@ -3835,7 +3836,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const homeBtn = playlistViewContent.querySelector('#profile-404-home-btn');
     if (homeBtn) {
       homeBtn.addEventListener('click', () => {
-        window.location.hash = '#/';
+        if (playlistViewContainer) playlistViewContainer.classList.add('hidden');
+        if (typeof switchPage === 'function') {
+          switchPage(hasListenedSongs() ? 'home' : 'listen');
+        } else {
+          window.location.pathname = '/';
+        }
       });
     }
   }

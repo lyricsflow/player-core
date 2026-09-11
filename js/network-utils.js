@@ -18,6 +18,7 @@ const PROXIES = [
 export async function robustFetch(url, options = {}) {
   let lastError = null;
   const skipProxy = options.skipProxy || false;
+  const proxyFirst = options.proxyFirst || false;
 
   // Security guard: Validate URL protocol to prevent javascript:, file:, or malicious data: schemes
   if (typeof url !== 'string' || !url.trim()) {
@@ -29,21 +30,10 @@ export async function robustFetch(url, options = {}) {
   }
 
   // Strip custom properties before passing to native fetch
-  const { skipProxy: _sp, ...fetchOptions } = options;
+  const { skipProxy: _sp, proxyFirst: _pf, ...fetchOptions } = options;
 
-  // 1. Try Direct Fetch First
-  try {
-    console.log(`[NetworkUtils] Trying direct fetch: ${trimmedUrl}`);
-    const directResponse = await fetch(trimmedUrl, fetchOptions);
-    if (directResponse.ok) return directResponse;
-    lastError = new Error(`Direct fetch failed: ${directResponse.status} ${directResponse.statusText}`);
-  } catch (e) {
-    lastError = e;
-    console.warn(`[NetworkUtils] Direct fetch blocked or failed:`, e.name);
-  }
-
-  // 2. Try Proxies (only if not skipped)
-  if (!skipProxy) {
+  const tryProxies = async () => {
+    if (skipProxy) return null;
     for (let i = 0; i < PROXIES.length; i++) {
       try {
         const proxiedUrl = PROXIES[i](url);
@@ -72,7 +62,39 @@ export async function robustFetch(url, options = {}) {
         await new Promise(r => setTimeout(r, 500));
       }
     }
+    return null;
+  };
+
+  const tryDirect = async () => {
+    try {
+      console.log(`[NetworkUtils] Trying direct fetch: ${trimmedUrl}`);
+      const directResponse = await fetch(trimmedUrl, fetchOptions);
+      if (directResponse.ok) {
+        return directResponse;
+      }
+      lastError = new Error(`Direct fetch failed: ${directResponse.status} ${directResponse.statusText}`);
+    } catch (e) {
+      lastError = e;
+      console.warn(`[NetworkUtils] Direct fetch blocked or failed:`, e.name);
+    }
+    return null;
+  };
+
+  // 1. If proxyFirst, try proxies before direct (when we know the target blocks CORS)
+  if (proxyFirst) {
+    const proxyResponse = await tryProxies();
+    if (proxyResponse) return proxyResponse;
+    const directResponse = await tryDirect();
+    if (directResponse) return directResponse;
   }
+
+  // 2. Try Direct Fetch First (default)
+  const directResponse = await tryDirect();
+  if (directResponse) return directResponse;
+
+  // 3. Try Proxies
+  const proxyResponse = await tryProxies();
+  if (proxyResponse) return proxyResponse;
 
   throw lastError || new Error(`Failed to fetch ${url} after direct attempt ${skipProxy ? '' : 'and all proxies'}.`);
 }

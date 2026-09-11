@@ -28,7 +28,7 @@ const SOURCE_LABELS = {
 async function fetchFromBetterLyrics(songName, artistName) {
   try {
     const url = `https://lyrics-api.boidu.dev/getLyrics?s=${encodeURIComponent(songName)}&a=${encodeURIComponent(artistName)}`;
-    const res = await fetch(url);
+    const res = await proxiedFetch(url);
     if (!res.ok) return null;
 
     const data = await res.json();
@@ -106,6 +106,15 @@ async function fetchFromCustomAPI(songId) {
 /** Proxy fetch to bypass CORS for specific providers */
 async function proxiedFetch(url, options = {}) {
   try {
+    const proxyTargets = [
+      'music.163.com',
+      'lyrics-api.boidu.dev',
+      'lyricsplus.prjktla.my.id'
+    ];
+    const needsProxyFirst = proxyTargets.some(d => url.includes(d));
+    if (needsProxyFirst) {
+      return await robustFetch(url, { ...options, proxyFirst: true });
+    }
     return await robustFetch(url, options);
   } catch (e) {
     console.warn(`[TTMLRetriever] robustFetch failed for ${url}:`, e.message);
@@ -351,7 +360,7 @@ async function fetchFromLyricsPlus(songName, artistName, albumName, durationSec)
       if (albumName) params.append('album', albumName);
       if (durationSec) params.append('duration', String(Math.round(durationSec)));
 
-      const res = await fetch(`https://lyricsplus.prjktla.my.id/v2/lyrics/get?${params}`, {
+      const res = await proxiedFetch(`https://lyricsplus.prjktla.my.id/v2/lyrics/get?${params}`, {
         headers: {
           'User-Agent': 'lyricsflow-amll-player/1.0'
         }

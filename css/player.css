@@ -18,10 +18,10 @@
   .pc-top-right-bar {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 5px;
     position: fixed;
-    top: 28px;
-    right: 36px;
+    top: 10px;
+    right: 10px;
     z-index: 100000;
     pointer-events: auto;
     background: rgba(255, 255, 255, 0.12);
@@ -30,7 +30,6 @@
     border: 1px solid rgba(255, 255, 255, 0.22);
     padding: 6px 14px;
     border-radius: 999px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
   }
 
   .pc-airplay-btn {
@@ -96,8 +95,8 @@
     align-items: center;
     gap: 14px;
     position: fixed;
-    bottom: 32px;
-    right: 40px;
+    bottom: 10px;
+    right: 10px;
     z-index: 100000;
     pointer-events: auto;
   }
@@ -810,9 +809,19 @@
 .NowBarControls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: clamp(40px, 2.5cqw, 34px);
   width: 100%;
   margin-bottom: 3cqh;
+}
+
+/* Shuffle pinned left, repeat pinned right; transport buttons stay close in the middle */
+.NowBarControls .playback-control.shuffle {
+  margin-right: auto;
+}
+
+.NowBarControls .playback-control.repeat {
+  margin-left: auto;
 }
 
 .playback-control {
@@ -832,33 +841,33 @@
 }
 
 .playback-control img {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   filter: brightness(0) invert(1);
   opacity: 0.8;
 }
 
 .playback-control.skip-back img,
 .playback-control.skip-forward img {
-  width: 56px;
-  height: 56px;
+  width: 62px;
+  height: 62px;
 }
 
 .playback-control.play-pause img {
-  width: 41px;
-  height: 44px;
+  width: 46px;
+  height: 50px;
   opacity: 1;
 }
 
 .playback-control.shuffle img {
-  width: 37px;
-  height: 34px;
+  width: 42px;
+  height: 39px;
   opacity: 0.6;
 }
 
 .playback-control.repeat img {
-  width: 42px;
-  height: 34px;
+  width: 48px;
+  height: 39px;
   opacity: 0.6;
 }
 

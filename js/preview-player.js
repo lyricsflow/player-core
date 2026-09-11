@@ -249,7 +249,11 @@ export class PreviewPlayer {
           };
         }
 
-        // Listen for messages from inside iframe
+        // Listen for messages from inside iframe (wired once — this function
+        // runs on every drawer open, and duplicate listeners would double-fire
+        // every player-state broadcast and pile up dialogs).
+        if (!this._drawerMsgWired) {
+          this._drawerMsgWired = true;
         window.addEventListener('message', (ev) => {
           // Validate origin to prevent cross-origin message spoofing
           if (ev.origin !== window.location.origin && ev.origin !== 'null' && window.location.origin !== 'null') {
@@ -259,8 +263,13 @@ export class PreviewPlayer {
             closeDrawer();
           } else if (ev.data?.type === 'player-state') {
             const { isPlaying, position, duration, songMetadata } = ev.data;
-            this.isPlaying = isPlaying;
-            this._updatePlayButton(isPlaying);
+            // player.html broadcasts 4x/sec — only touch the play icon when
+            // state actually flips, otherwise setPlayerIcon() replays the
+            // AeroUI swap animation on every single message.
+            if (isPlaying !== this.isPlaying) {
+              this.isPlaying = isPlaying;
+              this._updatePlayButton(isPlaying);
+            }
             if (duration && duration > 0) {
               this._setProgressUI(position, duration);
               if (this.container) {
@@ -269,9 +278,15 @@ export class PreviewPlayer {
               }
             }
             if (songMetadata) {
-              if (this.titleEl && songMetadata.title) this.titleEl.textContent = songMetadata.title;
-              if (this.subEl) this.subEl.textContent = `${songMetadata.artist || ''}${songMetadata.album ? ' • ' + songMetadata.album : ''}`;
-              if (this.artEl && songMetadata.artUrl) this.artEl.src = songMetadata.artUrl;
+              // Same 4x/sec broadcast — only repaint metadata (especially the
+              // artwork src, which reflashes on every reassign) when the track changed.
+              const newTitle = songMetadata.title || '';
+              const curTitle = this.titleEl ? this.titleEl.textContent : null;
+              if (newTitle && newTitle !== curTitle) {
+                if (this.titleEl) this.titleEl.textContent = newTitle;
+                if (this.subEl) this.subEl.textContent = `${songMetadata.artist || ''}${songMetadata.album ? ' • ' + songMetadata.album : ''}`;
+                if (this.artEl && songMetadata.artUrl && this.artEl.getAttribute('src') !== songMetadata.artUrl) this.artEl.src = songMetadata.artUrl;
+              }
             }
           } else if (ev.data?.action === 'showArtistOrAlbumDialog') {
             closeDrawer();
@@ -329,6 +344,7 @@ export class PreviewPlayer {
             }
           }
         });
+        } // end once-guarded drawer message listener
         return;
       }
 

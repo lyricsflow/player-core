@@ -12,7 +12,7 @@
   font-family: 'SF Pro';
   src: url('../fonts/sfpro.woff2') format('woff2'),
     url('../fonts/sfpro.ttf') format('truetype');
-  font-weight: 100 1200;
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -98,8 +98,11 @@ body {
   padding: 0;
   background: #000000;
   color: #ffffff;
-font-family: 'SF Pro Display', 'SF Pro', 'PingFang SC', 'Hiragino Sans', 'SF Arabic', Inter, "Noto Sans Georgian", "Vazirmatn", sans-serif;
-
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', 'PingFang SC', 'Hiragino Sans', 'SF Arabic', Inter, "Noto Sans Georgian", "Vazirmatn", sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   font-weight: 700;
   overflow: hidden;
   height: 100%;
@@ -162,7 +165,7 @@ input {
   --LyricsRightSidePadding: 6cqw;
 
   /* Font */
-  --lyricsflow-font-family: 'SF Pro Display', 'SF Pro', 'PingFang SC', 'Hiragino Sans', 'SF Arabic', Inter, "Noto Sans Georgian", "Vazirmatn", sans-serif;
+  --lyricsflow-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', 'PingFang SC', 'Hiragino Sans', 'SF Arabic', Inter, "Noto Sans Georgian", "Vazirmatn", sans-serif;
 
   /* Default font size for content */
   --default-font-size: clamp(0.5rem, calc(1cqw * 3), 2.4rem);

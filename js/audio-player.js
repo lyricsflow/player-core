@@ -58,6 +58,8 @@ export default class AudioPlayer {
     this.onEnded = null;
     this.onPlay = null;
     this.onPause = null;
+    this.onWaiting = null;
+    this.onCanPlay = null;
     this.onError = null;
     this.onPositionUpdate = null;
     this.onCrossfadeTrigger = null;
@@ -156,6 +158,16 @@ export default class AudioPlayer {
       if (this.currentChannel !== channel) return;
       this.isPlaying = false;
       if (this.onPause) this.onPause();
+    });
+
+    audioEl.addEventListener('waiting', () => {
+      if (this.currentChannel !== channel) return;
+      if (this.onWaiting) this.onWaiting();
+    });
+
+    audioEl.addEventListener('canplay', () => {
+      if (this.currentChannel !== channel) return;
+      if (this.onCanPlay) this.onCanPlay();
     });
   }
 

@@ -2,6 +2,7 @@ import { showToast } from './toast.js';
 import { addTrackToQueue, clearQueue, setCurrentIndex, getPlaylists, createPlaylist, addTrackToPlaylist, getPlaylistTracks, deletePlaylist, updatePlaylistTrack, findTrackInPlaylist } from './router.js';
 import { parseAudioMetadata } from './metadata-parser.js';
 import { robustFetch } from './network-utils.js';
+import { parseAmpResponse, resolveArtworkUrl } from './amp-parser.js';
 import { TTMLDownloader } from './ttml-downloader.js';
 import isRtl from './is-rtl.js';
 import { escapeHTML } from './security-utils.js';
@@ -63,15 +64,31 @@ import { previewPlayer } from './preview-player.js';
 
 const API_BASE = "https://api.spicyamll.online";
 
-function cleanArtworkUrl(url, w = 300, h = 300) {
+function cleanArtworkUrl(url, w = 300, h = 300, format = null) {
   if (!url || typeof url !== 'string') return '';
+  const isPng = format === 'png' || /\.png(?:\/|$)/i.test(url) || /Logo/i.test(url);
+  const targetExt = format || (isPng ? 'png' : 'jpg');
   let cleaned = url
     .replace('{w}', String(w))
     .replace('{h}', String(h))
     .replace('{c}', '')
-    .replace('{f}', 'jpg');
+    .replace('{f}', targetExt);
   if (w > 100 && /\/\d+x\d+bb\./.test(cleaned)) {
     cleaned = cleaned.replace(/\/\d+x\d+bb\./, `/${w}x${h}bb.`);
+  }
+  if (!/^https?:\/\//i.test(cleaned)) return '';
+  return cleaned.replace(/["'<>\s]/g, c => encodeURIComponent(c));
+}
+
+function cleanLogoUrl(url, w = 400, h = 133) {
+  if (!url || typeof url !== 'string') return '';
+  let cleaned = url
+    .replace('{w}', String(w))
+    .replace('{h}', String(h))
+    .replace('{c}', 'bb')
+    .replace('{f}', 'webp');
+  if (/\/\d+x\d+(?:bb)?\./.test(cleaned)) {
+    cleaned = cleaned.replace(/\/\d+x\d+(?:bb)?\./, `/${w}x${h}bb.`);
   }
   if (!/^https?:\/\//i.test(cleaned)) return '';
   return cleaned.replace(/["'<>\s]/g, c => encodeURIComponent(c));
@@ -81,6 +98,87 @@ function cleanMediaUrl(url) {
   if (!url || typeof url !== 'string') return '';
   if (!/^(https?:|blob:)/i.test(url)) return '';
   return url.replace(/["'<>\s]/g, c => encodeURIComponent(c));
+}
+
+let _hlsScriptLoadingPromise = null;
+function loadHlsLibrary() {
+  if (window.Hls) return Promise.resolve(window.Hls);
+  if (_hlsScriptLoadingPromise) return _hlsScriptLoadingPromise;
+  _hlsScriptLoadingPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+    script.async = true;
+    script.onload = () => resolve(window.Hls);
+    script.onerror = (e) => {
+      console.warn('[HLS] Failed to load hls.js from CDN:', e);
+      resolve(null);
+    };
+    document.head.appendChild(script);
+  });
+  return _hlsScriptLoadingPromise;
+}
+
+/**
+ * Loads and plays an HLS or MP4 stream on a video element.
+ * Tries hls.js first for any m3u8 stream, then falls back to native playback.
+ */
+async function playHlsStream(videoEl, streamUrl, { autoplay = true, isMuted = false, loop = false } = {}) {
+  if (!videoEl || !streamUrl) return;
+
+  // Clean up any existing Hls instance attached to this element
+  if (videoEl._hlsInstance) {
+    try {
+      videoEl._hlsInstance.destroy();
+    } catch (_) {}
+    videoEl._hlsInstance = null;
+  }
+
+  videoEl.muted = isMuted;
+  if (isMuted) videoEl.setAttribute('muted', '');
+  videoEl.playsInline = true;
+  videoEl.setAttribute('playsinline', '');
+  if (loop) videoEl.loop = true;
+
+  const isHlsStream = streamUrl.includes('.m3u8') || streamUrl.includes('/hls/') || streamUrl.includes('mvod.itunes.apple.com');
+
+  if (isHlsStream) {
+    try {
+      const HlsLib = await loadHlsLibrary();
+      if (HlsLib && HlsLib.isSupported()) {
+        const hls = new HlsLib({
+          enableWorker: true,
+          lowLatencyMode: false,
+          backBufferLength: 60
+        });
+        videoEl._hlsInstance = hls;
+        hls.loadSource(streamUrl);
+        hls.attachMedia(videoEl);
+        hls.on(HlsLib.Events.MANIFEST_PARSED, () => {
+          if (autoplay) {
+            videoEl.play().catch(e => console.warn('[HLS] Autoplay prevented:', e));
+          }
+        });
+        hls.on(HlsLib.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            console.warn('[HLS] Fatal error, falling back to native player:', data.type);
+            hls.destroy();
+            videoEl._hlsInstance = null;
+            videoEl.src = streamUrl;
+            if (autoplay) videoEl.play().catch(() => {});
+          }
+        });
+        return;
+      }
+    } catch (err) {
+      console.warn('[HLS] hls.js setup error, falling back to native:', err);
+    }
+  }
+
+  // Fallback to browser built-in player
+  videoEl.src = streamUrl;
+  if (autoplay) {
+    videoEl.play().catch(e => console.warn('[Video] Playback failed:', e));
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -130,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Search Elements
   const catalogSearch = document.getElementById('catalog-search');
+  const searchBarWrapper = document.querySelector('.am-apple-search-bar');
   const searchClearBtn = document.getElementById('search-clear-btn');
   const listenInitialContent = document.getElementById('listen-initial-content');
   const searchResultsContainer = document.getElementById('search-results-container');
@@ -174,6 +273,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Artist View
   const artistViewContainer = document.getElementById('artist-view-container');
   const artistViewContent = document.getElementById('artist-view-content');
+
+  // Song View
+  const songViewContainer = document.getElementById('song-view-container');
+  const songViewContent = document.getElementById('song-view-content');
 
   // Context Menu & Playlists
   const songContextMenu = document.getElementById('song-context-menu');
@@ -486,8 +589,86 @@ document.addEventListener('DOMContentLoaded', () => {
   const mobNavBtns = document.querySelectorAll('.am-mob-nav-btn');
   const pages = document.querySelectorAll('.am-page');
 
+  // ── Dynamic Detail Page Theme Color Scheme ──
+  let _currentThemeImg = null;
+  function clearPageThemeColor() {
+    if (_currentThemeImg) {
+      _currentThemeImg.onload = null;
+      _currentThemeImg.onerror = null;
+      _currentThemeImg = null;
+    }
+    const mainEl = document.querySelector('.am-main') || document.body;
+    mainEl.style.removeProperty('--am-page-theme-bg');
+    mainEl.style.removeProperty('--am-page-theme-accent');
+  }
+
+  function applyPageThemeColor(artUrl, rawBgColorHex = null) {
+    const mainEl = document.querySelector('.am-main') || document.body;
+    if (rawBgColorHex) {
+      const cleanHex = rawBgColorHex.replace(/^#/, '');
+      const r = parseInt(cleanHex.substring(0, 2), 16);
+      const g = parseInt(cleanHex.substring(2, 4), 16);
+      const b = parseInt(cleanHex.substring(4, 6), 16);
+      if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+        mainEl.style.setProperty('--am-page-theme-bg', `radial-gradient(ellipse 110% 70% at 50% -10%, rgba(${r}, ${g}, ${b}, 0.5) 0%, rgba(${Math.round(r * 0.4)}, ${Math.round(g * 0.4)}, ${Math.round(b * 0.4)}, 0.25) 55%, #0a0a0a 100%)`);
+        mainEl.style.setProperty('--am-page-theme-accent', `rgb(${r}, ${g}, ${b})`);
+        return;
+      }
+    }
+
+    if (!artUrl) return;
+
+    if (_currentThemeImg) {
+      _currentThemeImg.onload = null;
+      _currentThemeImg.onerror = null;
+    }
+
+    const img = new Image();
+    _currentThemeImg = img;
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 40;
+        canvas.height = 40;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 40, 40);
+        const data = ctx.getImageData(0, 0, 40, 40).data;
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < data.length; i += 16) {
+          r += data[i];
+          g += data[i + 1];
+          b += data[i + 2];
+          count++;
+        }
+        if (count > 0) {
+          r = Math.round(r / count);
+          g = Math.round(g / count);
+          b = Math.round(b / count);
+          // Darken if overly bright for ideal background aesthetics
+          const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+          const factor = brightness > 180 ? 0.7 : 1;
+          const dr = Math.round(r * factor);
+          const dg = Math.round(g * factor);
+          const db = Math.round(b * factor);
+          mainEl.style.setProperty('--am-page-theme-bg', `radial-gradient(ellipse 110% 70% at 50% -10%, rgba(${dr}, ${dg}, db, 0.45) 0%, rgba(${Math.round(dr * 0.4)}, ${Math.round(dg * 0.4)}, ${Math.round(db * 0.4)}, 0.2) 60%, #0a0a0a 100%)`);
+          mainEl.style.setProperty('--am-page-theme-accent', `rgb(${dr}, ${dg}, ${db})`);
+        }
+      } catch (_) {}
+    };
+    img.src = artUrl;
+  }
+
   function switchPage(pageId, options = {}) {
     if (!pageId) return;
+
+    // Reset page theme color when navigating between top-level pages
+    clearPageThemeColor();
+
+    // If navigating to home without any listening history, redirect to /new
+    if (pageId === 'home' && !hasListenedSongs()) {
+      pageId = 'new';
+    }
 
     // Update sidebar nav items
     navItems.forEach(i => {
@@ -513,6 +694,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (pageId === 'listen') {
         const q = catalogSearch?.value?.trim() || '';
         syncUrl('/search', q ? `q=${encodeURIComponent(q)}` : '', options.replaceUrl);
+      } else if (pageId === 'new') {
+        syncUrl('/new', '', options.replaceUrl);
       } else if (pageId === 'upload') {
         syncUrl('/upload', '', options.replaceUrl);
       } else if (pageId === 'playlists') {
@@ -534,6 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Page-specific loaders
     if (pageId === 'home') renderHomePage();
+    if (pageId === 'new') renderNewPage();
     if (pageId === 'listen') {
       clearSearchUI();
       loadLandingView();
@@ -635,6 +819,476 @@ document.addEventListener('DOMContentLoaded', () => {
     openRemotePlaylistView(playlistId, playlistName);
   }
 
+  function showSongView(songId, songName = '', options = {}) {
+    if (!songId) return;
+    pages.forEach(p => p.classList.remove('active'));
+    const listenPage = document.getElementById('page-listen');
+    if (listenPage) listenPage.classList.add('active');
+
+    navItems.forEach(i => {
+      if (i.dataset.page === 'listen') i.classList.add('am-nav-active');
+      else i.classList.remove('am-nav-active');
+    });
+    mobNavBtns.forEach(btn => {
+      if (btn.dataset.page === 'listen') btn.classList.add('am-mob-active');
+      else btn.classList.remove('am-mob-active');
+    });
+
+    if (!options.skipUrlSync) {
+      const slug = toSlug(songName || 'song');
+      syncUrl(`/song/${slug}/${songId}`, '', options.replaceUrl);
+    }
+
+    openSongView(songId, songName);
+  }
+  window.showSongView = showSongView;
+
+  async function openSongView(songId, preferredSongName = '') {
+    if (searchBarWrapper) searchBarWrapper.classList.add('hidden');
+    if (listenInitialContent) listenInitialContent.classList.add('hidden');
+    if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
+    if (albumViewContainer) albumViewContainer.classList.add('hidden');
+    if (artistViewContainer) artistViewContainer.classList.add('hidden');
+    if (playlistViewContainer) playlistViewContainer.classList.add('hidden');
+    if (songViewContainer) songViewContainer.classList.remove('hidden');
+
+    songViewContent.innerHTML = `<div class="am-loading-msg">${t('loading')}</div>`;
+
+    try {
+      const lang = getCurrentLang() || 'en-GB';
+      const catalogUrl = `${API_BASE}/v1/catalog/kz/songs/${songId}?art[url]=f&extend=lyricsExcerpt,offers&fields[albums]=artistName,artistUrl,artwork,name,url&fields[artists]=name,url&format[resources]=map&include=albums,artists,credits,lyrics,music-videos&l=${lang}&platform=web`;
+      const res = await fetch(catalogUrl);
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const data = await res.json();
+      const resources = data.resources || {};
+      const songData = resources.songs?.[String(songId)] || data.data?.[0];
+      if (!songData) throw new Error('Song not found');
+
+      const attr = songData.attributes || {};
+      const rels = songData.relationships || {};
+
+      const songTitle = attr.name || preferredSongName || 'Song';
+      const songSlug = toSlug(songTitle);
+      syncUrl(`/song/${songSlug}/${songId}`, '', true);
+
+      const coverArt = cleanArtworkUrl(attr.artwork?.url, 600, 600);
+
+      // Apply page-wide color scheming for Song view
+      applyPageThemeColor(coverArt, attr.artwork?.bgColor);
+
+      const artistName = attr.artistName || '';
+      const artistId = rels.artists?.data?.[0]?.id || null;
+
+      const albumRel = rels.albums?.data?.[0];
+      const authenticAlbumId = albumRel?.id || attr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+      const authenticAlbumObj = authenticAlbumId ? resources.albums?.[authenticAlbumId] : null;
+      const albumName = authenticAlbumObj?.attributes?.name || attr.albumName || 'Album';
+
+      const releaseDate = attr.releaseDate || authenticAlbumObj?.attributes?.releaseDate || '';
+      const releaseYear = releaseDate ? new Date(releaseDate).getFullYear() : '';
+
+      const lyricsExcerpt = attr.lyricsExcerpt || '';
+      const lyricsObj = resources.lyrics?.[String(songId)] || rels.lyrics?.data?.[0];
+      const ttml = lyricsObj?.attributes?.ttml || lyricsObj?.ttml || null;
+
+      let lyricsPreviewText = lyricsExcerpt;
+      if (!lyricsPreviewText && ttml) {
+        try {
+          const doc = new DOMParser().parseFromString(ttml, 'application/xml');
+          const pEls = Array.from(doc.querySelectorAll('p')).slice(0, 4);
+          lyricsPreviewText = pEls.map(p => p.textContent.trim()).filter(Boolean).join('\n');
+        } catch (_) {}
+      }
+
+      const creditArtists = resources['credit-artists'] || {};
+      const roleCategories = resources['role-categories'] || {};
+
+      const groupedCredits = {
+        performing: [],
+        composition: [],
+        production: []
+      };
+
+      for (const catId of Object.keys(roleCategories)) {
+        const cat = roleCategories[catId];
+        const kind = cat.attributes?.kind || '';
+        const credArtistList = cat.relationships?.['credit-artists']?.data || [];
+        const artistItems = credArtistList.map(ca => creditArtists[ca.id]).filter(Boolean);
+
+        if (kind.includes('performer')) {
+          groupedCredits.performing.push(...artistItems);
+        } else if (kind.includes('composer') || kind.includes('lyrics')) {
+          groupedCredits.composition.push(...artistItems);
+        } else if (kind.includes('production') || kind.includes('engineering')) {
+          groupedCredits.production.push(...artistItems);
+        }
+      }
+
+      const getInitials = (name) => {
+        if (!name) return 'AM';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      };
+
+      const renderCreditItems = (items) => {
+        if (!items || items.length === 0) return '';
+        return items.map(it => {
+          const cAttr = it.attributes || {};
+          const cName = cAttr.name || 'Artist';
+          const cRoles = (cAttr.roleNames || []).join(', ') || 'Contributor';
+          const cArt = cAttr.artwork?.url ? cleanArtworkUrl(cAttr.artwork.url, 120, 120) : null;
+          const avatarMarkup = cArt
+            ? `<img src="${cArt}" class="am-credit-avatar" alt="${escapeHTML(cName)}" onerror="this.outerHTML='<div class=\\'am-credit-avatar\\'>${getInitials(cName)}</div>'">`
+            : `<div class="am-credit-avatar">${getInitials(cName)}</div>`;
+
+          return `
+            <div class="am-credit-item">
+              ${avatarMarkup}
+              <div class="am-credit-info">
+                <span class="am-credit-name">${escapeHTML(cName)}</span>
+                <span class="am-credit-role">${escapeHTML(cRoles)}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      };
+
+      songViewContent.innerHTML = `
+        <div class="am-song-header">
+          <img src="${coverArt}" class="am-song-cover" onerror="this.src='favicon.svg'" alt="${escapeHTML(songTitle)}">
+          <div class="am-song-details">
+            <h1 class="am-song-title">${escapeHTML(songTitle)}</h1>
+            <div class="am-song-meta-line">
+              <a class="am-song-meta-link" id="song-view-artist-btn">${escapeHTML(artistName)}</a>
+              <span class="am-song-meta-dot">•</span>
+              <a class="am-song-meta-link" id="song-view-album-btn">${escapeHTML(albumName)}</a>
+              ${releaseYear ? `<span class="am-song-meta-dot">•</span><span>${releaseYear}</span>` : ''}
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <button class="premium-btn primary" id="song-view-play-btn" style="border-radius:100px; padding:0 32px; height:44px; display:inline-flex; align-items:center; gap:8px;">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg>
+                <span>Play</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        ${lyricsPreviewText ? `
+          <div class="am-song-section">
+            <h3 class="am-song-section-heading">Lyrics</h3>
+            <div class="am-song-lyrics-preview">${escapeHTML(lyricsPreviewText)}</div>
+            <button class="am-song-view-full-lyrics-btn" id="song-view-full-lyrics-btn">
+              <span>View Full Lyrics</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+        ` : ''}
+
+        ${groupedCredits.performing.length > 0 ? `
+          <div class="am-song-section">
+            <h3 class="am-song-section-heading">Performing Artists</h3>
+            <div class="am-credits-grid">
+              ${renderCreditItems(groupedCredits.performing)}
+            </div>
+          </div>
+        ` : ''}
+
+        ${groupedCredits.composition.length > 0 ? `
+          <div class="am-song-section">
+            <h3 class="am-song-section-heading">Composition & Lyrics</h3>
+            <div class="am-credits-grid">
+              ${renderCreditItems(groupedCredits.composition)}
+            </div>
+          </div>
+        ` : ''}
+
+        ${groupedCredits.production.length > 0 ? `
+          <div class="am-song-section">
+            <h3 class="am-song-section-heading">Production & Engineering</h3>
+            <div class="am-credits-grid">
+              ${renderCreditItems(groupedCredits.production)}
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="am-song-section" id="song-more-by-section" style="border-bottom: none;">
+          <h3 class="am-song-section-heading" id="song-more-by-heading" style="cursor: pointer;">
+            More By ${escapeHTML(artistName)} <span style="font-size: 1rem; opacity: 0.6;">›</span>
+          </h3>
+          <div class="am-cards-horizontal-scroll" id="song-more-by-grid">
+            <div class="am-loading-msg">${t('loading')}</div>
+          </div>
+        </div>
+      `;
+
+      const artistBtn = songViewContent.querySelector('#song-view-artist-btn');
+      if (artistBtn) {
+        artistBtn.onclick = () => showArtistView(artistId || artistName, artistName);
+      }
+
+      const albumBtn = songViewContent.querySelector('#song-view-album-btn');
+      if (albumBtn) {
+        albumBtn.onclick = () => {
+          if (authenticAlbumId) {
+            showAlbumView(authenticAlbumId, albumName, songId);
+          } else {
+            lyricsflowShowAlbumByName(albumName, songId);
+          }
+        };
+      }
+
+      const moreByHeading = songViewContent.querySelector('#song-more-by-heading');
+      if (moreByHeading) {
+        moreByHeading.onclick = () => showArtistView(artistId || artistName, artistName);
+      }
+
+      const fullLyricsBtn = songViewContent.querySelector('#song-view-full-lyrics-btn');
+      if (fullLyricsBtn) {
+        fullLyricsBtn.onclick = () => {
+          openAppleMusicLyricsModal({
+            title: songTitle,
+            artist: artistName,
+            album: albumName,
+            releaseDate: releaseDate,
+            ttml: ttml,
+            lyricsExcerpt: lyricsExcerpt
+          });
+        };
+      }
+
+      const playBtn = songViewContent.querySelector('#song-view-play-btn');
+      if (playBtn) {
+        playBtn.onclick = () => {
+          queueContextualWithSimilar({
+            trackId: songId,
+            trackName: songTitle,
+            artistName: artistName,
+            collectionName: albumName,
+            albumId: authenticAlbumId,
+            artistId: artistId,
+            artworkUrl100: coverArt,
+            ttml: ttml,
+            lyricsExcerpt: lyricsExcerpt,
+            durationMs: attr.durationInMillis
+          }, [{
+            id: songId,
+            title: songTitle,
+            artist: artistName,
+            album: albumName,
+            artUrl: coverArt,
+            durationMs: attr.durationInMillis || 180000
+          }], 0);
+        };
+      }
+
+      fetchArtistOtherAlbumsForSong(artistId, artistName, authenticAlbumId);
+
+    } catch (err) {
+      console.error('[SongView] Failed to load song view:', err);
+      songViewContent.innerHTML = `<div class="am-error-msg">${t('error')}: ${err.message}</div>`;
+    }
+  }
+
+  function openAppleMusicLyricsModal({ title, artist, album, releaseDate, ttml, lyricsExcerpt }) {
+    const existing = document.querySelector('.am-full-lyrics-modal-backdrop');
+    if (existing) existing.remove();
+
+    // Format release date (e.g. 1 January 2000)
+    let formattedDate = '';
+    if (releaseDate) {
+      try {
+        const d = new Date(releaseDate);
+        if (!isNaN(d.getTime())) {
+          formattedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+      } catch (_) {}
+    }
+
+    // Build metadata subtitle: Album • Artist • Date
+    const metaParts = [];
+    if (album) metaParts.push(album);
+    if (artist) metaParts.push(artist);
+    if (formattedDate) metaParts.push(formattedDate);
+    const subtitle = metaParts.join(' • ');
+
+    // Parse stanzas and lines
+    let stanzas = [];
+    let isRTL = false;
+
+    if (ttml) {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(ttml, 'application/xml');
+        const rootLang = doc.documentElement?.getAttribute('xml:lang') || '';
+        if (rootLang.toLowerCase().startsWith('ar') || rootLang.toLowerCase().startsWith('he') || rootLang.toLowerCase().startsWith('fa')) {
+          isRTL = true;
+        }
+
+        const divEls = Array.from(doc.querySelectorAll('body div'));
+        if (divEls.length > 0) {
+          divEls.forEach(div => {
+            const pEls = Array.from(div.querySelectorAll('p'));
+            const lines = pEls.map(p => p.textContent.trim()).filter(Boolean);
+            if (lines.length > 0) {
+              stanzas.push(lines);
+            }
+          });
+        } else {
+          const pEls = Array.from(doc.querySelectorAll('p'));
+          const lines = pEls.map(p => p.textContent.trim()).filter(Boolean);
+          if (lines.length > 0) {
+            stanzas.push(lines);
+          }
+        }
+      } catch (e) {
+        console.warn('[LyricsModal] Failed to parse TTML:', e);
+      }
+    }
+
+    if (stanzas.length === 0 && lyricsExcerpt) {
+      const lines = lyricsExcerpt.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length > 0) {
+        stanzas.push(lines);
+      }
+    }
+
+    // RTL detection heuristic across lyrics text if not already determined
+    if (!isRTL && stanzas.length > 0) {
+      const sampleText = stanzas.slice(0, 3).flat().join(' ');
+      if (/[\u0600-\u06FF\u0750-\u077F\u0590-\u05FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(sampleText)) {
+        isRTL = true;
+      }
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'am-full-lyrics-modal-backdrop';
+
+    const card = document.createElement('div');
+    card.className = 'am-full-lyrics-modal-card';
+
+    const header = document.createElement('div');
+    header.className = 'am-full-lyrics-modal-header';
+    header.innerHTML = `
+      <button class="am-full-lyrics-modal-close-btn" aria-label="Close">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <h2 class="am-full-lyrics-modal-title">${escapeHTML(title || 'Lyrics')}</h2>
+      ${subtitle ? `<div class="am-full-lyrics-modal-meta">${escapeHTML(subtitle)}</div>` : ''}
+    `;
+
+    const body = document.createElement('div');
+    body.className = 'am-full-lyrics-modal-body';
+    body.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+
+    if (stanzas.length > 0) {
+      stanzas.forEach(stanzaLines => {
+        const stanzaEl = document.createElement('div');
+        stanzaEl.className = 'am-full-lyrics-stanza';
+        stanzaLines.forEach(line => {
+          const lineEl = document.createElement('p');
+          lineEl.className = 'am-full-lyrics-line';
+          lineEl.textContent = line;
+          stanzaEl.appendChild(lineEl);
+        });
+        body.appendChild(stanzaEl);
+      });
+    } else {
+      const emptyEl = document.createElement('p');
+      emptyEl.className = 'am-full-lyrics-line';
+      emptyEl.style.opacity = '0.5';
+      emptyEl.textContent = 'No full lyrics available for this song.';
+      body.appendChild(emptyEl);
+    }
+
+    card.appendChild(header);
+    card.appendChild(body);
+    backdrop.appendChild(card);
+    document.body.appendChild(backdrop);
+
+    const closeModal = () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      backdrop.remove();
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') closeModal();
+    };
+
+    const closeBtn = header.querySelector('.am-full-lyrics-modal-close-btn');
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      closeModal();
+    };
+
+    backdrop.onclick = (e) => {
+      if (e.target === backdrop) closeModal();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+  }
+
+  async function fetchArtistOtherAlbumsForSong(artistId, artistName, currentAlbumId) {
+    const moreGrid = document.getElementById('song-more-by-grid');
+    if (!moreGrid) return;
+
+    try {
+      let otherAlbums = [];
+      if (artistId && /^\d+$/.test(String(artistId))) {
+        try {
+          const res = await fetch(`${API_BASE}/artist/albums?artist=${artistId}&limit=25&l=${getCurrentLang()}`);
+          if (res.ok) {
+            const data = await res.json();
+            otherAlbums = data.data || [];
+          }
+        } catch (_) {}
+      }
+
+      if (otherAlbums.length === 0 && artistName) {
+        try {
+          const sRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(artistName)}&types=albums&limit=25&l=${getCurrentLang()}`);
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            otherAlbums = sData.results?.albums?.data || [];
+          }
+        } catch (_) {}
+      }
+
+      const filtered = otherAlbums.filter(a => String(a.id) !== String(currentAlbumId));
+      const randomized = filtered.sort(() => 0.5 - Math.random()).slice(0, 15);
+
+      if (randomized.length === 0) {
+        moreGrid.innerHTML = `<p class="am-empty-msg">${t('empty_other_albums')}</p>`;
+        return;
+      }
+
+      moreGrid.innerHTML = randomized.map(alb => {
+        const attr = alb.attributes || alb || {};
+        const art = cleanArtworkUrl(attr.artwork?.url || attr.artworkUrl100, 300, 300);
+        const y = attr.releaseDate ? new Date(attr.releaseDate).getFullYear() : '';
+        return `
+          <div class="am-standard-media-card animate-fade" data-id="${alb.id}">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+            <div class="am-media-card-title">${escapeHTML(attr.name || attr.collectionName || '')}</div>
+            <div class="am-media-card-sub">${escapeHTML(y || t('badge_album'))}</div>
+          </div>
+        `;
+      }).join('');
+
+      moreGrid.querySelectorAll('.am-standard-media-card').forEach(card => {
+        card.onclick = () => {
+          const title = card.querySelector('.am-media-card-title')?.textContent || '';
+          showAlbumView(card.dataset.id, title);
+        };
+      });
+    } catch (_) {
+      moreGrid.innerHTML = `<p class="am-empty-msg">${t('empty_other_albums')}</p>`;
+    }
+  }
+
   // Global navigation helpers for player dialog
   window.lyricsflowShowArtistByName = async (artistName) => {
     if (!artistName) return;
@@ -642,15 +1296,19 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.lyricsflowShowAlbumByName = async (albumName, amTrackId = null) => {
-    if (amTrackId) {
+    const trackLookupId = amTrackId || (window.__waveCurrentTrack?.amTrackId || window.__waveCurrentTrack?.trackId || window.__waveCurrentTrack?.id);
+    if (trackLookupId && !isNaN(Number(trackLookupId))) {
       try {
-        const sRes = await fetch(`${API_BASE}/song?song=${amTrackId}&l=en-US`);
+        const sRes = await fetch(`${API_BASE}/v1/catalog/kz/songs/${trackLookupId}?art[url]=f&fields[albums]=name,url&format[resources]=map&include=albums&l=en-GB&platform=web`);
         if (sRes.ok) {
           const sData = await sRes.json();
-          const songObj = sData.data?.[0] || sData.results?.songs?.data?.[0];
-          const albId = songObj?.relationships?.albums?.data?.[0]?.id || songObj?.attributes?.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1];
+          const songObj = sData.resources?.songs?.[String(trackLookupId)] || sData.data?.[0];
+          const albRel = songObj?.relationships?.albums?.data?.[0];
+          const albId = albRel?.id || songObj?.attributes?.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1];
+          const authenticAlb = albId ? sData.resources?.albums?.[albId] : null;
+          const targetAlbumName = authenticAlb?.attributes?.name || songObj?.attributes?.albumName || albumName;
           if (albId) {
-            showAlbumView(albId, albumName || songObj?.attributes?.albumName, amTrackId);
+            showAlbumView(albId, targetAlbumName, trackLookupId);
             return;
           }
         }
@@ -733,15 +1391,7 @@ document.addEventListener('DOMContentLoaded', () => {
               const idx = parseInt(card.dataset.idx, 10);
               const pick = picks[idx];
               if (type === 'song') {
-                loadRemoteTrack({
-                  trackId: id,
-                  trackName: pick.title,
-                  artistName: pick.subtitle,
-                  collectionName: pick.album || '',
-                  albumId: pick.albumId || null,
-                  artistId: pick.artistId || null,
-                  artworkUrl100: pick.artUrl
-                });
+                showSongView(id, pick.title);
               } else if (type === 'album') {
                 showAlbumView(id, pick.title);
               } else if (type === 'artist') {
@@ -834,15 +1484,7 @@ document.addEventListener('DOMContentLoaded', () => {
               }
 
               if (item.type === 'song') {
-                loadRemoteTrack({
-                  trackId: item.id,
-                  trackName: item.title,
-                  artistName: item.subtitle,
-                  collectionName: item.album || '',
-                  albumId: item.albumId || null,
-                  artistId: item.artistId || null,
-                  artworkUrl100: item.artUrl
-                });
+                showSongView(item.id, item.title);
               } else if (item.type === 'album') {
                 showAlbumView(item.id, item.title);
               } else if (item.type === 'artist') {
@@ -854,6 +1496,119 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (e) {
         recommendedGrid.innerHTML = `<p class="am-error-msg">${t('error')}</p>`;
       }
+    }
+  }
+
+  // ── "New" Page (Apple Music Editorial Groupings / Releases) ──
+  async function renderNewPage() {
+    const pageNew = document.getElementById('page-new');
+    if (!pageNew) return;
+
+    pageNew.innerHTML = `
+      <div class="am-hero">
+        <div class="am-hero-icon" style="background: linear-gradient(135deg, #fa586a 0%, #d9384a 100%);">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/>
+          </svg>
+        </div>
+        <div class="am-hero-text">
+          <h1 class="am-hero-title">New</h1>
+          <p class="am-hero-subtitle">Discover the latest releases and editorial selections.</p>
+        </div>
+      </div>
+      <div id="new-page-content" style="padding-bottom: 60px;">
+        <div class="am-loading-msg">${t('loading')}</div>
+      </div>
+    `;
+
+    const contentEl = pageNew.querySelector('#new-page-content');
+
+    try {
+      const url = `${API_BASE}/v1/editorial/kz/groupings?art%5Burl%5D=c%2Cf&extend=artistUrl%2CeditorialArtwork%2CplainEditorialNotes&extend%5Bstation-events%5D=editorialVideo&fields%5Balbums%5D=artistName%2CartistUrl%2Cartwork%2CcontentRating%2CeditorialArtwork%2CplainEditorialNotes%2Cname%2CplayParams%2CreleaseDate%2Curl%2CtrackCount&fields%5Bartists%5D=name%2Curl%2Cartwork%2CeditorialArtwork%2CgenreNames%2CplainEditorialNotes&format%5Bresources%5D=map&include%5Balbums%5D=artists&include%5Bmusic-videos%5D=artists&include%5Bsongs%5D=artists&include%5Bstations%5D=events%2Cradio-show&l=en-GB&name=music&omit%5Bresource%3Aartists%5D=autos&platform=web&relate%5Bsongs%5D=albums&tabs=subscriber`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      const resources = data.resources || {};
+      const tab = resources['editorial-elements']?.['default'] || {};
+      const sectionRefs = tab.relationships?.children?.data || [];
+
+      // Extract valid section elements that have contents
+      const sections = sectionRefs.map(ref => {
+        const sec = resources['editorial-elements']?.[ref.id];
+        if (!sec) return null;
+        const attrs = sec.attributes || {};
+        const title = attrs.name || attrs.title || '';
+        const items = sec.relationships?.contents?.data || [];
+        if (!title || items.length === 0) return null;
+        return { id: ref.id, title, items };
+      }).filter(Boolean);
+
+      if (sections.length === 0) {
+        contentEl.innerHTML = `<p class="am-empty-msg">No editorial highlights available right now.</p>`;
+        return;
+      }
+
+      contentEl.innerHTML = sections.map((sec, sIdx) => {
+        const resolved = sec.items.map(it => {
+          const pool = resources[it.type] || {};
+          return pool[it.id] || it;
+        });
+
+        return `
+          <div class="am-search-section" style="margin-top: 32px;">
+            <div class="am-section-header-row">
+              <h2 class="am-search-section-title">${escapeHTML(sec.title)}</h2>
+            </div>
+            <div class="am-cards-horizontal-scroll" id="new-shelf-${sIdx}">
+              ${resolved.map((item, i) => {
+                const attr = item.attributes || item || {};
+                const rawArt = attr.artwork?.url || attr.editorialArtwork?.bannerUber?.url || attr.editorialArtwork?.storeArtworkUber?.url;
+                const art = cleanArtworkUrl(rawArt, 400, 400);
+                const name = attr.name || attr.title || 'Release';
+                const sub = attr.artistName || attr.curatorName || (attr.genreNames && attr.genreNames[0]) || '';
+                return `
+                  <div class="am-standard-media-card animate-fade" data-type="${item.type}" data-id="${item.id}" data-idx="${i}">
+                    <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
+                    <div class="am-media-card-title">${escapeHTML(name)}</div>
+                    <div class="am-media-card-sub">${escapeHTML(sub)}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      contentEl.querySelectorAll('.am-standard-media-card').forEach(card => {
+        card.onclick = () => {
+          const type = card.dataset.type;
+          const id = card.dataset.id;
+          const title = card.querySelector('.am-media-card-title')?.textContent || '';
+          if (type === 'albums') {
+            showAlbumView(id, title);
+          } else if (type === 'playlists') {
+            showRemotePlaylistView(id, title);
+          } else if (type === 'songs') {
+            // Queue song with similar recommendations
+            if (typeof queueContextualWithSimilar === 'function') {
+              queueContextualWithSimilar(id, [{ id, name: title }]);
+            } else {
+              showSongView(id, title);
+            }
+          } else if (type === 'artists') {
+            showArtistView(id, title);
+          } else if (type === 'music-videos') {
+            if (typeof playMusicVideo === 'function') {
+              playMusicVideo(id, title);
+            }
+          }
+        };
+      });
+
+    } catch (err) {
+      console.error('[New Page] Error fetching editorial groupings:', err);
+      contentEl.innerHTML = `<p class="am-error-msg">Could not load New releases: ${err.message}</p>`;
     }
   }
 
@@ -1397,10 +2152,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function clearSearchUI() {
+    if (searchBarWrapper) searchBarWrapper.classList.remove('hidden');
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
     if (artistViewContainer) artistViewContainer.classList.add('hidden');
     if (playlistViewContainer) playlistViewContainer.classList.add('hidden');
+    if (songViewContainer) songViewContainer.classList.add('hidden');
     if (listenInitialContent) listenInitialContent.classList.remove('hidden');
   }
 
@@ -1411,10 +2168,12 @@ document.addEventListener('DOMContentLoaded', () => {
       syncUrl('/search', `q=${encodeURIComponent(query)}`, options.replaceUrl);
     }
 
+    if (searchBarWrapper) searchBarWrapper.classList.remove('hidden');
     if (listenInitialContent) listenInitialContent.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
     if (artistViewContainer) artistViewContainer.classList.add('hidden');
     if (playlistViewContainer) playlistViewContainer.classList.add('hidden');
+    if (songViewContainer) songViewContainer.classList.add('hidden');
     if (searchResultsContainer) searchResultsContainer.classList.remove('hidden');
 
     [sectionTopResults, sectionArtists, sectionSongs, sectionAlbums, sectionPlaylists, sectionVideos, sectionStations, sectionLabels, sectionCurators].forEach(s => {
@@ -1426,17 +2185,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     try {
-      const res = await fetch(`${API_BASE}/search?term=${encodeURIComponent(query)}&limit=25&l=${getCurrentLang()}`);
+      const searchUrl = `${API_BASE}/v1/catalog/kz/search?art[music-videos:url]=c&art[url]=f&extend=artistUrl&fields[albums]=artistName,artistUrl,artwork,contentRating,editorialArtwork,editorialNotes,name,playParams,releaseDate,url,trackCount&fields[artists]=url,name,artwork&format[resources]=map&include[albums]=artists&include[music-videos]=artists&include[songs]=artists&include[stations]=radio-show&l=${getCurrentLang() || 'en-GB'}&limit=21&omit[resource]=autos&platform=web&relate[albums]=artists&relate[songs]=albums&term=${encodeURIComponent(query)}&types=activities,albums,apple-curators,artists,curators,editorial-items,music-movies,music-videos,playlists,record-labels,songs,stations,tv-episodes,uploaded-videos&with=lyricHighlights,lyrics,naturalLanguage,serverBubbles,subtitles`;
+      const res = await fetch(searchUrl);
       if (!res.ok) throw new Error(`Search error ${res.status}`);
-      const data = await res.json();
-      const results = data.results || {};
+      const rawData = await res.json();
+      const parsed = parseAmpResponse(rawData);
+      const results = parsed.results || rawData.results || {};
 
-      // Support both 'top' and 'topResults' schemas (e.g. searchapi.json vs standard)
-      const topData = results.top?.data || results.topResults?.data || [];
+      // Support 'top', 'topResults', or primary category fallback
+      const topData = results.top?.data || results.topResults?.data || results.songs?.data?.slice(0, 1) || results.artists?.data?.slice(0, 1) || [];
       const topResult = topData[0];
       if (topResult) {
-        const attr = topResult.attributes || {};
-        const art = attr.artwork?.url ? cleanArtworkUrl(attr.artwork.url, 100, 100) : '';
+        const attr = topResult.attributes || topResult;
+        const art = resolveArtworkUrl(attr.artwork || attr.editorialArtwork, { width: 100, height: 100 });
         addRecentSearch(query, attr.name || query, topResult.type, art);
       }
 
@@ -1444,9 +2205,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const songData = results.songs?.data || [];
       const albumData = results.albums?.data || [];
       const playlistData = results.playlists?.data || [];
-      const videoData = results.music_video?.data || results['music-videos']?.data || [];
+      const videoData = results.music_video?.data || results['music-videos']?.data || results['uploaded-videos']?.data || [];
       const stationData = results.stations?.data || [];
-      const labelData = results['record-labels']?.data || [];
+      const labelData = results['record-labels']?.data || results.record_label?.data || results['record-label']?.data || [];
       const curatorData = results.curators?.data || results['apple-curators']?.data || results.activities?.data || [];
 
       renderTopResults(topData);
@@ -1501,19 +2262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = card.dataset.id;
         const title = card.querySelector('.am-top-card-title')?.textContent || '';
         if (type === 'songs') {
-          const song = items.find(x => x.id === id);
-          const attr = song?.attributes || {};
-          const albumId = song?.relationships?.albums?.data?.[0]?.id || attr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
-          const artistId = song?.relationships?.artists?.data?.[0]?.id || null;
-          loadRemoteTrack({
-            trackId: id,
-            trackName: attr.name,
-            artistName: attr.artistName,
-            collectionName: attr.albumName,
-            albumId,
-            artistId,
-            artworkUrl100: cleanArtworkUrl(attr.artwork?.url, 100, 100)
-          });
+          showSongView(id, title);
         } else if (type === 'albums') {
           showAlbumView(id, title);
         } else if (type === 'artists') {
@@ -1608,15 +2357,39 @@ document.addEventListener('DOMContentLoaded', () => {
           albumName: attr.albumName
         });
 
-        loadRemoteTrack({
-          trackId: song.id,
-          trackName: attr.name,
-          artistName: attr.artistName,
-          collectionName: attr.albumName,
-          albumId,
-          artistId,
-          artworkUrl100: cleanArtworkUrl(attr.artwork?.url, 100, 100)
-        });
+        showSongView(song.id, attr.name);
+
+        // Fetch recommended songs by similar artists + the same artist using songs endpoint
+        (async () => {
+          try {
+            const queryTerm = attr.artistName || attr.name || '';
+            const recRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(queryTerm)}&types=songs&limit=20&l=en-US`);
+            if (recRes.ok) {
+              const recData = await recRes.json();
+              const recSongs = recData?.results?.songs?.data || [];
+              const existingIds = new Set(previewPlayer.queue.map(x => String(x.id)));
+              const addQueue = [];
+              for (const r of recSongs) {
+                if (!existingIds.has(String(r.id))) {
+                  existingIds.add(String(r.id));
+                  const rAttr = r.attributes || {};
+                  addQueue.push({
+                    id: r.id,
+                    title: rAttr.name,
+                    artist: rAttr.artistName,
+                    album: rAttr.albumName,
+                    artUrl: cleanArtworkUrl(rAttr.artwork?.url, 300, 300),
+                    previewUrl: `${API_BASE}/stream?song=${r.id}&l=en-US`,
+                    durationMs: rAttr.durationInMillis || 180000
+                  });
+                }
+              }
+              if (addQueue.length > 0) {
+                previewPlayer.queue.push(...addQueue);
+              }
+            }
+          } catch (_) {}
+        })();
       };
     });
   }
@@ -1796,16 +2569,31 @@ document.addEventListener('DOMContentLoaded', () => {
     prepStatus.textContent = t('loading');
 
     try {
-      const res = await fetch(`${API_BASE}/musicvideo?song=${vidId}&l=${getCurrentLang()}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      let data = {};
+      const customUrl = options.customUrl;
+      if (customUrl && typeof customUrl === 'string' && customUrl.startsWith('http')) {
+        // Direct stream or resolve via /stream or /musicvideo?url=
+        try {
+          const res = await fetch(`${API_BASE}/musicvideo?url=${encodeURIComponent(customUrl)}&l=${getCurrentLang()}`);
+          if (res.ok) data = await res.json();
+        } catch (_) {}
+        if (!data.video_url && !data.preview_url && !data.hls_url) {
+          data.video_url = `${API_BASE}/stream?url=${encodeURIComponent(customUrl)}&quality=1080p`;
+        }
+      } else {
+        const queryParam = (vidId && String(vidId).startsWith('http')) ? `url=${encodeURIComponent(vidId)}` : `song=${vidId}`;
+        const res = await fetch(`${API_BASE}/musicvideo?${queryParam}&l=${getCurrentLang()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        data = await res.json();
+      }
 
       prepOverlay.classList.remove('active');
 
       const videoUrl = data.video_url || data.preview_url || data.hls_url;
-      const title = data.title || data.name || videoTitle || 'Music Video';
+      const title = data.title || data.name || videoTitle || 'Video';
       const artist = data.artist || data.artist_name || videoArtist || '';
-      const downloadUrl = `${API_BASE}/musicvideo/download?song=${vidId}&quality=4k&l=${getCurrentLang()}`;
+      const downloadParam = (vidId && String(vidId).startsWith('http')) ? `url=${encodeURIComponent(vidId)}` : `song=${vidId}`;
+      const downloadUrl = `${API_BASE}/musicvideo/download?${downloadParam}&quality=1080&l=${getCurrentLang()}`;
 
       if (!options.skipUrlSync) {
         syncUrl(`/video/${toSlug(title)}/${vidId}`, '', options.replaceUrl);
@@ -1841,14 +2629,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         videoModal.querySelector('#mv-modal-close').onclick = () => {
           const v = videoModal.querySelector('#mv-modal-video');
-          if (v) { v.pause(); v.src = ''; }
+          if (v) {
+            v.pause();
+            if (v._hlsInstance) {
+              try { v._hlsInstance.destroy(); } catch (_) {}
+              v._hlsInstance = null;
+            }
+            v.src = '';
+          }
           videoModal.classList.add('hidden');
         };
 
         videoModal.onclick = (e) => {
           if (e.target === videoModal) {
             const v = videoModal.querySelector('#mv-modal-video');
-            if (v) { v.pause(); v.src = ''; }
+            if (v) {
+              v.pause();
+              if (v._hlsInstance) {
+                try { v._hlsInstance.destroy(); } catch (_) {}
+                v._hlsInstance = null;
+              }
+              v.src = '';
+            }
             videoModal.classList.add('hidden');
           }
         };
@@ -1863,8 +2665,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const videoEl = videoModal.querySelector('#mv-modal-video');
       if (videoUrl) {
-        videoEl.src = videoUrl;
-        videoEl.play().catch(() => { });
+        playHlsStream(videoEl, videoUrl, { autoplay: true, isMuted: false });
       }
       videoModal.classList.remove('hidden');
 
@@ -1877,10 +2678,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Album Detail View with "More by Artist" row in random order ──
   async function fetchAlbumDetails(albumId, preferredAlbumName = '', targetTrackId = null) {
+    if (searchBarWrapper) searchBarWrapper.classList.add('hidden');
     if (listenInitialContent) listenInitialContent.classList.add('hidden');
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
     if (artistViewContainer) artistViewContainer.classList.add('hidden');
     if (playlistViewContainer) playlistViewContainer.classList.add('hidden');
+    if (songViewContainer) songViewContainer.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.remove('hidden');
 
     albumHeader.innerHTML = `<div class="am-loading-msg">${t('loading')}</div>`;
@@ -2055,18 +2858,31 @@ document.addEventListener('DOMContentLoaded', () => {
           is_explicit: tItem.attributes?.contentRating === 'explicit'
         }));
 
+      // Apply page-wide color scheming for Album
+      applyPageThemeColor(artUrl, attr.artwork?.bgColor);
+
       // Render Tracks
       albumTracksGrid.innerHTML = tracks.map((tItem, idx) => `
         <div class="am-track-row animate-fade" data-id="${tItem.id}" data-index="${idx}">
            <div class="am-track-num">${tItem.trackNumber || idx + 1}</div>
            <div class="am-track-title">
-             <span>${escapeHTML(tItem.name || 'Unknown')}</span>
+             <span class="am-track-title-link" data-id="${tItem.id}" data-title="${escapeHTML(tItem.name || 'Song')}">${escapeHTML(tItem.name || 'Unknown')}</span>
              ${tItem.is_explicit ? '<span class="am-explicit-tag">E</span>' : ''}
            </div>
            <div class="am-track-duration">${formatDuration(tItem.durationInMillis)}</div>
            <button class="am-song-more-btn" data-id="${tItem.id}">•••</button>
         </div>
       `).join('');
+
+      // Title link click: open song view (/song/songid)
+      albumTracksGrid.querySelectorAll('.am-track-title-link').forEach(link => {
+        link.onclick = (e) => {
+          e.stopPropagation();
+          const sId = link.dataset.id;
+          const sTitle = link.dataset.title;
+          showSongView(sId, sTitle);
+        };
+      });
 
       // Play album / preview button
       const playAlbumBtn = document.getElementById('album-play-btn');
@@ -2121,6 +2937,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Track clicks: play full song like on homepage/search with full album queue
       albumTracksGrid.querySelectorAll('.am-track-row').forEach(row => {
         row.onclick = (e) => {
+          if (e.target.closest('.am-track-title-link')) return;
           const id = row.dataset.id;
           const idx = parseInt(row.dataset.index, 10);
           const tItem = tracks[idx] || tracks.find(x => x.id === id);
@@ -2142,18 +2959,8 @@ document.addEventListener('DOMContentLoaded', () => {
           // Update URL to include ?i={trackId}
           syncUrl(`/album/${albumSlug}/${albumId}`, `i=${id}`);
 
-          const albumQueue = tracks.map(t => ({
-            id: t.id,
-            title: t.name,
-            artist: t.artistName || artistName,
-            album: attr.name,
-            artUrl: artUrl,
-            previewUrl: `${API_BASE}/stream?song=${t.id}&l=en-US`,
-            durationMs: t.durationInMillis || 180000
-          }));
-
-          // Play full song directly with album queue
-          loadRemoteTrack({
+          // Play full song directly with contextual album queue + similar songs
+          queueContextualWithSimilar({
             trackId: id,
             trackName: tItem?.name,
             artistName: tItem?.artistName || artistName,
@@ -2162,7 +2969,14 @@ document.addEventListener('DOMContentLoaded', () => {
             artistId: artistId,
             artworkUrl100: artUrl,
             durationMs: tItem?.durationInMillis
-          }, albumQueue);
+          }, tracks.map(t => ({
+            id: t.id,
+            title: t.name,
+            artist: t.artistName || artistName,
+            album: attr.name,
+            artUrl: artUrl,
+            durationMs: t.durationInMillis || 180000
+          })), idx);
         };
       });
 
@@ -2340,11 +3154,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ── Artist View with 4x7 Top Songs Grid & Singles / Albums Sorted Latest to Oldest ──
+  // ── Artist View with Apple Music Catalog Compound Request, Dynamic Hero (Video vs Centered Avatar) & Shelves ──
   async function openArtistView(artistId, artistName) {
+    if (searchBarWrapper) searchBarWrapper.classList.add('hidden');
     if (artistViewContainer) artistViewContainer.classList.remove('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
     if (playlistViewContainer) playlistViewContainer.classList.add('hidden');
+    if (songViewContainer) songViewContainer.classList.add('hidden');
     if (listenInitialContent) listenInitialContent.classList.add('hidden');
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
 
@@ -2374,46 +3190,75 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { }
       }
 
-      // If we have a numeric artist ID, fetch artist details with the exact requested views, relationships, and extensions
       let artistViews = {};
       let artistRels = {};
+      let rawResources = {};
+      let canvasShelvesCollections = {};
 
+      // 1. Fetch using Apple Music Catalog API compound endpoint
       if (resolvedArtistId && /^\d+$/.test(String(resolvedArtistId))) {
-        try {
-          const artistApiUrl = `${API_BASE}/artist?id=${resolvedArtistId}&storefront=us&l=en-US&include=albums,music-videos,playlists,station&views=top-songs,full-albums,singles-eps,featured-playlists,latest-release,appears-on-albums,similar-artists&extend=editorialArtwork,editorialVideo,editorialNotes`;
-          const res = await fetch(artistApiUrl);
-          if (res.ok) {
-            const data = await res.json();
-            const found = Array.isArray(data.data) ? data.data[0] : (data.data || data);
-            if (found?.attributes) attr = { ...attr, ...found.attributes };
-            artistViews = found?.views || data.views || {};
-            artistRels = found?.relationships || data.relationships || {};
+        const langCode = getCurrentLang() === 'ru' ? 'ru' : 'en-GB';
+        const catalogUrl = `${API_BASE}/v1/catalog/kz/artists/${resolvedArtistId}?art[url]=c,f&extend=artistBio,editorialArtwork,editorialVideo,extendedAssetUrls,hasBiographyContent,hero,keyColor,plainEditorialNotes,seoDescription,seoTitle&extend[canvas-shelves-header]=badge&extend[concerts]=tickets&filter[canvas-shelves-collection.contents.type]=albums,apple-curators,artists,concerts,music-movies,music-videos,playlists,songs,stations,uploaded-videos,venues&format[resources]=map&include=canvas,default-playable-content&include[canvas-shelves-collection]=contents&include[canvas-shelves-group]=children&include[concerts]=artists,venues&include[songs]=albums&l=${langCode}&limit[canvas-shelves-collection:contents]=12&limit[canvas-shelves-collection:contents{displayStyle}]=artist-featured-track-lockup:24&omit[resource]=autos&platform=web&relate[canvas-shelves-collection]=see-all`;
 
-            // 1. Top Songs view
-            if (artistViews['top-songs']?.data?.length > 0) {
-              songs = artistViews['top-songs'].data;
+        try {
+          const catRes = await fetch(catalogUrl);
+          if (catRes.ok) {
+            const catData = await catRes.json();
+            rawResources = catData.resources || {};
+            const artObj = rawResources.artists?.[String(resolvedArtistId)] ||
+              (catData.data && catData.data[0] ? rawResources.artists?.[catData.data[0].id] : null);
+            if (artObj?.attributes) {
+              attr = { ...attr, ...artObj.attributes };
+            }
+            if (artObj?.relationships) {
+              artistRels = { ...artObj.relationships };
             }
 
-            // 2. Full Albums & Singles/EPs view / relationships albums
-            if (artistViews['full-albums']?.data?.length > 0) {
-              albums = artistViews['full-albums'].data;
-            } else if (artistRels.albums?.data?.length > 0) {
-              albums = artistRels.albums.data;
+            // Normalise songs and albums from resources
+            if (rawResources.songs) {
+              songs = Object.values(rawResources.songs);
+            }
+            if (rawResources.albums) {
+              albums = Object.values(rawResources.albums);
+            }
+            if (rawResources['canvas-shelves-collection']) {
+              canvasShelvesCollections = rawResources['canvas-shelves-collection'];
             }
           }
         } catch (e) {
-          console.warn("[Artist Fetch] Primary endpoint error:", e);
+          console.warn("[Artist Fetch] Catalog compound endpoint error:", e);
+        }
+
+        // Secondary fallback to standard artist endpoint if still needed
+        if (!attr.name || (songs.length === 0 && albums.length === 0)) {
+          try {
+            const artistApiUrl = `${API_BASE}/artist?id=${resolvedArtistId}&storefront=us&l=en-US&include=albums,music-videos,playlists,station&views=top-songs,full-albums,singles-eps,featured-playlists,latest-release,appears-on-albums,similar-artists&extend=editorialArtwork,editorialVideo,editorialNotes`;
+            const res = await fetch(artistApiUrl);
+            if (res.ok) {
+              const data = await res.json();
+              const found = Array.isArray(data.data) ? data.data[0] : (data.data || data);
+              if (found?.attributes) attr = { ...attr, ...found.attributes };
+              artistViews = found?.views || data.views || {};
+              if (!artistRels.albums) artistRels = found?.relationships || data.relationships || {};
+              if (songs.length === 0 && artistViews['top-songs']?.data?.length > 0) {
+                songs = artistViews['top-songs'].data;
+              }
+              if (albums.length === 0) {
+                if (artistViews['full-albums']?.data?.length > 0) albums = artistViews['full-albums'].data;
+                else if (artistRels.albums?.data?.length > 0) albums = artistRels.albums.data;
+              }
+            }
+          } catch (e) { }
         }
       }
 
       const displayName = attr.name || artistName || (isNumericId ? '' : artistId) || 'Artist';
 
-      // Update slug URL with resolved artist name
       if (resolvedArtistId) {
         syncUrl(`/artist/${toSlug(displayName)}/${resolvedArtistId}`, '', true);
       }
 
-      // If artist artwork is still missing, fallback to search by artist name to retrieve artwork
+      // If artwork is missing, search by artist name to retrieve artwork
       if (!attr.artwork?.url && displayName) {
         try {
           const sRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=artists&limit=5&l=${getCurrentLang()}`);
@@ -2428,74 +3273,48 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { }
       }
 
-      // Always fetch full artist discography (both full albums and singles/EPs)
+      // Supplementary Discography fetch to guarantee all albums are retrieved (up to 100)
       if (resolvedArtistId && /^\d+$/.test(String(resolvedArtistId))) {
-        const discogFetches = [
-          fetch(`${API_BASE}/artist/albums?artist=${resolvedArtistId}&limit=100&l=en-US`)
-            .then(r => r.ok ? r.json() : null)
-            .then(d => { if (d?.data?.length > 0) albums = (albums || []).concat(d.data); })
-            .catch(() => { })
-        ];
-        if (songs.length === 0) {
-          discogFetches.push(
-            fetch(`${API_BASE}/artist/songs?artist=${resolvedArtistId}&limit=50&l=en-US`)
-              .then(r => r.ok ? r.json() : null)
-              .then(d => { if (d?.data?.length > 0) songs = d.data; })
-              .catch(() => { })
-          );
+        try {
+          const dRes = await fetch(`${API_BASE}/artist/albums?artist=${resolvedArtistId}&limit=100&l=en-US`);
+          if (dRes.ok) {
+            const dData = await dRes.json();
+            const fetchedAlbs = dData?.data || dData?.results?.albums?.data || [];
+            if (fetchedAlbs.length > 0) {
+              albums = [...albums, ...fetchedAlbs];
+            }
+          }
+        } catch (e) { }
+      }
+
+      // Determine hero video & motion assets
+      const edVideo = attr.editorialVideo || {};
+      const heroVideoObj = edVideo.motionArtistFullscreen16x9 || edVideo.motionArtistWide16x9 || edVideo.motionArtistSquare1x1 || null;
+      const heroVideoUrl = heroVideoObj?.video || null;
+      const heroVideoPreview = heroVideoObj?.previewFrame?.url || null;
+
+      // Determine logo trimmed image
+      const logoArtwork = attr.editorialArtwork?.musicContentColorLogoTrimmed || null;
+      const logoUrl = logoArtwork ? cleanLogoUrl(logoArtwork.url, 400, 133) : null;
+
+      // Determine artist photo (portrait / identity)
+      let heroContentArtwork = null;
+      if (Array.isArray(attr.hero)) {
+        for (const h of attr.hero) {
+          if (Array.isArray(h?.content)) {
+            const cArt = h.content[0]?.artwork?.url;
+            if (cArt) { heroContentArtwork = cArt; break; }
+          }
         }
-        await Promise.all(discogFetches);
       }
 
-      // If albums are still empty, fallback to searching albums for artist name or itunes lookup
-      if (albums.length === 0 && (displayName || resolvedArtistId)) {
-        try {
-          const [sData, lData] = await Promise.all([
-            displayName ? fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=albums&limit=50&l=en-US`).then(r => r.ok ? r.json() : null).catch(() => null) : null,
-            resolvedArtistId ? fetch(`${API_BASE}/itunes/lookup?id=${resolvedArtistId}&entity=album&limit=50`).then(r => r.ok ? r.json() : null).catch(() => null) : null
-          ]);
-          if (sData?.results?.albums?.data?.length > 0) {
-            albums = sData.results.albums.data;
-          } else if (lData?.results?.length > 0) {
-            albums = lData.results.filter(r => r.wrapperType === 'collection').map(c => ({
-              id: String(c.collectionId),
-              type: 'albums',
-              attributes: {
-                name: c.collectionName,
-                artistName: c.artistName,
-                releaseDate: c.releaseDate,
-                trackCount: c.trackCount,
-                artwork: { url: c.artworkUrl100 }
-              }
-            }));
-          }
-        } catch (e) { }
-      }
-
-      // If songs are few, search for artist name to populate top songs (up to 28)
-      if (songs.length < 28 && (displayName || resolvedArtistId)) {
-        try {
-          const sSearch = await fetch(`${API_BASE}/search?term=${encodeURIComponent(displayName)}&types=songs&limit=50&l=en-US`);
-          if (sSearch.ok) {
-            const sData = await sSearch.json();
-            const moreSongs = sData.results?.songs?.data || [];
-            const seenIds = new Set(songs.map(s => String(s.id)));
-            moreSongs.forEach(ms => {
-              if (!seenIds.has(String(ms.id))) {
-                seenIds.add(String(ms.id));
-                songs.push(ms);
-              }
-            });
-          }
-        } catch (e) { }
-      }
-
-      // Determine artist photo: prioritize the true artist portrait / identity artwork
-      let rawArtistPhoto = attr.artwork?.url ||
-        attr.editorialArtwork?.header?.url ||
-        attr.editorialArtwork?.bannerUber?.url ||
+      let rawArtistPhoto = heroVideoPreview ||
+        attr.artwork?.url ||
+        heroContentArtwork ||
         attr.editorialArtwork?.storeFlowcase?.url ||
-        attr.editorialArtwork?.bannerArtwork?.url;
+        attr.editorialArtwork?.bannerUber?.url ||
+        attr.editorialArtwork?.header?.url;
+
       if (!rawArtistPhoto && albums.length > 0) {
         rawArtistPhoto = albums[0]?.attributes?.artwork?.url;
       }
@@ -2504,7 +3323,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const artistPhoto = rawArtistPhoto ? cleanArtworkUrl(rawArtistPhoto, 1200, 1200) : '';
 
-      // Collect all album/single candidates combining views and relationships
+      // Dominant / Accent Color
+      const rawHexColor = attr.keyColor || attr.artwork?.bgColor || '1b1917';
+      const tintColor = rawHexColor.startsWith('#') ? rawHexColor : `#${rawHexColor}`;
+
+      // Resolve releases into Albums vs Singles/EPs
       const allReleasesMap = new Map();
       const addRelease = (item) => {
         if (!item || !item.id) return;
@@ -2514,19 +3337,86 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       };
 
+      // Extract from canvas-shelves-collection if available
+      let shelfAlbums = [];
+      let shelfSingles = [];
+      let shelfEssentials = [];
+      let shelfLive = [];
+      let shelfTopSongs = [];
+      let shelfSimilar = [];
+      let shelfPlaylists = [];
+      let shelfVideos = [];
+      let shelfPosts = [];
+      let shelfMoreToSee = [];
+      let shelfConcerts = [];
+      let shelfLatestRelease = null;
+
+      Object.values(canvasShelvesCollections).forEach(shelf => {
+        const kind = (shelf.attributes?.kind || '').toUpperCase();
+        const shelfId = shelf.id || '';
+        const title = (shelf.attributes?.title || '').toLowerCase();
+        const cData = shelf.relationships?.contents?.data || [];
+        const resolvedItems = cData.map(d => rawResources[d.type]?.[d.id] || d).filter(Boolean);
+
+        if (kind === 'TOP_SONGS' || shelfId.includes('TopSongs')) {
+          shelfTopSongs = resolvedItems;
+        } else if (kind === 'ALBUMS' || shelfId.includes('Albums')) {
+          shelfAlbums = resolvedItems;
+        } else if (shelfId.includes('ArtistSingles') || title.includes('singles')) {
+          shelfSingles = resolvedItems;
+        } else if (kind === 'ESSENTIALS' || shelfId.includes('Essentials')) {
+          shelfEssentials = resolvedItems;
+        } else if (shelfId.includes('LiveAlbums')) {
+          shelfLive = resolvedItems;
+        } else if (kind === 'SIMILAR_ARTISTS' || shelfId.includes('SimilarArtists')) {
+          shelfSimilar = resolvedItems;
+        } else if (kind === 'ARTIST_PLAYLISTS' || shelfId.includes('ArtistPlaylists')) {
+          shelfPlaylists = resolvedItems;
+        } else if (kind === 'MUSIC_VIDEOS' || shelfId.includes('MusicVideos')) {
+          shelfVideos = resolvedItems;
+        } else if (kind === 'POSTS' || kind === 'SOCIAL_POSTS' || shelfId.includes('Posts') || title.includes('posts')) {
+          shelfPosts = resolvedItems;
+        } else if (kind === 'MORE_TO_SEE' || kind === 'MORE_TO_HEAR' || shelfId.includes('MoreToSee') || shelfId.includes('MoreToHear') || title.includes('more to see') || title.includes('more to hear')) {
+          shelfMoreToSee = resolvedItems;
+        } else if (kind === 'CONCERTS' || shelfId.includes('Concerts') || shelfId.includes('TourDates')) {
+          shelfConcerts = resolvedItems;
+        } else if (shelfId.includes('LatestReleaseFallback') || shelfId.includes('LatestRelease')) {
+          shelfLatestRelease = resolvedItems[0] || null;
+        }
+      });
+
+
+      // Upcoming dynamic concerts
+      const rawConcertsList = (shelfConcerts.length > 0 ? shelfConcerts : (Object.values(rawResources.concerts || {}) || artistViews['upcoming-concerts']?.data || artistViews.concerts?.data || [])).filter(c => c && (c.attributes || c.name));
+      const hasConcerts = rawConcertsList.length > 0;
+
+      if (shelfTopSongs.length > 0) songs = shelfTopSongs;
+      if (shelfAlbums.length > 0) shelfAlbums.forEach(addRelease);
+      if (shelfSingles.length > 0) shelfSingles.forEach(addRelease);
       (artistViews['full-albums']?.data || []).forEach(addRelease);
       (artistViews['singles-eps']?.data || []).forEach(addRelease);
       (artistRels.albums?.data || []).forEach(addRelease);
       (albums || []).forEach(addRelease);
 
-      // Separate into Full Albums vs Singles & EPs
       const fullAlbums = [];
       const singles = [];
+      const compilations = [];
+      const appearedOn = [];
 
       allReleasesMap.forEach(alb => {
         const aAttr = alb.attributes || alb || {};
         const name = (aAttr.name || aAttr.collectionName || '').toLowerCase();
+        const artist = (aAttr.artistName || '').toLowerCase();
+        const dispArtist = (displayName || '').toLowerCase();
         const trackCount = aAttr.trackCount || 0;
+        const isCompilation = aAttr.isCompilation === true ||
+          aAttr.isComplete === false ||
+          name.includes('compilation') ||
+          name.includes('greatest hits') ||
+          name.includes('best of') ||
+          artist.includes('various artists');
+        const isAppeared = artist && dispArtist && !artist.includes(dispArtist) && !dispArtist.includes(artist);
+
         const isSingle = aAttr.isSingle === true ||
           (trackCount > 0 && trackCount <= 3) ||
           name.includes(' - single') ||
@@ -2535,28 +3425,23 @@ document.addEventListener('DOMContentLoaded', () => {
           name.includes(' (ep)') ||
           name.endsWith(' single') ||
           name.endsWith(' ep');
-        if (isSingle) singles.push(alb);
+
+        if (isAppeared) appearedOn.push(alb);
+        else if (isCompilation) compilations.push(alb);
+        else if (isSingle) singles.push(alb);
         else fullAlbums.push(alb);
       });
 
-      // Sort both from latest to oldest release date
       fullAlbums.sort((a, b) => new Date(b.attributes?.releaseDate || b.releaseDate || 0) - new Date(a.attributes?.releaseDate || a.releaseDate || 0));
       singles.sort((a, b) => new Date(b.attributes?.releaseDate || b.releaseDate || 0) - new Date(a.attributes?.releaseDate || a.releaseDate || 0));
+      compilations.sort((a, b) => new Date(b.attributes?.releaseDate || b.releaseDate || 0) - new Date(a.attributes?.releaseDate || a.releaseDate || 0));
+      appearedOn.sort((a, b) => new Date(b.attributes?.releaseDate || b.releaseDate || 0) - new Date(a.attributes?.releaseDate || a.releaseDate || 0));
 
-      // Featured Playlists
-      const artistPlaylists = artistViews['featured-playlists']?.data || artistRels.playlists?.data || [];
-
-      // Music Videos
-      const artistMusicVideos = artistRels['music-videos']?.data || [];
-
-      // Artist Station
-      const artistStation = artistRels.station?.data?.[0] || null;
-
-      // Appears On Albums
-      const appearsOnAlbums = artistViews['appears-on-albums']?.data || [];
-
-      // Similar Artists
-      const similarArtists = artistViews['similar-artists']?.data || [];
+      // Extra collections
+      const artistPlaylists = shelfPlaylists.length > 0 ? shelfPlaylists : (artistViews['featured-playlists']?.data || artistRels.playlists?.data || []);
+      const artistMusicVideos = shelfVideos.length > 0 ? shelfVideos : (artistRels['music-videos']?.data || (rawResources['music-videos'] ? Object.values(rawResources['music-videos']) : []));
+      const artistStation = artistRels.station?.data?.[0] || (rawResources.stations ? Object.values(rawResources.stations)[0] : null);
+      const similarArtists = shelfSimilar.length > 0 ? shelfSimilar : (artistViews['similar-artists']?.data || []);
 
       const inLib = isArtistInLibrary(resolvedArtistId || displayName);
 
@@ -2567,32 +3452,83 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const genre = attr.genreNames?.[0] || 'Music';
 
-      // 4 rows x 7 cols (28 top songs)
-      const top28Songs = songs.slice(0, 28);
-      const topSongsCardsHTML = top28Songs.map((s, i) => {
+      // Pinned / Latest Release Object
+      const latestReleaseObj = shelfLatestRelease ||
+        (artistViews?.['latest-release']?.data?.[0]) ||
+        (attr.views?.['latest-release']?.data?.[0]) ||
+        singles[0] ||
+        fullAlbums[0] ||
+        null;
+
+      let latestReleaseHTML = '';
+      if (latestReleaseObj) {
+        const lrAttr = latestReleaseObj.attributes || latestReleaseObj;
+        const lrArt = cleanArtworkUrl(lrAttr.artwork?.url || lrAttr.artworkUrl100, 240, 240);
+        const lrDate = lrAttr.releaseDate ? formatLocalizedDate(lrAttr.releaseDate) : '';
+        const lrTitle = lrAttr.name || lrAttr.collectionName || 'Latest Release';
+        const lrCount = lrAttr.trackCount ? (lrAttr.trackCount === 1 ? '1 song' : `${lrAttr.trackCount} songs`) : 'Single';
+        const lrInLib = isAlbumInLibrary(latestReleaseObj.id);
+
+        latestReleaseHTML = `
+          <div class="am-artist-latest-card" data-id="${latestReleaseObj.id}">
+            <img src="${lrArt}" class="am-artist-latest-art" onerror="this.src='favicon.svg'" alt="">
+            <div class="am-artist-latest-info">
+              <div class="am-artist-latest-date">${escapeHTML(lrDate)}</div>
+              <div class="am-artist-latest-title">${escapeHTML(lrTitle)}</div>
+              <div class="am-artist-latest-count">${escapeHTML(lrCount)}</div>
+            </div>
+            <button class="am-artist-latest-add-btn" data-id="${latestReleaseObj.id}" title="Add to Library">
+              ${lrInLib ? '✓' : '+'}
+            </button>
+          </div>
+        `;
+      }
+
+      // Top 24 Songs
+      const top24Songs = songs.slice(0, 24);
+      const topSongsCardsHTML = top24Songs.map((s, i) => {
         const sAttr = s.attributes || s || {};
         const sArt = cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 120, 120);
+        const releaseYear = sAttr.releaseDate ? new Date(sAttr.releaseDate).getFullYear() : '';
+        const albumSub = sAttr.albumName || sAttr.collectionName || '';
+        const subLine = [albumSub, releaseYear].filter(Boolean).join(' • ');
+
         return `
           <div class="am-artist-song-card animate-fade" data-id="${s.id}" data-idx="${i}">
             <img src="${sArt}" loading="lazy" referrerpolicy="no-referrer" class="am-artist-song-art" onerror="this.src='favicon.svg'">
             <div class="am-artist-song-info">
               <div class="am-artist-song-title">${escapeHTML(sAttr.name || sAttr.trackName || '')}</div>
-              <div class="am-artist-song-artist">${escapeHTML(sAttr.albumName || sAttr.collectionName || displayName)}</div>
+              <div class="am-artist-song-artist">${escapeHTML(subLine || displayName)}</div>
             </div>
             <button class="am-song-more-btn" data-id="${s.id}" data-idx="${i}">•••</button>
           </div>
         `;
       }).join('') || `<p class="am-empty-msg">${t('empty_artist_songs')}</p>`;
 
-      const renderAlbumItem = (alb) => {
+      const renderAlbumItem = (alb, typeOverride = null) => {
         const aAttr = alb.attributes || alb || {};
         const art = cleanArtworkUrl(aAttr.artwork?.url || aAttr.artworkUrl100, 300, 300);
         const y = aAttr.releaseDate ? new Date(aAttr.releaseDate).getFullYear() : '';
+        const albName = aAttr.name || aAttr.collectionName || '';
+        const artist = aAttr.artistName || '';
+        const isComp = typeOverride === 'compilation' || aAttr.isCompilation === true || albName.toLowerCase().includes('compilation');
+        const isApp = typeOverride === 'appearedOn';
+
+        let badgeTag = '';
+        if (isComp) {
+          badgeTag = `<div class="am-media-badge-tag" style="background: rgba(250, 88, 106, 0.9); color: #fff;">Compilation</div>`;
+        } else if (isApp) {
+          badgeTag = `<div class="am-media-badge-tag" style="background: rgba(255, 255, 255, 0.85); color: #000;">Appeared On</div>`;
+        }
+
+        const subText = isApp ? (artist || displayName) : (isComp ? 'Compilation' : (y || t('badge_album')));
+
         return `
           <div class="am-standard-media-card animate-fade" data-id="${alb.id}">
+            ${badgeTag}
             <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
-            <div class="am-media-card-title">${escapeHTML(aAttr.name || aAttr.collectionName || '')}</div>
-            <div class="am-media-card-sub">${escapeHTML(y || t('badge_album'))}</div>
+            <div class="am-media-card-title">${escapeHTML(albName)}</div>
+            <div class="am-media-card-sub">${escapeHTML(subText)}</div>
           </div>
         `;
       };
@@ -2633,12 +3569,35 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
       };
 
-      const albumsHTML = fullAlbums.map(renderAlbumItem).join('') || `<p class="am-empty-msg">${t('empty_artist_albums')}</p>`;
-      const singlesHTML = singles.map(renderAlbumItem).join('') || `<p class="am-empty-msg">${t('empty_artist_singles')}</p>`;
+      const renderPostItem = (post) => {
+        const pAttr = post.attributes || post || {};
+        const art = cleanArtworkUrl(pAttr.artwork?.url || artistPhoto, 480, 480);
+        const text = pAttr.body || pAttr.caption || pAttr.name || 'Artist Post';
+        const dateStr = pAttr.date || pAttr.postedDate || '';
+        return `
+          <div class="am-standard-media-card am-post-card-item animate-fade" data-id="${post.id}" data-url="${pAttr.url || ''}">
+            <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" style="aspect-ratio: 1/1; object-fit: cover; border-radius: 12px;" onerror="this.src='favicon.svg'">
+            <div class="am-media-card-title" style="font-size: 0.88rem; line-height: 1.3; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHTML(text)}</div>
+            <div class="am-media-card-sub">${dateStr ? escapeHTML(formatLocalizedDate(dateStr)) : displayName}</div>
+          </div>
+        `;
+      };
+
+      const albumsCount = fullAlbums.length;
+      const showAlbumsViewAllChevron = albumsCount > 7;
+
+      const albumsShelfHTML = fullAlbums.slice(0, 14).map(a => renderAlbumItem(a)).join('');
+      const allAlbumsGridHTML = fullAlbums.map(a => renderAlbumItem(a)).join('');
+      const singlesHTML = singles.map(s => renderAlbumItem(s)).join('');
+      const compilationsHTML = compilations.map(c => renderAlbumItem(c, 'compilation')).join('');
+      const appearedOnHTML = appearedOn.map(a => renderAlbumItem(a, 'appearedOn')).join('');
+      const essentialsHTML = shelfEssentials.map(e => renderAlbumItem(e)).join('') || '';
       const playlistsHTML = artistPlaylists.map(renderPlaylistItem).join('') || '';
       const videosHTML = artistMusicVideos.map(renderVideoItem).join('') || '';
-      const appearsOnHTML = appearsOnAlbums.map(renderAlbumItem).join('') || '';
+      const postsHTML = shelfPosts.map(renderPostItem).join('') || '';
+      const moreToSeeHTML = shelfMoreToSee.map(renderVideoItem).join('') || '';
       const similarArtistsHTML = similarArtists.map(renderArtistItem).join('') || '';
+
 
       const stationHTML = artistStation ? `
         <div class="am-artist-station-card animate-fade" data-id="${artistStation.id}" style="display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: background 0.2s;">
@@ -2653,315 +3612,587 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       ` : '';
 
-      const isMobile = window.innerWidth <= 768;
-      const latestReleaseObj = (artistViews?.['latest-release']?.data?.[0]) || (attr.views?.['latest-release']?.data?.[0]) || singles[0] || fullAlbums[0] || null;
+      // Construct Hero Markup
+      const hasHeroVideo = Boolean(heroVideoUrl);
+      const identityHTML = logoUrl
+        ? `<img src="${logoUrl}" class="am-artist-logo-img" alt="${escapeHTML(displayName)}">`
+        : `<h1 class="am-artist-pc-hero-title">${escapeHTML(displayName)}</h1>`;
 
-      let latestReleaseHTML = '';
-      if (latestReleaseObj) {
-        const lrAttr = latestReleaseObj.attributes || latestReleaseObj;
-        const lrArt = cleanArtworkUrl(lrAttr.artwork?.url || lrAttr.artworkUrl100, 200, 200);
-        const lrDate = lrAttr.releaseDate ? formatLocalizedDate(lrAttr.releaseDate) : '';
-        const lrTitle = lrAttr.name || lrAttr.collectionName || 'Latest Release';
-        const lrCount = lrAttr.trackCount ? (lrAttr.trackCount === 1 ? '1 song' : `${lrAttr.trackCount} songs`) : 'Single';
-        const lrInLib = isAlbumInLibrary(latestReleaseObj.id);
-
-        latestReleaseHTML = `
-          <div class="am-artist-latest-card" data-id="${latestReleaseObj.id}">
-            <img src="${lrArt}" class="am-artist-latest-art" onerror="this.src='favicon.svg'" alt="">
-            <div class="am-artist-latest-info">
-              <div class="am-artist-latest-date">${escapeHTML(lrDate)}</div>
-              <div class="am-artist-latest-title">${escapeHTML(lrTitle)}</div>
-              <div class="am-artist-latest-count">${escapeHTML(lrCount)}</div>
-            </div>
-            <button class="am-artist-latest-add-btn" data-id="${latestReleaseObj.id}" title="Add to Library">
-              ${lrInLib ? '✓' : '+'}
+      // Top navigation overlay for mobile (Back, Share, More)
+      const mobileTopNavMarkup = `
+        <div class="am-artist-mobile-nav-bar">
+          <button class="am-artist-mob-nav-btn back-btn" id="artist-mob-back-btn" title="Back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <div class="am-artist-mob-nav-right">
+            <button class="am-artist-mob-nav-btn share-btn" id="artist-mob-share-btn" title="Share" aria-label="Share">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+            </button>
+            <button class="am-artist-mob-nav-btn more-btn" id="artist-mob-more-btn" title="More" aria-label="More">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="12" r="2"/></svg>
             </button>
           </div>
-        `;
-      }
+        </div>
+      `;
 
-      if (isMobile) {
-        // Mobile 
-        artistViewContent.innerHTML = `
-          <div class="am-artist-mob-hero">
-            <div class="am-artist-mob-bg" style="background-image: url('${artistPhoto}');"></div>
-            <div class="am-artist-mob-overlay"></div>
-
-            <!-- Top Nav Controls -->
-            <div class="am-artist-mob-top-bar">
-              <button class="am-artist-mob-nav-btn" id="artist-mob-back-btn" aria-label="Back">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-              </button>
-              <div class="am-artist-mob-top-right">
-                <button class="am-artist-mob-nav-btn" id="artist-mob-share-btn" aria-label="Share">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                </button>
-                <button class="am-artist-mob-nav-btn" id="artist-mob-more-btn" aria-label="More">•••</button>
-              </div>
-            </div>
-
-            <!-- Centered Artist Title & Action Pills -->
-            <div class="am-artist-mob-center-content">
-              <h1 class="am-artist-mob-title">${escapeHTML(displayName)}</h1>
-
-              <div class="am-artist-mob-actions-row">
-                <!-- Info (i) Button -->
-                <button class="am-artist-circle-btn" id="artist-mob-info-btn" title="About Artist" aria-label="About Artist">
-                  <span>i</span>
-                </button>
-
-                <!-- Large White Play Button -->
-                <button class="am-artist-play-circle-btn" id="artist-play-top-btn" title="Play Top Songs" aria-label="Play">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                </button>
-
-                <!-- Favorite / Library (★) Button -->
-                <button class="am-artist-circle-btn ${inLib ? 'favorited' : ''}" id="artist-add-lib-btn" title="Add Artist to Library" aria-label="Favorite">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                </button>
+      let heroMarkup = '';
+      if (hasHeroVideo) {
+        // Taylor Swift style: Full-width video banner with identity & action buttons
+        heroMarkup = `
+          <div class="am-artist-pc-hero-wrap" id="am-artist-pc-hero" style="--am-artist-tint: ${tintColor};">
+            ${mobileTopNavMarkup}
+            <div class="am-artist-pc-hero-video-banner">
+              <video src="${heroVideoUrl}" autoplay loop muted playsinline poster="${cleanArtworkUrl(heroVideoPreview || artistPhoto, 1800, 900)}"></video>
+              <div class="am-artist-pc-hero-gradient-overlay"></div>
+              <div class="am-artist-hero-identity">
+                ${identityHTML}
+                <div class="am-artist-hero-actions">
+                  <button class="am-artist-icon-round-btn" id="artist-open-info-btn" title="${t('artist_about_title')}" aria-label="${t('artist_about_title')}">
+                    <span>i</span>
+                  </button>
+                  <button class="am-artist-hero-play-btn" id="artist-play-top-btn" title="${t('artist_play_top')}" aria-label="${t('ctx_play')}">
+                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  </button>
+                  <button class="am-artist-icon-round-btn ${inLib ? 'favorited' : ''}" id="artist-add-lib-btn" title="${inLib ? t('ctx_in_library') : t('ctx_favorite')}" aria-label="${t('ctx_favorite')}">
+                    <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-
-          <!-- Featured Latest Release Card -->
-          ${latestReleaseHTML ? `
-            <div class="am-artist-mob-latest-section">
-              ${latestReleaseHTML}
-            </div>
-          ` : ''}
-
-          <!-- Top Songs Section (Vertical list on mobile with header arrow) -->
-          <div class="am-search-section" style="margin-top: 24px;">
-            <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 14px; padding: 0 4px;">
-              <h3 class="am-search-section-title" style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #fff;">${t('artist_top_songs')}</h3>
-              <span style="font-size: 1.25rem; color: rgba(255,255,255,0.4); font-weight: 600;">›</span>
-            </div>
-            <div class="am-artist-top-songs-list">${topSongsCardsHTML}</div>
-          </div>
-
-          <!-- Albums Section -->
-          <div class="am-search-section" style="margin-top: 32px;">
-            <h3 class="am-search-section-title">${t('artist_albums')}</h3>
-            <div class="am-cards-horizontal-scroll">${albumsHTML}</div>
-          </div>
-
-          <!-- Singles Section -->
-          <div class="am-search-section" style="margin-top: 32px;">
-            <h3 class="am-search-section-title">${t('artist_singles')}</h3>
-            <div class="am-cards-horizontal-scroll">${singlesHTML}</div>
-          </div>
-
-          ${playlistsHTML ? `
-            <!-- Artist Playlists Section -->
-            <div class="am-search-section" style="margin-top: 32px;">
-              <h3 class="am-search-section-title">Playlists</h3>
-              <div class="am-cards-horizontal-scroll">${playlistsHTML}</div>
-            </div>
-          ` : ''}
-
-          ${videosHTML ? `
-            <!-- Music Videos Section -->
-            <div class="am-search-section" style="margin-top: 32px;">
-              <h3 class="am-search-section-title">Music Videos</h3>
-              <div class="am-cards-horizontal-scroll">${videosHTML}</div>
-            </div>
-          ` : ''}
-
-          ${stationHTML ? `
-            <!-- Artist Station Section -->
-            <div class="am-search-section" style="margin-top: 32px;">
-              ${stationHTML}
-            </div>
-          ` : ''}
-
-          ${appearsOnHTML ? `
-            <!-- Appears On Section -->
-            <div class="am-search-section" style="margin-top: 32px;">
-              <h3 class="am-search-section-title">Appears On</h3>
-              <div class="am-cards-horizontal-scroll">${appearsOnHTML}</div>
-            </div>
-          ` : ''}
-
-          ${similarArtistsHTML ? `
-            <!-- Similar Artists Section -->
-            <div class="am-search-section" style="margin-top: 32px; margin-bottom: 40px;">
-              <h3 class="am-search-section-title">Similar Artists</h3>
-              <div class="am-cards-horizontal-scroll">${similarArtistsHTML}</div>
-            </div>
-          ` : ''}
         `;
       } else {
-        // Desktop / Tablet side-by-side header
-        artistViewContent.innerHTML = `
-          <div class="am-artist-header am-artist-side-header">
-            <div class="am-artist-art-container">
-              <img src="${cleanArtworkUrl(artistPhoto, 600, 600)}" referrerpolicy="no-referrer" class="am-artist-card-cover" onerror="this.src='favicon.svg'">
-            </div>
-            <div class="am-artist-details">
-              <h1 class="am-artist-title">${escapeHTML(displayName)}</h1>
-              <div class="am-artist-meta">${escapeHTML(genre)}</div>
-              <div class="am-artist-actions" style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
-                <button class="premium-btn primary am-artist-play-btn" id="artist-play-top-btn" style="border-radius:100px; padding:0 28px; height:42px; display:inline-flex; align-items:center; gap:8px;">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M8 5v14l11-7z"/></svg>
-                  <span>Play</span>
-                </button>
-                <button class="premium-btn secondary" id="artist-add-lib-btn" style="border-radius:100px; padding:0 22px; height:42px; display:inline-flex; align-items:center; gap:8px;">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                  <span id="artist-lib-label">${inLib ? t('ctx_in_library') : t('ctx_add_library')}</span>
-                </button>
-                <button class="premium-btn secondary" id="artist-share-btn" style="border-radius:100px; padding:0 18px; height:42px; display:inline-flex; align-items:center; gap:8px;">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                  <span>Share</span>
-                </button>
+        // Full portrait editorial image banner on mobile, centered avatar on desktop
+        heroMarkup = `
+          <div class="am-artist-pc-hero-wrap" id="am-artist-pc-hero" style="--am-artist-tint: ${tintColor};">
+            ${mobileTopNavMarkup}
+            <div class="am-artist-mobile-portrait-banner">
+              <img src="${cleanArtworkUrl(artistPhoto, 1200, 1400)}" class="am-artist-mobile-portrait-img" onerror="this.src='favicon.svg'" alt="${escapeHTML(displayName)}">
+              <div class="am-artist-mobile-portrait-gradient"></div>
+              <div class="am-artist-mobile-portrait-identity">
+                ${identityHTML}
+                <div class="am-artist-hero-actions">
+                  <button class="am-artist-icon-round-btn" id="artist-open-info-btn" title="${t('artist_about_title')}" aria-label="${t('artist_about_title')}">
+                    <span>i</span>
+                  </button>
+                  <button class="am-artist-hero-play-btn" id="artist-play-top-btn" title="${t('artist_play_top')}" aria-label="${t('ctx_play')}">
+                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  </button>
+                  <button class="am-artist-icon-round-btn ${inLib ? 'favorited' : ''}" id="artist-add-lib-btn" title="${inLib ? t('ctx_in_library') : t('ctx_favorite')}" aria-label="${t('ctx_favorite')}">
+                    <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-
-          ${latestReleaseHTML ? `
-            <div class="am-artist-latest-section-desktop" style="margin-top: 28px; max-width: 480px;">
-              <h3 class="am-search-section-title" style="margin-bottom: 12px;">Latest Release</h3>
-              ${latestReleaseHTML}
-            </div>
-          ` : ''}
-
-          <!-- Top Songs Section (4 songs vertically x 7 horizontally scrollable) -->
-          <div class="am-search-section" style="margin-top: 32px;">
-            <h3 class="am-search-section-title">${t('artist_top_songs')}</h3>
-            <div class="am-artist-top-songs-grid">${topSongsCardsHTML}</div>
-          </div>
-
-          <!-- Albums Row (Latest to Oldest) -->
-          <div class="am-search-section" style="margin-top: 36px;">
-            <h3 class="am-search-section-title">${t('artist_albums')}</h3>
-            <div class="am-cards-horizontal-scroll">${albumsHTML}</div>
-          </div>
-
-          <!-- Singles Row (Latest to Oldest) -->
-          <div class="am-search-section" style="margin-top: 36px;">
-            <h3 class="am-search-section-title">${t('artist_singles')}</h3>
-            <div class="am-cards-horizontal-scroll">${singlesHTML}</div>
-          </div>
-
-          ${playlistsHTML ? `
-            <!-- Artist Playlists Row -->
-            <div class="am-search-section" style="margin-top: 36px;">
-              <h3 class="am-search-section-title">Playlists</h3>
-              <div class="am-cards-horizontal-scroll">${playlistsHTML}</div>
-            </div>
-          ` : ''}
-
-          ${videosHTML ? `
-            <!-- Music Videos Row -->
-            <div class="am-search-section" style="margin-top: 36px;">
-              <h3 class="am-search-section-title">Music Videos</h3>
-              <div class="am-cards-horizontal-scroll">${videosHTML}</div>
-            </div>
-          ` : ''}
-
-          ${stationHTML ? `
-            <!-- Artist Station Row -->
-            <div class="am-search-section" style="margin-top: 36px; max-width: 480px;">
-              <h3 class="am-search-section-title" style="margin-bottom: 12px;">Radio Station</h3>
-              ${stationHTML}
-            </div>
-          ` : ''}
-
-          ${appearsOnHTML ? `
-            <!-- Appears On Row -->
-            <div class="am-search-section" style="margin-top: 36px;">
-              <h3 class="am-search-section-title">Appears On</h3>
-              <div class="am-cards-horizontal-scroll">${appearsOnHTML}</div>
-            </div>
-          ` : ''}
-
-          ${similarArtistsHTML ? `
-            <!-- Similar Artists Row -->
-            <div class="am-search-section" style="margin-top: 36px;">
-              <h3 class="am-search-section-title">Similar Artists</h3>
-              <div class="am-cards-horizontal-scroll">${similarArtistsHTML}</div>
-            </div>
-          ` : ''}
-
-          <!-- About Section -->
-          <div class="am-about-section" style="margin-top: 36px; margin-bottom: 40px;">
-            <h3 style="color: #fff; font-size: 18px; margin-bottom: 8px;">${t('artist_about')}</h3>
-            <div class="am-about-text-container" id="artist-about-text">
-              <p style="color: #d1d1d6; font-size: 14px;">${bioText || '...'}</p>
-            </div>
-            ${bioRaw ? `<button class="am-show-more-btn" id="about-toggle-btn">${t('artist_show_more')}</button>` : ''}
-            <div class="am-artist-meta-grid">
-              <div class="am-meta-item">
-                <label>${t('artist_genre')}</label>
-                <span>${escapeHTML(genre)}</span>
+            <div class="am-artist-pc-hero-centered">
+              ${artistPhoto ? `
+                <div class="am-artist-hero-backdrop-blur" style="background-image: url('${artistPhoto}');"></div>
+                <div class="am-artist-hero-backdrop-gradient"></div>
+              ` : ''}
+              <div class="am-artist-circle-avatar-wrap">
+                <img src="${cleanArtworkUrl(artistPhoto, 500, 500)}" class="am-artist-circle-avatar-img" onerror="this.src='favicon.svg'" alt="${escapeHTML(displayName)}">
               </div>
-              <div class="am-meta-item">
-                <label>${t('artist_albums')}</label>
-                <span>${fullAlbums.length + singles.length}</span>
+              ${hasConcerts ? `
+                <div class="am-artist-hero-badge">
+                  <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+                  <span>${t('artist_upcoming_concerts')}</span>
+                </div>
+              ` : ''}
+              <div class="am-artist-hero-identity">
+                ${identityHTML}
               </div>
-              <div class="am-meta-item">
-                <label>${t('artist_top_songs')}</label>
-                <span>${songs.length}</span>
+              <div class="am-artist-hero-actions">
+                <button class="am-artist-icon-round-btn" id="artist-open-info-btn-desktop" title="${t('artist_about_title')}" aria-label="${t('artist_about_title')}">
+                  <span>i</span>
+                </button>
+                <button class="am-artist-hero-play-btn" id="artist-play-top-btn-desktop" title="${t('artist_play_top')}" aria-label="${t('ctx_play')}">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <button class="am-artist-icon-round-btn ${inLib ? 'favorited' : ''}" id="artist-add-lib-btn-desktop" title="${inLib ? t('ctx_in_library') : t('ctx_favorite')}" aria-label="${t('ctx_favorite')}">
+                  <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                </button>
               </div>
             </div>
           </div>
         `;
       }
 
-      // Share button listener
-      const shareBtn = artistViewContent.querySelector('#artist-mob-share-btn') || artistViewContent.querySelector('#artist-share-btn');
-      if (shareBtn) {
-        shareBtn.onclick = () => {
-          shareEntity({
-            title: displayName,
-            text: `Check out ${displayName} on Lyricsflow`,
-            url: `/artist/${toSlug(displayName)}/${resolvedArtistId || artistId}`
-          });
+      // Sticky bar when scrolled
+      const stickyBarMarkup = `
+        <div class="am-artist-sticky-bar" id="am-artist-sticky-bar">
+          <div class="am-artist-sticky-left">
+            <img src="${cleanArtworkUrl(artistPhoto, 120, 120)}" class="am-artist-sticky-avatar" onerror="this.src='favicon.svg'">
+            <h2 class="am-artist-sticky-title">${escapeHTML(displayName)}</h2>
+          </div>
+          <div class="am-artist-sticky-right">
+            <button class="am-artist-icon-round-btn" id="artist-sticky-play-btn" style="width: 36px; height: 36px;" title="Play">
+              <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: #fff; margin-left: 2px;"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Dynamic Concert Cards HTML
+      const concertsCardsHTML = rawConcertsList.map(cnc => {
+        const cAttr = cnc.attributes || cnc;
+        const venue = cAttr.venueName || cAttr.city || cAttr.location || '';
+        const name = cAttr.name || cAttr.title || `${displayName} Live`;
+        const dateStr = cAttr.start || cAttr.date || '';
+        let monthStr = 'LIVE';
+        let dayStr = '';
+        if (dateStr) {
+          try {
+            const d = new Date(dateStr);
+            monthStr = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+            dayStr = d.getDate();
+          } catch (_) {}
+        }
+        const concertUrl = cAttr.url || cAttr.ticketUrl || cAttr.eventUrl || (cAttr.externalUrls?.ticketmaster) || (cAttr.externalUrls?.bandsintown) || '';
+        return `
+          <div class="am-standard-media-card am-concert-card animate-fade" data-url="${escapeHTML(concertUrl)}" style="min-width: 220px; max-width: 260px; padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: transform 0.2s ease, background 0.2s ease;">
+            <div style="display: flex; gap: 14px; align-items: center; margin-bottom: 10px;">
+              <div style="width: 48px; height: 48px; border-radius: 10px; background: rgba(250,88,106,0.15); color: #fa586a; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; line-height: 1.1;">
+                <span style="font-size: 0.65rem;">${escapeHTML(monthStr)}</span>
+                <span style="font-size: 1.15rem;">${escapeHTML(String(dayStr))}</span>
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 0.92rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(venue || displayName)}</div>
+                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.6);">${escapeHTML(cAttr.city || 'Tour Date')}</div>
+              </div>
+            </div>
+            <div style="font-size: 0.82rem; color: rgba(255,255,255,0.8); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHTML(name)}</div>
+          </div>
+        `;
+      }).join('');
+
+      // Full Layout Assembly
+      artistViewContent.innerHTML = `
+        ${artistPhoto ? `
+          <div class="am-artist-ambient-canvas-blur" style="background-image: url('${artistPhoto}');"></div>
+          <div class="am-artist-ambient-canvas-gradient"></div>
+        ` : ''}
+        ${stickyBarMarkup}
+        ${heroMarkup}
+
+        <div class="am-artist-canvas-body" style="padding: 0 4px; margin-top: 12px; position: relative; z-index: 2;">
+          <!-- Dual Grid: Latest Release / Pinned Release fallback paired with Top Songs -->
+          <div style="display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; margin-top: 24px;">
+            ${latestReleaseHTML ? `
+              <div style="flex: 1; min-width: 280px; max-width: 360px;">
+                <h3 class="am-search-section-title" style="margin-bottom: 12px;">${(t('artist_latest_release') !== 'artist_latest_release' && t('artist_latest_release')) || 'Latest Release'}</h3>
+                ${latestReleaseHTML}
+              </div>
+            ` : ''}
+
+            <div style="flex: 2; min-width: 320px; position: relative;">
+              <div class="am-section-header-row" style="margin-bottom: 12px;">
+                <h3 class="am-search-section-title" style="margin-bottom: 0;">${(t('artist_top_songs') !== 'artist_top_songs' && t('artist_top_songs')) || 'Top Songs'}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-top-songs-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-top-songs-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-artist-top-songs-grid" id="artist-top-songs-scroll">${topSongsCardsHTML}</div>
+            </div>
+          </div>
+
+          ${essentialsHTML ? `
+            <!-- Essential Albums Shelf (Directly under Top Songs / Latest Release) -->
+            <div class="am-search-section" style="margin-top: 38px;">
+              <div class="am-section-header-row">
+                <h3 class="am-search-section-title">${t('artist_essentials')}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-essentials-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-essentials-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-essentials-scroll">${essentialsHTML}</div>
+            </div>
+          ` : ''}
+
+          ${hasConcerts ? `
+            <!-- Dynamic Upcoming Concerts Shelf -->
+            <div class="am-search-section" style="margin-top: 38px;">
+              <div class="am-section-header-row">
+                <h3 class="am-search-section-title">${t('artist_upcoming_concerts')}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-concerts-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-concerts-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-concerts-scroll">${concertsCardsHTML}</div>
+            </div>
+          ` : ''}
+
+          <!-- Albums Shelf (only rendered if artist has albums) -->
+          ${albumsShelfHTML ? `
+            <div class="am-search-section" style="margin-top: 38px;">
+              <div class="am-section-header-row">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <h3 class="am-search-section-title">${t('artist_albums')}</h3>
+                  ${showAlbumsViewAllChevron ? `
+                    <button class="am-shelf-header-chevron-btn" id="artist-toggle-all-albums-btn" title="View All Albums">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                  ` : ''}
+                </div>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-albums-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-albums-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-albums-scroll">${albumsShelfHTML}</div>
+              <div class="am-home-media-grid hidden" id="artist-all-albums-grid" style="margin-top: 14px;">${allAlbumsGridHTML}</div>
+            </div>
+          ` : ''}
+
+          <!-- Singles & EPs Shelf (only rendered if artist has singles) -->
+          ${singlesHTML ? `
+            <div class="am-search-section" style="margin-top: 38px;">
+              <div class="am-section-header-row">
+                <h3 class="am-search-section-title">${t('artist_singles')}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-singles-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-singles-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-singles-scroll">${singlesHTML}</div>
+            </div>
+          ` : ''}
+
+          <!-- Compilations Shelf -->
+          ${compilationsHTML ? `
+            <div class="am-search-section" style="margin-top: 38px;">
+              <div class="am-section-header-row">
+                <h3 class="am-search-section-title">${t('artist_compilations')}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-compilations-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-compilations-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-compilations-scroll">${compilationsHTML}</div>
+            </div>
+          ` : ''}
+
+          <!-- Appears On Shelf -->
+          ${appearedOnHTML ? `
+            <div class="am-search-section" style="margin-top: 38px;">
+              <div class="am-section-header-row">
+                <h3 class="am-search-section-title">${t('artist_appeared_on')}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-appeared-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-appeared-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-appeared-scroll">${appearedOnHTML}</div>
+            </div>
+          ` : ''}
+
+          ${playlistsHTML ? `
+            <!-- Curated Artist Playlists Shelf -->
+            <div class="am-search-section" style="margin-top: 38px;">
+              <div class="am-section-header-row">
+                <h3 class="am-search-section-title">${t('artist_playlists')}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-playlists-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-playlists-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-playlists-scroll">${playlistsHTML}</div>
+            </div>
+          ` : ''}
+
+          ${videosHTML ? `
+            <!-- Music Videos Shelf -->
+            <div class="am-search-section" style="margin-top: 38px;">
+              <div class="am-section-header-row">
+                <h3 class="am-search-section-title">${t('artist_videos')}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-videos-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-videos-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-videos-scroll">${videosHTML}</div>
+            </div>
+          ` : ''}
+
+          ${postsHTML ? `
+            <!-- Artist Posts Shelf -->
+            <div class="am-search-section" style="margin-top: 38px;">
+              <div class="am-section-header-row">
+                <h3 class="am-search-section-title">${(t('artist_posts') !== 'artist_posts' && t('artist_posts')) || 'Posts'}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-posts-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-posts-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-posts-scroll">${postsHTML}</div>
+            </div>
+          ` : ''}
+
+          ${moreToSeeHTML ? `
+            <!-- More to See / Hear Shelf -->
+            <div class="am-search-section" style="margin-top: 38px;">
+              <div class="am-section-header-row">
+                <h3 class="am-search-section-title">${(t('artist_more_to_see') !== 'artist_more_to_see' && t('artist_more_to_see')) || 'More to See'}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-more-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-more-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-more-scroll">${moreToSeeHTML}</div>
+            </div>
+          ` : ''}
+
+          ${stationHTML ? `
+            <!-- Artist Radio Station -->
+            <div class="am-search-section" style="margin-top: 38px; max-width: 440px;">
+              <h3 class="am-search-section-title" style="margin-bottom: 12px;">${t('artist_station')}</h3>
+              ${stationHTML}
+            </div>
+          ` : ''}
+
+          ${similarArtistsHTML ? `
+            <!-- Similar Artists Shelf -->
+            <div class="am-search-section" style="margin-top: 38px; margin-bottom: 50px;">
+              <div class="am-section-header-row">
+                <h3 class="am-search-section-title">${t('artist_similar')}</h3>
+                <div class="am-shelf-nav-arrows">
+                  <button class="am-shelf-arrow-btn prev" data-target="#artist-similar-scroll" title="Scroll Left">‹</button>
+                  <button class="am-shelf-arrow-btn next" data-target="#artist-similar-scroll" title="Scroll Right">›</button>
+                </div>
+              </div>
+              <div class="am-cards-horizontal-scroll" id="artist-similar-scroll">${similarArtistsHTML}</div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      // ── Progressive Scroll Blur & Fade Dynamics ──
+      const heroElem = artistViewContent.querySelector('#am-artist-pc-hero');
+      const stickyBar = artistViewContent.querySelector('#am-artist-sticky-bar');
+
+      const handleArtistScroll = () => {
+        const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+        if (heroElem) {
+          const heroHeight = heroElem.offsetHeight || 400;
+          const progress = Math.min(Math.max(scrollY / (heroHeight * 0.8), 0), 1);
+          // Progressive upward blur + fade-out
+          heroElem.style.opacity = String(1 - (progress * 0.85));
+          heroElem.style.filter = `blur(${progress * 16}px)`;
+          heroElem.style.transform = `translateY(${progress * -20}px)`;
+
+          if (stickyBar) {
+            if (scrollY > heroHeight * 0.7) {
+              stickyBar.classList.add('visible');
+            } else {
+              stickyBar.classList.remove('visible');
+            }
+          }
+        }
+      };
+
+      window.removeEventListener('scroll', window.__waveArtistScrollHandler);
+      window.__waveArtistScrollHandler = handleArtistScroll;
+      window.addEventListener('scroll', handleArtistScroll, { passive: true });
+
+      // ── Apple Music (i) About Artist Sheet Modal ──
+      const openAboutModal = () => {
+        let sheet = document.getElementById('am-about-artist-sheet');
+        if (!sheet) {
+          sheet = document.createElement('div');
+          sheet.id = 'am-about-artist-sheet';
+          sheet.className = 'am-about-sheet-backdrop';
+          document.body.appendChild(sheet);
+        }
+
+        const bioParagraphs = bioText
+          ? bioText.split('<br><br>').map(p => `<p>${p}</p>`).join('')
+          : `<p>${t('empty_artist_bio') || 'No editorial biography available for this artist.'}</p>`;
+
+        sheet.innerHTML = `
+          <div class="am-about-sheet-card">
+            <button class="am-about-sheet-close-btn" id="close-about-sheet-btn" aria-label="${t('profile_close')}">✕</button>
+            <div class="am-about-sheet-scrollable">
+              <div class="am-about-sheet-hero-art">
+                <img src="${cleanArtworkUrl(artistPhoto, 900, 900)}" class="am-about-sheet-hero-img" onerror="this.src='favicon.svg'" alt="">
+                <div class="am-about-sheet-hero-gradient"></div>
+              </div>
+              <div class="am-about-sheet-body">
+                <h2 class="am-about-sheet-artist-name">${escapeHTML(displayName)}</h2>
+
+                <div class="am-about-sheet-meta-block">
+                  <div class="am-about-sheet-meta-label">${t('artist_genre')}</div>
+                  <div class="am-about-sheet-genre-pill">${escapeHTML(genre)}</div>
+                </div>
+
+                <div class="am-about-sheet-bio-section">
+                  <h3 class="am-about-sheet-bio-title">${t('artist_about')}</h3>
+                  <div class="am-about-sheet-bio-text">
+                    ${bioParagraphs}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        sheet.classList.remove('hidden');
+        sheet.style.display = 'flex';
+
+        const closeBtn = sheet.querySelector('#close-about-sheet-btn');
+        if (closeBtn) {
+          closeBtn.onclick = () => {
+            sheet.classList.add('hidden');
+            sheet.style.display = 'none';
+          };
+        }
+        sheet.onclick = (e) => {
+          if (e.target === sheet) {
+            sheet.classList.add('hidden');
+            sheet.style.display = 'none';
+          }
         };
+      };
+
+      // Wire hero video playback (HLS stream support)
+      if (hasHeroVideo && heroVideoUrl) {
+        const heroVideoEl = artistViewContent.querySelector('.am-artist-pc-hero-video-banner video');
+        if (heroVideoEl) {
+          playHlsStream(heroVideoEl, heroVideoUrl, { autoplay: true, isMuted: true, loop: true });
+        }
       }
 
-      // Mobile Back button
+      // Wire Mobile Navigation Buttons (Back, Share, More)
       const mobBackBtn = artistViewContent.querySelector('#artist-mob-back-btn');
       if (mobBackBtn) {
-        mobBackBtn.onclick = () => {
-          window.history.back();
+        mobBackBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            switchPage('listen');
+          }
         };
       }
 
-      // Mobile Info (i) button — opens Bio modal
-      const mobInfoBtn = artistViewContent.querySelector('#artist-mob-info-btn');
-      if (mobInfoBtn) {
-        mobInfoBtn.onclick = () => {
-          let bioModal = document.getElementById('am-artist-bio-modal');
-          if (!bioModal) {
-            bioModal = document.createElement('div');
-            bioModal.id = 'am-artist-bio-modal';
-            bioModal.className = 'am-mobile-modal-overlay';
-            bioModal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background:rgba(0,0,0,0.72);backdrop-filter:blur(25px);display:flex;align-items:center;justify-content:center;padding:20px;';
-            document.body.appendChild(bioModal);
-          }
-          bioModal.innerHTML = `
-            <div class="am-mobile-modal-sheet" style="max-width: 440px; width: 90%; max-height: 80vh; overflow-y: auto; background: rgba(28,28,30,0.96); border: 1px solid rgba(255,255,255,0.12); border-radius: 24px; padding: 26px; box-shadow: 0 20px 50px rgba(0,0,0,0.7);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff;">About ${escapeHTML(displayName)}</h3>
-                <button id="close-bio-modal" style="background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 15px; cursor: pointer;">✕</button>
-              </div>
-              <div style="font-size: 0.95rem; line-height: 1.65; color: #e4e4e7;">${bioText || 'No editorial biography available.'}</div>
-            </div>
-          `;
-          bioModal.classList.remove('hidden');
-          bioModal.style.display = 'flex';
-          bioModal.querySelector('#close-bio-modal').onclick = () => {
-            bioModal.classList.add('hidden');
-            bioModal.style.display = 'none';
-          };
-          bioModal.onclick = (ev) => {
-            if (ev.target === bioModal) {
-              bioModal.classList.add('hidden');
-              bioModal.style.display = 'none';
-            }
-          };
+      const mobShareBtn = artistViewContent.querySelector('#artist-mob-share-btn');
+      if (mobShareBtn) {
+        mobShareBtn.onclick = (e) => {
+          e.stopPropagation();
+          shareEntity('artist', resolvedArtistId || displayName, displayName);
         };
       }
+
+      const mobMoreBtn = artistViewContent.querySelector('#artist-mob-more-btn');
+      if (mobMoreBtn) {
+        mobMoreBtn.onclick = (e) => {
+          e.stopPropagation();
+          openAboutModal();
+        };
+      }
+
+      // Wire (i) Info buttons (both mobile and desktop)
+      artistViewContent.querySelectorAll('#artist-open-info-btn, #artist-open-info-btn-desktop').forEach(btn => {
+        btn.onclick = openAboutModal;
+      });
+
+      // Wire Favorite / Library button (both mobile and desktop)
+      const handleFavToggle = () => {
+        const inNow = isArtistInLibrary(resolvedArtistId || displayName);
+        if (inNow) {
+          removeArtistFromLibrary(resolvedArtistId || displayName);
+          artistViewContent.querySelectorAll('#artist-add-lib-btn, #artist-add-lib-btn-desktop').forEach(b => b.classList.remove('favorited'));
+          showToast({ message: t('ctx_removed_from_lib') });
+        } else {
+          addArtistToLibrary({ id: resolvedArtistId || displayName, name: displayName, artUrl: artistPhoto, genre });
+          artistViewContent.querySelectorAll('#artist-add-lib-btn, #artist-add-lib-btn-desktop').forEach(b => b.classList.add('favorited'));
+          showToast({ message: t('ctx_added_to_lib') });
+        }
+      };
+
+      artistViewContent.querySelectorAll('#artist-add-lib-btn, #artist-add-lib-btn-desktop').forEach(btn => {
+        btn.onclick = handleFavToggle;
+      });
+
+      // Wire Albums View All Chevron (Toggle Grid vs Horizontal Scroll)
+      const toggleAllAlbumsBtn = artistViewContent.querySelector('#artist-toggle-all-albums-btn');
+      const albumsScrollEl = artistViewContent.querySelector('#artist-albums-scroll');
+      const allAlbumsGridEl = artistViewContent.querySelector('#artist-all-albums-grid');
+      if (toggleAllAlbumsBtn && albumsScrollEl && allAlbumsGridEl) {
+        toggleAllAlbumsBtn.onclick = (e) => {
+          e.stopPropagation();
+          const isGridVisible = !allAlbumsGridEl.classList.contains('hidden');
+          if (isGridVisible) {
+            allAlbumsGridEl.classList.add('hidden');
+            albumsScrollEl.classList.remove('hidden');
+            toggleAllAlbumsBtn.style.transform = 'rotate(0deg)';
+          } else {
+            allAlbumsGridEl.classList.remove('hidden');
+            albumsScrollEl.classList.add('hidden');
+            toggleAllAlbumsBtn.style.transform = 'rotate(90deg)';
+          }
+        };
+      }
+
+      // Wire Shelf Horizontal Nav Arrows
+      artistViewContent.querySelectorAll('.am-shelf-arrow-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const targetSelector = btn.getAttribute('data-target');
+          if (!targetSelector) return;
+          const container = artistViewContent.querySelector(targetSelector);
+          if (!container) return;
+          const isPrev = btn.classList.contains('prev');
+          const scrollDistance = container.clientWidth * 0.75;
+          container.scrollBy({
+            left: isPrev ? -scrollDistance : scrollDistance,
+            behavior: 'smooth'
+          });
+        };
+      });
+
+      // Helper: build artist top songs queue
+      const createArtistTopSongsQueue = (startIdx) => {
+        const after = top24Songs.slice(startIdx);
+        const before = top24Songs.slice(0, startIdx);
+        return [...after, ...before].map(s => {
+          const sAttr = s.attributes || s || {};
+          const albumId = s?.relationships?.albums?.data?.[0]?.id || sAttr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+          return {
+            id: s.id,
+            title: sAttr.name || sAttr.trackName,
+            artist: sAttr.artistName || displayName,
+            album: sAttr.albumName || sAttr.collectionName || 'Top Song',
+            artUrl: cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 300, 300),
+            previewUrl: `${API_BASE}/stream?song=${s.id}&l=en-US`,
+            durationMs: sAttr.durationInMillis || 180000
+          };
+        });
+      };
+
+      // Wire Play Top Songs Buttons (mobile, desktop, and sticky)
+      const handlePlayTopSongs = (e) => {
+        if (e) e.stopPropagation();
+        if (top24Songs.length === 0) return;
+        const firstSong = top24Songs[0];
+        const sAttr = firstSong.attributes || firstSong || {};
+        const albumId = firstSong?.relationships?.albums?.data?.[0]?.id || sAttr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+        const topQueue = createArtistTopSongsQueue(0);
+        loadRemoteTrack({
+          trackId: firstSong.id,
+          trackName: sAttr.name || sAttr.trackName,
+          artistName: sAttr.artistName || displayName,
+          collectionName: sAttr.albumName || sAttr.collectionName,
+          albumId: albumId,
+          artistId: resolvedArtistId || artistId,
+          artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100)
+        }, topQueue);
+      };
+
+      artistViewContent.querySelectorAll('#artist-play-top-btn, #artist-play-top-btn-desktop, #artist-sticky-play-btn').forEach(btn => {
+        btn.onclick = handlePlayTopSongs;
+      });
 
       // Latest release card click
       artistViewContent.querySelectorAll('.am-artist-latest-card').forEach(card => {
@@ -2988,39 +4219,26 @@ document.addEventListener('DOMContentLoaded', () => {
         };
       });
 
-      // About Toggle
-      const toggleBtn = artistViewContent.querySelector('#about-toggle-btn');
-      const textContainer = artistViewContent.querySelector('.am-about-text-container');
-      if (toggleBtn && textContainer) {
-        toggleBtn.addEventListener('click', () => {
-          const isExpanded = textContainer.classList.toggle('expanded');
-          toggleBtn.textContent = isExpanded ? t('artist_show_less') : t('artist_show_more');
-        });
-      }
-
-      // Add to library
-      const artistAddBtn = artistViewContent.querySelector('#artist-add-lib-btn');
-      if (artistAddBtn) {
-        artistAddBtn.onclick = () => {
-          if (isArtistInLibrary(resolvedArtistId || displayName)) {
-            removeArtistFromLibrary(resolvedArtistId || displayName);
-            const lbl = document.getElementById('artist-lib-label');
-            if (lbl) lbl.textContent = t('ctx_add_library');
-            artistAddBtn.classList.remove('favorited');
-          } else {
-            addArtistToLibrary({ id: resolvedArtistId || displayName, name: displayName, artUrl: artistPhoto, genre });
-            const lbl = document.getElementById('artist-lib-label');
-            if (lbl) lbl.textContent = t('ctx_in_library');
-            artistAddBtn.classList.add('favorited');
-          }
-        };
-      }
-
       // Albums, Singles, and Appears-On card clicks
-      artistViewContent.querySelectorAll('.am-standard-media-card:not(.am-playlist-card):not(.am-artist-card-item):not(.am-video-card-item)').forEach(card => {
+      artistViewContent.querySelectorAll('.am-standard-media-card:not(.am-playlist-card):not(.am-artist-card-item):not(.am-video-card-item):not(.am-concert-card)').forEach(card => {
         card.onclick = () => {
           const title = card.querySelector('.am-media-card-title')?.textContent || '';
           showAlbumView(card.dataset.id, title);
+        };
+      });
+
+      // Upcoming Concerts card click (Open in new tab)
+      artistViewContent.querySelectorAll('.am-concert-card').forEach(card => {
+        card.onclick = (e) => {
+          e.stopPropagation();
+          const url = card.dataset.url;
+          if (url && url.startsWith('http')) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+          } else {
+            const venue = card.querySelector('.am-media-card-title')?.textContent || '';
+            const query = encodeURIComponent(`${displayName} ${venue} concert tickets`);
+            window.open(`https://www.google.com/search?q=${query}`, '_blank', 'noopener,noreferrer');
+          }
         };
       });
 
@@ -3032,7 +4250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
       });
 
-      // Music Videos card click
+      // Music Videos and More to See card click
       artistViewContent.querySelectorAll('.am-video-card-item').forEach(card => {
         card.onclick = () => {
           const title = card.querySelector('.am-media-card-title')?.textContent || '';
@@ -3041,21 +4259,33 @@ document.addEventListener('DOMContentLoaded', () => {
         };
       });
 
+      // Artist Posts card click (Play video or open post media)
+      artistViewContent.querySelectorAll('.am-post-card-item').forEach(card => {
+        card.onclick = () => {
+          const title = card.querySelector('.am-media-card-title')?.textContent || 'Artist Post';
+          const postUrl = card.dataset.url || '';
+          const postId = card.dataset.id || '';
+          // If the post has a direct URL or video id, play via music video player modal
+          playMusicVideo(postId || postUrl, title, displayName, { customUrl: postUrl });
+        };
+      });
+
       // Station card click
       artistViewContent.querySelectorAll('.am-artist-station-card').forEach(card => {
         card.onclick = () => {
-          if (top28Songs.length > 0) {
-            const sAttr = top28Songs[0].attributes || top28Songs[0] || {};
-            const albumId = top28Songs[0]?.relationships?.albums?.data?.[0]?.id || sAttr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+          if (top24Songs.length > 0) {
+            const sAttr = top24Songs[0].attributes || top24Songs[0] || {};
+            const albumId = top24Songs[0]?.relationships?.albums?.data?.[0]?.id || sAttr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+            const topQueue = createArtistTopSongsQueue(0);
             loadRemoteTrack({
-              trackId: top28Songs[0].id,
+              trackId: top24Songs[0].id,
               trackName: sAttr.name || sAttr.trackName,
               artistName: sAttr.artistName || displayName,
               collectionName: sAttr.albumName || sAttr.collectionName,
               albumId: albumId,
               artistId: resolvedArtistId || artistId,
               artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100)
-            });
+            }, topQueue);
           }
         };
       });
@@ -3072,7 +4302,7 @@ document.addEventListener('DOMContentLoaded', () => {
       artistViewContent.querySelectorAll('.am-artist-song-card').forEach(card => {
         card.onclick = (e) => {
           const idx = parseInt(card.dataset.idx, 10);
-          const song = top28Songs[idx];
+          const song = top24Songs[idx];
           const sAttr = song?.attributes || song || {};
           const albumId = song?.relationships?.albums?.data?.[0]?.id || sAttr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
 
@@ -3090,36 +4320,28 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
 
-          loadRemoteTrack({
+          queueContextualWithSimilar({
             trackId: song.id,
             trackName: sAttr.name || sAttr.trackName,
             artistName: sAttr.artistName || displayName,
             collectionName: sAttr.albumName || sAttr.collectionName,
             albumId: albumId,
             artistId: resolvedArtistId || artistId,
-            artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100)
-          });
+            artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100),
+            durationMs: sAttr.durationInMillis
+          }, top24Songs.map(s => {
+            const a = s.attributes || s || {};
+            return {
+              id: s.id,
+              title: a.name || a.trackName,
+              artist: a.artistName || displayName,
+              album: a.albumName || a.collectionName || 'Top Song',
+              artUrl: cleanArtworkUrl(a.artwork?.url || a.artworkUrl100, 300, 300),
+              durationMs: a.durationInMillis || 180000
+            };
+          }), idx);
         };
       });
-
-      // Play top song button
-      const playBtn = artistViewContent.querySelector('.am-artist-play-btn');
-      if (playBtn && top28Songs.length > 0) {
-        playBtn.onclick = (e) => {
-          e.stopPropagation();
-          const sAttr = top28Songs[0].attributes || top28Songs[0] || {};
-          const albumId = top28Songs[0]?.relationships?.albums?.data?.[0]?.id || sAttr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
-          loadRemoteTrack({
-            trackId: top28Songs[0].id,
-            trackName: sAttr.name || sAttr.trackName,
-            artistName: sAttr.artistName || displayName,
-            collectionName: sAttr.albumName || sAttr.collectionName,
-            albumId: albumId,
-            artistId: resolvedArtistId || artistId,
-            artworkUrl100: cleanArtworkUrl(sAttr.artwork?.url || sAttr.artworkUrl100, 100, 100)
-          });
-        };
-      }
 
     } catch (err) {
       console.error(err);
@@ -3133,6 +4355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
     if (artistViewContainer) artistViewContainer.classList.add('hidden');
+    if (songViewContainer) songViewContainer.classList.add('hidden');
     if (playlistViewContainer) playlistViewContainer.classList.remove('hidden');
 
     const displayName = labelName || 'Record Label';
@@ -3299,6 +4522,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
     if (artistViewContainer) artistViewContainer.classList.add('hidden');
+    if (songViewContainer) songViewContainer.classList.add('hidden');
     if (playlistViewContainer) playlistViewContainer.classList.remove('hidden');
 
     const displayName = curatorName || 'Curator';
@@ -3391,10 +4615,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Remote Playlist View ──
   // ── Remote Playlist View ──
   async function showRemotePlaylistView(playlistId, playlistName, options = {}) {
+    if (searchBarWrapper) searchBarWrapper.classList.add('hidden');
     if (listenInitialContent) listenInitialContent.classList.add('hidden');
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
     if (artistViewContainer) artistViewContainer.classList.add('hidden');
+    if (songViewContainer) songViewContainer.classList.add('hidden');
     if (playlistViewContainer) playlistViewContainer.classList.remove('hidden');
 
     playlistViewContent.innerHTML = `<div class="am-loading-msg">${t('loading')}</div>`;
@@ -3447,6 +4673,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const heroArt = cleanArtworkUrl(rawArt, 1200, 1200);
       const isMobile = window.innerWidth <= 768;
 
+      // Apply page-wide color scheming for Playlist
+      applyPageThemeColor(artUrl, attr.artwork?.bgColor);
+
+      const renderPlaylistTrackRows = () => tracks.map((tItem, idx) => `
+        <div class="am-track-row animate-fade" data-id="${tItem.id}" data-idx="${idx}">
+          <div class="am-track-num">${idx + 1}</div>
+          <div class="am-track-title">
+            <span class="am-track-title-link" data-id="${tItem.id}" data-title="${escapeHTML(tItem.title || 'Song')}">${escapeHTML(tItem.title || 'Unknown')}</span>
+            ${tItem.is_explicit ? '<span class="am-explicit-tag">E</span>' : ''}
+          </div>
+          <div class="am-track-duration">${formatDuration(tItem.duration_ms)}</div>
+          <button class="am-song-more-btn" data-id="${tItem.id}">•••</button>
+        </div>
+      `).join('');
+
       if (isMobile) {
         playlistViewContent.innerHTML = `
           <div class="am-artist-mob-hero">
@@ -3496,17 +4737,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
 
           <div class="am-album-tracks" style="margin-top: 20px;">
-            ${tracks.map((tItem, idx) => `
-              <div class="am-track-row animate-fade" data-id="${tItem.id}" data-idx="${idx}">
-                <div class="am-track-num">${idx + 1}</div>
-                <div class="am-track-title">
-                  <span>${escapeHTML(tItem.title || 'Unknown')}</span>
-                  ${tItem.is_explicit ? '<span class="am-explicit-tag">E</span>' : ''}
-                </div>
-                <div class="am-track-duration">${formatDuration(tItem.duration_ms)}</div>
-                <button class="am-song-more-btn" data-id="${tItem.id}">•••</button>
-              </div>
-            `).join('')}
+            ${renderPlaylistTrackRows()}
           </div>
         `;
       } else {
@@ -3522,26 +4753,30 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="am-album-details">
               <h2 class="am-album-title">${escapeHTML(name)}</h2>
               <div class="am-album-artist" style="color: #fa586a; font-weight: 600;">${escapeHTML(curator)}</div>
-              ${desc ? `<div style="margin-top: 8px; font-size: 0.88rem; color: #a1a1a6; max-height: 48px; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(desc)}</div>` : ''}
               <div style="margin-top: 10px; font-size: 0.85rem; color: #6e6e73;">${trackCount} Songs</div>
+              <div class="am-album-actions" style="display: flex; gap: 12px; margin-top: 16px;">
+                <button class="am-album-play-btn" id="playlist-desktop-play-btn" style="display: flex; align-items: center; gap: 8px; padding: 8px 20px; border-radius: 20px; background: #fa586a; color: #fff; border: none; font-weight: 600; cursor: pointer;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Play
+                </button>
+              </div>
             </div>
           </div>
 
           <div class="am-album-tracks" style="margin-top: 20px;">
-            ${tracks.map((tItem, idx) => `
-              <div class="am-track-row animate-fade" data-id="${tItem.id}" data-idx="${idx}">
-                <div class="am-track-num">${idx + 1}</div>
-                <div class="am-track-title">
-                  <span>${escapeHTML(tItem.title || 'Unknown')}</span>
-                  ${tItem.is_explicit ? '<span class="am-explicit-tag">E</span>' : ''}
-                </div>
-                <div class="am-track-duration">${formatDuration(tItem.duration_ms)}</div>
-                <button class="am-song-more-btn" data-id="${tItem.id}">•••</button>
-              </div>
-            `).join('')}
+            ${renderPlaylistTrackRows()}
           </div>
         `;
       }
+
+      // Title link click: open song view (/song/songid)
+      playlistViewContent.querySelectorAll('.am-track-title-link').forEach(link => {
+        link.onclick = (e) => {
+          e.stopPropagation();
+          const sId = link.dataset.id;
+          const sTitle = link.dataset.title;
+          showSongView(sId, sTitle);
+        };
+      });
 
       // Mobile controls
       const mobBack = playlistViewContent.querySelector('#playlist-mob-back-btn');
@@ -3558,57 +4793,41 @@ document.addEventListener('DOMContentLoaded', () => {
         };
       }
 
-      const mobPlay = playlistViewContent.querySelector('#playlist-mob-play-btn');
-      if (mobPlay && tracks.length > 0) {
-        mobPlay.onclick = () => {
-          loadRemoteTrack({
-            trackId: tracks[0].id,
-            trackName: tracks[0].title,
-            artistName: tracks[0].artist,
-            collectionName: tracks[0].album,
-            albumId: tracks[0].album_id,
-            artworkUrl100: tracks[0].artwork_url
-          });
-        };
-      }
+      // Helper: build playlist queue from clicked index onwards
+      const createPlaylistQueue = (startIdx) => {
+        const after = tracks.slice(startIdx);
+        const before = tracks.slice(0, startIdx);
+        return [...after, ...before].map(t => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist,
+          album: t.album,
+          artUrl: t.artwork_url,
+          previewUrl: `${API_BASE}/stream?song=${t.id}&l=en-US`,
+          durationMs: t.duration_ms || 180000
+        }));
+      };
 
-      const mobInfo = playlistViewContent.querySelector('#playlist-mob-info-btn');
-      if (mobInfo) {
-        mobInfo.onclick = () => {
-          let infoModal = document.getElementById('am-playlist-info-modal');
-          if (!infoModal) {
-            infoModal = document.createElement('div');
-            infoModal.id = 'am-playlist-info-modal';
-            infoModal.className = 'am-mobile-modal-overlay';
-            infoModal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background:rgba(0,0,0,0.72);backdrop-filter:blur(25px);display:flex;align-items:center;justify-content:center;padding:20px;';
-            document.body.appendChild(infoModal);
-          }
-          infoModal.innerHTML = `
-            <div class="am-mobile-modal-sheet" style="max-width: 440px; width: 90%; max-height: 80vh; overflow-y: auto; background: rgba(28,28,30,0.96); border: 1px solid rgba(255,255,255,0.12); border-radius: 24px; padding: 26px; box-shadow: 0 20px 50px rgba(0,0,0,0.7);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff;">${escapeHTML(name)}</h3>
-                <button id="close-playlist-info-modal" style="background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 15px; cursor: pointer;">✕</button>
-              </div>
-              <div style="font-size: 0.95rem; line-height: 1.65; color: #e4e4e7;">${desc || 'No description available for this playlist.'}</div>
-            </div>
-          `;
-          infoModal.classList.remove('hidden');
-          infoModal.style.display = 'flex';
-          infoModal.querySelector('#close-playlist-info-modal').onclick = () => {
-            infoModal.classList.add('hidden');
-            infoModal.style.display = 'none';
-          };
-          infoModal.onclick = (ev) => {
-            if (ev.target === infoModal) {
-              infoModal.classList.add('hidden');
-              infoModal.style.display = 'none';
-            }
-          };
-        };
-      }
+      const mobPlay = playlistViewContent.querySelector('#playlist-mob-play-btn');
+      const deskPlay = playlistViewContent.querySelector('#playlist-desktop-play-btn');
+      const handlePlayAll = () => {
+        if (!tracks || tracks.length === 0) return;
+        const plQueue = createPlaylistQueue(0);
+        loadRemoteTrack({
+          trackId: tracks[0].id,
+          trackName: tracks[0].title,
+          artistName: tracks[0].artist,
+          collectionName: tracks[0].album,
+          albumId: tracks[0].album_id,
+          artworkUrl100: tracks[0].artwork_url
+        }, plQueue);
+      };
+      if (mobPlay) mobPlay.onclick = handlePlayAll;
+      if (deskPlay) deskPlay.onclick = handlePlayAll;
 
       playlistViewContent.querySelectorAll('.am-track-row').forEach(row => {
         row.onclick = (e) => {
+          if (e.target.closest('.am-track-title-link')) return;
           const idx = parseInt(row.dataset.idx, 10);
           const tItem = tracks[idx];
           if (!tItem) return;
@@ -3626,14 +4845,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
 
-          loadRemoteTrack({
+          queueContextualWithSimilar({
             trackId: tItem.id,
             trackName: tItem.title,
             artistName: tItem.artist,
             collectionName: tItem.album,
             albumId: tItem.album_id,
-            artworkUrl100: tItem.artwork_url
-          });
+            artworkUrl100: tItem.artwork_url,
+            durationMs: tItem.duration_ms
+          }, tracks.map(t => ({
+            id: t.id,
+            title: t.title,
+            artist: t.artist,
+            album: t.album,
+            artUrl: t.artwork_url,
+            durationMs: t.duration_ms || 180000
+          })), idx);
         };
       });
 
@@ -3643,23 +4870,128 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ── Contextual Queue with Ordered Tracks & Similar Songs Appended ──
+  async function queueContextualWithSimilar(currentSong, list = [], clickedIndex = 0) {
+    if (!currentSong) return;
+    const songId = currentSong.trackId || currentSong.id;
+
+    // 1. Arrange queue: Clicked song first, followed by songs after it, followed by songs before it
+    const orderedList = [];
+    if (list && list.length > 0) {
+      const idx = (clickedIndex >= 0 && clickedIndex < list.length) ? clickedIndex : list.findIndex(x => String(x.id || x.trackId) === String(songId));
+      if (idx >= 0) {
+        for (let i = idx; i < list.length; i++) orderedList.push(list[i]);
+        for (let i = 0; i < idx; i++) orderedList.push(list[i]);
+      } else {
+        orderedList.push(currentSong);
+        for (const item of list) {
+          if (String(item.id || item.trackId) !== String(songId)) orderedList.push(item);
+        }
+      }
+    } else {
+      orderedList.push(currentSong);
+    }
+
+    // Format queue items for PreviewPlayer
+    const formattedQueue = orderedList.map(item => ({
+      id: item.id || item.trackId || item.amTrackId,
+      title: item.title || item.name || item.trackName || 'Track',
+      artist: item.artist || item.artistName || '',
+      album: item.album || item.collectionName || '',
+      artUrl: cleanArtworkUrl(item.artUrl || item.artworkUrl100 || item.artwork_url, 300, 300),
+      previewUrl: item.previewUrl || `${API_BASE}/stream?song=${item.id || item.trackId}&l=en-US`,
+      durationMs: item.durationMs || item.durationInMillis || item.duration_ms || 180000
+    }));
+
+    // Start playing the clicked song immediately
+    loadRemoteTrack(currentSong, formattedQueue);
+
+    // 2. Fetch similar songs using search/artist recommendations and append to queue
+    (async () => {
+      try {
+        const queryTerm = currentSong.artistName || currentSong.artist || currentSong.trackName || currentSong.title || '';
+        if (!queryTerm) return;
+        const recRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(queryTerm)}&types=songs&limit=25&l=en-US`);
+        if (recRes.ok) {
+          const recData = await recRes.json();
+          const recSongs = recData?.results?.songs?.data || [];
+          const existingIds = new Set(previewPlayer.queue.map(x => String(x.id)));
+          const additional = [];
+          for (const s of recSongs) {
+            if (!existingIds.has(String(s.id))) {
+              existingIds.add(String(s.id));
+              const sAttr = s.attributes || {};
+              additional.push({
+                id: s.id,
+                title: sAttr.name || 'Song',
+                artist: sAttr.artistName || '',
+                album: sAttr.albumName || '',
+                artUrl: cleanArtworkUrl(sAttr.artwork?.url, 300, 300),
+                previewUrl: `${API_BASE}/stream?song=${s.id}&l=en-US`,
+                durationMs: sAttr.durationInMillis || 180000
+              });
+            }
+          }
+          if (additional.length > 0) {
+            previewPlayer.queue.push(...additional);
+          }
+        }
+      } catch (_) {}
+    })();
+  }
+  window.queueContextualWithSimilar = queueContextualWithSimilar;
+
   // ── Remote Track Load & Playback (Plays in bottom mini player immediately) ──
   async function loadRemoteTrack(song, queue = []) {
-    addToRecent(song);
-    syncHomeNavVisibility();
+    const songId = song.trackId || song.id;
+    let fullSongData = null;
 
-    // 1. Seed into IndexedDB immediately so player.html has data ready
+    // Always query the /song endpoint to obtain authoritative metadata
+    if (songId && !isNaN(Number(songId))) {
+      try {
+        const sRes = await fetch(`${API_BASE}/song?song=${songId}&l=en-US`);
+        if (sRes.ok) {
+          const sJson = await sRes.json();
+          fullSongData = sJson.data?.[0] || sJson.results?.songs?.data?.[0] || (sJson.resources?.songs ? Object.values(sJson.resources.songs)[0] : null);
+        }
+      } catch (e) {
+        console.warn('[upload.js] Failed to fetch /song metadata:', e);
+      }
+    }
+
+    const attr = fullSongData?.attributes || {};
+    const rels = fullSongData?.relationships || {};
+
+    const finalTitle = attr.name || attr.trackName || song.trackName || song.title || 'Track';
+    const finalArtist = attr.artistName || song.artistName || song.artist || 'Artist';
+    const finalAlbum = attr.albumName || attr.collectionName || song.collectionName || song.album || '';
+    const finalAlbumId = rels.albums?.data?.[0]?.id || song.albumId || attr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+    const finalArtistId = rels.artists?.data?.[0]?.id || song.artistId || null;
+    const rawArt = attr.artwork?.url || song.artworkUrlLarge || song.rawArtwork || song.artworkUrl100 || song.artUrl;
+    const finalArt = resolveArtworkUrl(rawArt, { width: 1000, height: 1000 }) || cleanArtworkUrl(rawArt, 600, 600);
+    const finalDurationMs = attr.durationInMillis || song.durationMs || 180000;
+    const finalReleaseDate = attr.releaseDate || song.releaseDate || null;
+    const finalAudioTraits = attr.audioTraits || song.audioTraits || [];
+
+    // 1. Seed into IndexedDB immediately so player.html has full rich data ready
     try {
       const { clearQueue, addTrackToQueue, setCurrentIndex } = await import('./router.js');
       await clearQueue();
       await addTrackToQueue(null, {
-        name: song.trackName,
-        artist: song.artistName,
-        album: song.collectionName,
-        artUrl: cleanArtworkUrl(song.artworkUrl100 || song.artUrl, 600, 600),
+        name: finalTitle,
+        artist: finalArtist,
+        album: finalAlbum,
+        albumId: finalAlbumId,
+        artistId: finalArtistId,
+        artUrl: finalArt,
         type: 'audio/mp4',
-        ttml: '__AUTO_FETCH__',
-        amTrackId: song.trackId
+        ttml: song.ttml || '__AUTO_FETCH__',
+        amTrackId: songId,
+        releaseDate: finalReleaseDate,
+        year: finalReleaseDate ? new Date(finalReleaseDate).getFullYear() : (song.year || null),
+        audioTraits: finalAudioTraits,
+        songwriters: song.songwriters || [],
+        credits: song.credits || null
       });
       setCurrentIndex(0);
     } catch (e) {
@@ -3667,19 +4999,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const trackObj = {
-      id: song.trackId,
-      title: song.trackName,
-      artist: song.artistName,
-      album: song.collectionName,
-      artUrl: cleanArtworkUrl(song.artworkUrl100 || song.artUrl, 600, 600),
-      previewUrl: `${API_BASE}/stream?song=${song.trackId}&l=en-US`,
-      durationMs: song.durationMs || 180000
+      id: songId,
+      title: finalTitle,
+      artist: finalArtist,
+      album: finalAlbum,
+      albumId: finalAlbumId,
+      artistId: finalArtistId,
+      artUrl: finalArt,
+      previewUrl: song.previewUrl || `${API_BASE}/stream?song=${songId}&l=en-US`,
+      durationMs: finalDurationMs,
+      releaseDate: finalReleaseDate,
+      year: finalReleaseDate ? new Date(finalReleaseDate).getFullYear() : (song.year || null),
+      audioTraits: finalAudioTraits,
+      ttml: song.ttml || null
     };
+
+    addToRecent(trackObj);
+    syncHomeNavVisibility();
 
     previewPlayer.playTrack(trackObj, queue);
   }
 
-  async function loadTrackById(id) {
+  async function loadTrackById(id, queue = []) {
     if (!prepOverlay) return;
 
     prepOverlay.classList.add('active');
@@ -3690,20 +5031,54 @@ document.addEventListener('DOMContentLoaded', () => {
       let attr = null;
       let albumId = null;
       let artistId = null;
+      let parsedAmp = null;
+      let songTtml = null;
+      let songwriters = [];
 
       try {
-        const res = await fetch(`${API_BASE}/song?song=${id}&l=${getCurrentLang()}`);
+        const songAmpUrl = `${API_BASE}/v1/catalog/kz/songs/${id}?art[url]=f&extend=lyricsExcerpt,offers&fields[albums]=artistName,artistUrl,artwork,name,url&fields[artists]=name,url&format[resources]=map&include=albums,artists,credits,lyrics,music-videos&l=${getCurrentLang() || 'en-GB'}&platform=web`;
+        const res = await fetch(songAmpUrl);
         if (res.ok) {
-          const data = await res.json();
-          songData = data.data?.[0] || data.results?.songs?.data?.[0];
+          const raw = await res.json();
+          parsedAmp = parseAmpResponse(raw);
+          songData = parsedAmp.data?.[0] || parsedAmp.resources?.songs?.[id] || null;
           if (songData) {
-            attr = songData.attributes || {};
-            albumId = songData.relationships?.albums?.data?.[0]?.id || attr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
-            artistId = songData.relationships?.artists?.data?.[0]?.id || null;
+            attr = songData.attributes || songData;
+            albumId = songData.relationships?.albums?.[0]?.id || songData.relationships?.albums?.data?.[0]?.id || attr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+            artistId = songData.relationships?.artists?.[0]?.id || songData.relationships?.artists?.data?.[0]?.id || null;
+
+            // Direct extraction of high-fidelity TTML lyrics and credits if included in AMP response
+            const lyricsObj = parsedAmp.resources?.lyrics?.[id] || songData.relationships?.lyrics?.[0];
+            if (lyricsObj?.attributes?.ttml) {
+              songTtml = lyricsObj.attributes.ttml;
+            } else if (lyricsObj?.ttml) {
+              songTtml = lyricsObj.ttml;
+            }
+
+            const creditsData = songData.relationships?.credits || [];
+            if (Array.isArray(creditsData)) {
+              songwriters = creditsData.map(c => c.name || c.attributes?.name).filter(Boolean);
+            }
           }
         }
       } catch (e) {
-        console.warn("[ID Loader] API_BASE fetch failed, falling back to iTunes API:", e);
+        console.warn("[ID Loader] AMP API fetch failed, trying legacy route:", e);
+      }
+
+      // Legacy API_BASE fallback if AMP proxy failed
+      if (!songData) {
+        try {
+          const legacyRes = await fetch(`${API_BASE}/song?song=${id}&l=${getCurrentLang()}`);
+          if (legacyRes.ok) {
+            const data = await legacyRes.json();
+            songData = data.data?.[0] || data.results?.songs?.data?.[0];
+            if (songData) {
+              attr = songData.attributes || {};
+              albumId = songData.relationships?.albums?.data?.[0]?.id || attr.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
+              artistId = songData.relationships?.artists?.data?.[0]?.id || null;
+            }
+          }
+        } catch (_) {}
       }
 
       // Seamless fallback to Apple iTunes lookup API if spicyamll API returned 404
@@ -3724,6 +5099,7 @@ document.addEventListener('DOMContentLoaded', () => {
           releaseDate: itunesTrack.releaseDate || null,
           year: itunesTrack.releaseDate ? new Date(itunesTrack.releaseDate).getFullYear().toString() : null,
           artworkUrl100: itunesTrack.artworkUrl100 ? itunesTrack.artworkUrl100.replace('100x100', '600x600') : '',
+          artworkUrlLarge: itunesTrack.artworkUrl100 ? itunesTrack.artworkUrl100.replace('100x100', '1000x1000') : '',
           durationMs: itunesTrack.trackTimeMillis || 180000,
           previewUrl: itunesTrack.previewUrl || `${API_BASE}/stream?song=${id}&l=${getCurrentLang()}`
         };
@@ -3734,18 +5110,22 @@ document.addEventListener('DOMContentLoaded', () => {
             title: song.trackName,
             artist: song.artistName,
             album: song.collectionName,
-            artUrl: song.artworkUrl100,
+            artUrl: song.artworkUrlLarge || song.artworkUrl100,
             previewUrl: itunesTrack.previewUrl,
             durationMs: itunesTrack.trackTimeMillis || 180000
-          });
+          }, queue);
           if (prepOverlay) prepOverlay.classList.remove('active');
           return;
         }
 
-        await loadRemoteTrack(song);
+        await loadRemoteTrack(song, queue);
         if (prepOverlay) prepOverlay.classList.remove('active');
         return;
       }
+
+      const rawArt = attr.artwork || attr.editorialArtwork;
+      const artworkUrl100 = resolveArtworkUrl(rawArt, { width: 100, height: 100 }) || cleanArtworkUrl(attr.artwork?.url, 100, 100);
+      const artworkUrlLarge = resolveArtworkUrl(rawArt, { width: 1000, height: 1000 }) || cleanArtworkUrl(attr.artwork?.url, 1000, 1000);
 
       const song = {
         trackId: songData.id,
@@ -3756,17 +5136,112 @@ document.addEventListener('DOMContentLoaded', () => {
         artistId: artistId,
         releaseDate: attr.releaseDate || null,
         year: attr.releaseDate ? formatLocalizedYear(attr.releaseDate) : null,
-        artworkUrl100: cleanArtworkUrl(attr.artwork?.url, 100, 100),
-        durationMs: attr.durationInMillis || 180000
+        rawArtwork: rawArt,
+        artworkUrl100: artworkUrl100,
+        artworkUrlLarge: artworkUrlLarge,
+        durationMs: attr.durationInMillis || 180000,
+        audioTraits: attr.audioTraits || [],
+        lyricsExcerpt: attr.lyricsExcerpt || null,
+        ttml: songTtml,
+        songwriters: songwriters
       };
 
-      await loadRemoteTrack(song);
+      await loadRemoteTrack(song, queue);
       if (prepOverlay) prepOverlay.classList.remove('active');
     } catch (err) {
       console.error("[ID Loader] Failed:", err);
       if (prepOverlay) prepOverlay.classList.remove('active');
       showToast({ message: `Could not load track ${id}: ${err.message}` });
     }
+  }
+
+  // ── Unified Contextual + Similar Songs Queueing Helper ──
+  async function queueContextualWithSimilar(clickedTrack, listTracks = [], currentIndex = 0) {
+    let contextualQueue = [];
+    if (listTracks && listTracks.length > 0) {
+      const after = listTracks.slice(currentIndex);
+      const before = listTracks.slice(0, currentIndex);
+      contextualQueue = [...after, ...before].map(t => {
+        const tId = t.id || t.trackId;
+        const tTitle = t.title || t.trackName || t.name || 'Song';
+        const tArtist = t.artist || t.artistName || 'Artist';
+        const tAlbum = t.album || t.collectionName || '';
+        const tArt = t.artUrl || t.artwork_url || t.artworkUrl100 || '';
+        const tDuration = t.durationMs || t.duration_ms || t.durationInMillis || 180000;
+        return {
+          id: tId,
+          title: tTitle,
+          artist: tArtist,
+          album: tAlbum,
+          artUrl: cleanArtworkUrl(tArt, 300, 300),
+          previewUrl: t.previewUrl || `${API_BASE}/stream?song=${tId}&l=en-US`,
+          durationMs: tDuration
+        };
+      });
+    }
+
+    // Play clicked track with reordered contextual queue immediately
+    await loadRemoteTrack(clickedTrack, contextualQueue);
+
+    // Asynchronously fetch similar songs from Apple Music catalog endpoint
+    (async () => {
+      try {
+        const songId = clickedTrack.trackId || clickedTrack.id;
+        const artist = clickedTrack.artistName || clickedTrack.artist || '';
+        let similarSongs = [];
+
+        // 1. Try Apple Music catalog similar-songs view
+        if (songId) {
+          try {
+            const res = await fetch(`${API_BASE}/v1/catalog/kz/songs/${songId}?views=similar-songs&l=en-US`);
+            if (res.ok) {
+              const data = await res.json();
+              similarSongs = data.resources?.songs ? Object.values(data.resources.songs) : (data.views?.['similar-songs']?.data || []);
+            }
+          } catch (_) {}
+        }
+
+        // 2. Fallback search by artist if similar-songs view returned empty
+        if (!similarSongs || similarSongs.length === 0) {
+          if (artist) {
+            const sRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(artist)}&types=songs&limit=15&l=en-US`);
+            if (sRes.ok) {
+              const sData = await sRes.json();
+              similarSongs = sData.results?.songs?.data || [];
+            }
+          }
+        }
+
+        if (similarSongs && similarSongs.length > 0) {
+          const existingIds = new Set(previewPlayer.queue.map(x => String(x.id)));
+          if (clickedTrack.trackId || clickedTrack.id) existingIds.add(String(clickedTrack.trackId || clickedTrack.id));
+
+          const appendItems = [];
+          for (const s of similarSongs) {
+            const sId = String(s.id);
+            if (!existingIds.has(sId)) {
+              existingIds.add(sId);
+              const attr = s.attributes || s;
+              appendItems.push({
+                id: sId,
+                title: attr.name || attr.trackName || 'Song',
+                artist: attr.artistName || artist,
+                album: attr.albumName || attr.collectionName || '',
+                artUrl: cleanArtworkUrl(attr.artwork?.url || attr.artworkUrl100, 300, 300),
+                previewUrl: `${API_BASE}/stream?song=${sId}&l=en-US`,
+                durationMs: attr.durationInMillis || 180000
+              });
+            }
+          }
+
+          if (appendItems.length > 0) {
+            previewPlayer.queue.push(...appendItems);
+          }
+        }
+      } catch (err) {
+        console.warn('[Queue] Failed to append similar songs:', err);
+      }
+    })();
   }
 
   // ── Community Profile View (Pure /:username, No @, Handcrafted Aesthetics) ──
@@ -3776,6 +5251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
     if (albumViewContainer) albumViewContainer.classList.add('hidden');
     if (artistViewContainer) artistViewContainer.classList.add('hidden');
+    if (songViewContainer) songViewContainer.classList.add('hidden');
     if (playlistViewContainer) playlistViewContainer.classList.remove('hidden');
 
     const cleanUsername = identifier.replace(/^@/, '').trim();
@@ -4178,10 +5654,23 @@ document.addEventListener('DOMContentLoaded', () => {
       return true;
     }
 
+    // Song: /song/[slug]/[id] or /song/[id]
+    const songRouteMatch = path.match(/^\/song\/(?:([^/]+)\/)?(\d+)/i);
+    if (songRouteMatch) {
+      const slugName = songRouteMatch[1] ? decodeURIComponent(songRouteMatch[1]).replace(/-/g, ' ') : '';
+      const songId = songRouteMatch[2];
+      showSongView(songId, slugName, { skipUrlSync: true });
+      return true;
+    }
+
     // 2. Check top-level page routes: /home, /search, /upload, /playlists, /recently-added, /library, /recently-listened
     const cleanPath = path.replace(/\/+$/, '').toLowerCase();
     if (cleanPath === '/home') {
       switchPage('home', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/new') {
+      switchPage('new', { skipUrlSync: true });
       return true;
     }
     if (cleanPath === '/search') {
@@ -4237,12 +5726,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. Check song route or bare ID: /song/12345 or #12345
     const pathMatch = path.match(/\/song\/(\d+)/i);
     if (pathMatch) {
-      loadTrackById(pathMatch[1]);
+      showSongView(pathMatch[1], '', { skipUrlSync: true });
       return true;
     }
     const numMatch = (window.location.hash || '').match(/\d{5,}/);
     if (numMatch) {
-      loadTrackById(numMatch[0]);
+      showSongView(numMatch[0], '', { skipUrlSync: true });
       return true;
     }
 
@@ -4273,32 +5762,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Context Menu (Desktop Dropdown & Mobile 76% Centered Modal) ──
   function showContextMenu(e, song) {
-    contextMenuTrack = song;
+    if (!song) return;
+    const normalizedSong = {
+      trackId: song.trackId || song.id || song.amTrackId,
+      id: song.id || song.trackId || song.amTrackId,
+      trackName: song.trackName || song.title || song.name || 'Song',
+      name: song.name || song.trackName || song.title || 'Song',
+      artistName: song.artistName || song.artist || '',
+      artist: song.artist || song.artistName || '',
+      collectionName: song.collectionName || song.album || '',
+      album: song.album || song.collectionName || '',
+      albumId: song.albumId || null,
+      artistId: song.artistId || null,
+      artworkUrl100: song.artworkUrl100 || song.artUrl || '',
+      artUrl: song.artUrl || song.artworkUrl100 || '',
+      previewUrl: song.previewUrl || ''
+    };
+    contextMenuTrack = normalizedSong;
     const isMobile = window.innerWidth <= 768;
 
     if (isMobile && mobileContextModal) {
       // Mobile 76% Centered Modal
-      if (mobModalArt) mobModalArt.src = cleanArtworkUrl(song.artworkUrl100 || song.artUrl, 300, 300);
-      if (mobModalTitle) mobModalTitle.textContent = song.trackName || song.name || 'Song';
-      if (mobModalSub) mobModalSub.textContent = song.artistName || song.artist || '';
+      if (mobModalArt) mobModalArt.src = cleanArtworkUrl(normalizedSong.artworkUrl100 || normalizedSong.artUrl, 300, 300);
+      if (mobModalTitle) mobModalTitle.textContent = normalizedSong.trackName;
+      if (mobModalSub) mobModalSub.textContent = normalizedSong.artistName;
 
-      const inLib = isSongInLibrary(song.trackId || song.id);
+      const inLib = isSongInLibrary(normalizedSong.trackId);
       if (mobCtxLibLabel) mobCtxLibLabel.textContent = inLib ? t('ctx_in_library') : t('ctx_add_library');
 
       mobileContextModal.classList.remove('hidden');
 
     } else if (songContextMenu) {
       // Desktop Floating Context Menu
-      const inLib = isSongInLibrary(song.trackId || song.id);
+      const inLib = isSongInLibrary(normalizedSong.trackId);
       if (ctxAddLib) ctxAddLib.textContent = inLib ? t('ctx_in_library') : t('ctx_add_library');
 
-      const clientX = e.clientX || e.pageX || 100;
-      const clientY = e.clientY || e.pageY || 100;
+      let clientX = e.clientX || e.pageX || 100;
+      let clientY = e.clientY || e.pageY || 100;
+      
+      // Calculate top so that if clicked near bottom (e.g. from the mini-player), it pops upwards
+      const menuHeight = 240;
+      let top = clientY;
+      if (clientY + menuHeight > window.innerHeight - 20) {
+        top = Math.max(12, clientY - menuHeight);
+      }
+      
       songContextMenu.style.left = `${Math.min(clientX, window.innerWidth - 220)}px`;
-      songContextMenu.style.top = `${Math.min(clientY, window.innerHeight - 260)}px`;
+      songContextMenu.style.top = `${top}px`;
       songContextMenu.classList.remove('hidden');
     }
   }
+
+  // Expose globally for mini preview-player & other components
+  window.showContextMenu = showContextMenu;
 
   function hideContextMenu() {
     if (songContextMenu) songContextMenu.classList.add('hidden');
@@ -4306,7 +5822,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.addEventListener('click', (e) => {
-    if (songContextMenu && !songContextMenu.contains(e.target) && !e.target.classList.contains('am-song-more-btn') && !e.target.classList.contains('am-card-3dots-btn')) {
+    if (songContextMenu && !songContextMenu.contains(e.target) && !e.target.classList.contains('am-song-more-btn') && !e.target.classList.contains('am-card-3dots-btn') && !e.target.classList.contains('am-preview-lcd-more-btn')) {
       songContextMenu.classList.add('hidden');
     }
     if (mobileContextModal && e.target === mobileContextModal) {
@@ -4351,23 +5867,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let albId = contextMenuTrack.albumId;
 
-    // Resolve albumId via song lookup API if not directly present
+    // Resolve authentic albumId via spicyamll song lookup API if not directly present
     if (!albId && (contextMenuTrack.trackId || contextMenuTrack.id)) {
       const sId = contextMenuTrack.trackId || contextMenuTrack.id;
       try {
-        const res = await fetch(`${API_BASE}/song?song=${sId}&l=${getCurrentLang()}`);
+        const res = await fetch(`${API_BASE}/v1/catalog/kz/songs/${sId}?art[url]=f&fields[albums]=name,url&format[resources]=map&include=albums&l=en-GB&platform=web`);
         if (res.ok) {
           const data = await res.json();
-          const sObj = data.data?.[0] || data.results?.songs?.data?.[0];
-          albId = sObj?.relationships?.albums?.data?.[0]?.id || sObj?.attributes?.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1];
+          const sObj = data.resources?.songs?.[String(sId)] || data.data?.[0];
+          const albRel = sObj?.relationships?.albums?.data?.[0];
+          albId = albRel?.id || sObj?.attributes?.url?.match(/\/album\/[^/]+\/(\d+)/)?.[1];
+          if (albId && !contextMenuTrack.collectionName) {
+            contextMenuTrack.collectionName = data.resources?.albums?.[albId]?.attributes?.name || sObj?.attributes?.albumName;
+          }
         }
       } catch (e) { }
     }
 
-    // Resolve albumId via direct album search lookup
+    // Resolve albumId via direct album search lookup only if song API failed
     if (!albId && contextMenuTrack.collectionName) {
       try {
-        const aRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(contextMenuTrack.collectionName)}&types=albums&limit=5&l=${getCurrentLang()}`);
+        const searchQuery = contextMenuTrack.artistName ? `${contextMenuTrack.artistName} ${contextMenuTrack.collectionName}` : contextMenuTrack.collectionName;
+        const aRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(searchQuery)}&types=albums&limit=5&l=${getCurrentLang()}`);
         if (aRes.ok) {
           const aData = await aRes.json();
           const found = aData.results?.albums?.data?.[0];
@@ -4562,7 +6083,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // ── Playlists View (User Playlists) ──
+  // ── Playlists View (User Playlists - All Playlists Grid Screenshot 2) ──
   async function renderPlaylistsPage() {
     if (!playlistsGrid) return;
     playlistDetail.classList.add('hidden');
@@ -4581,24 +6102,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const tracks = await getPlaylistTracks(p.id);
       const firstArt = tracks[0]?.artUrl || 'favicon.svg';
       return `
-        <div class="playlist-card animate-fade" data-id="${p.id}">
-           <img src="${cleanArtworkUrl(firstArt, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="playlist-card-art" alt="${escapeHTML(p.name)}">
-           <div class="playlist-card-info">
-             <h4>${escapeHTML(p.name)}</h4>
-             <p>${t('lib_tracks_count', { count: tracks.length })}</p>
-           </div>
-           <button class="playlist-delete-btn" data-id="${p.id}" title="Delete Playlist">✕</button>
+        <div class="am-playlist-card animate-fade" data-id="${p.id}">
+          <div class="am-playlist-card-art-wrap">
+            <img src="${cleanArtworkUrl(firstArt, 500, 500)}" loading="lazy" referrerpolicy="no-referrer" class="am-playlist-card-art" alt="${escapeHTML(p.name)}">
+            <button class="am-playlist-card-play-hover" data-id="${p.id}" title="Play">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+          <div class="am-playlist-card-title">${escapeHTML(p.name)}</div>
+          <div class="am-playlist-card-curator">Apple Music</div>
+          <button class="playlist-delete-btn" data-id="${p.id}" title="Delete Playlist">✕</button>
         </div>
       `;
     }));
 
+    playlistsGrid.className = 'am-playlists-grid';
     playlistsGrid.innerHTML = cardsHTML.join('');
 
-    playlistsGrid.querySelectorAll('.playlist-card').forEach(card => {
+    playlistsGrid.querySelectorAll('.am-playlist-card').forEach(card => {
       card.onclick = (e) => {
-        if (e.target.classList.contains('playlist-delete-btn')) {
+        const pId = parseInt(card.dataset.id, 10);
+        if (e.target.closest('.playlist-delete-btn')) {
           e.stopPropagation();
-          const pId = parseInt(card.dataset.id, 10);
           if (confirm(t('prompt_confirm_delete_playlist'))) {
             deletePlaylist(pId).then(() => {
               renderPlaylistsPage();
@@ -4607,7 +6132,29 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           return;
         }
-        openLocalPlaylistDetail(parseInt(card.dataset.id, 10));
+        if (e.target.closest('.am-playlist-card-play-hover')) {
+          e.stopPropagation();
+          getPlaylistTracks(pId).then(tracks => {
+            if (tracks.length > 0) {
+              queueContextualWithSimilar({
+                trackId: tracks[0].amTrackId || tracks[0].id,
+                trackName: tracks[0].name || tracks[0].title,
+                artistName: tracks[0].artist,
+                collectionName: tracks[0].album || 'Playlist',
+                artworkUrl100: cleanArtworkUrl(tracks[0].artUrl, 100, 100)
+              }, tracks.map(t => ({
+                id: t.amTrackId || t.id,
+                title: t.name || t.title,
+                artist: t.artist,
+                album: t.album,
+                artUrl: t.artUrl,
+                durationMs: 180000
+              })), 0);
+            }
+          });
+          return;
+        }
+        openLocalPlaylistDetail(pId);
       };
     });
   }
@@ -4618,17 +6165,212 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const playlists = await getPlaylists();
     const playlist = playlists.find(p => p.id === playlistId);
-    if (playlistDetailTitle) playlistDetailTitle.textContent = playlist?.name || 'Playlist';
+    const plName = playlist?.name || 'Playlist';
 
-    playlistTracksGrid.innerHTML = `<div class="am-loading-msg">${t('loading_tracks')}</div>`;
     const tracks = await getPlaylistTracks(playlistId);
+    const firstArt = tracks[0]?.artUrl || 'favicon.svg';
 
-    if (!tracks.length) {
-      playlistTracksGrid.innerHTML = `<div class="am-error-msg">${t('playlists_empty_tracks')}</div>`;
-      return;
+    playlistDetail.innerHTML = `
+      <div class="am-playlist-detail-header">
+        <button class="am-back-btn" id="local-playlist-back-btn" style="position:absolute;top:10px;left:10px;z-index:10;background:rgba(255,255,255,0.08);color:#fff;border:none;border-radius:20px;padding:6px 14px;cursor:pointer;">← Back</button>
+        <div class="am-playlist-detail-art-wrap">
+          <img src="${cleanArtworkUrl(firstArt, 600, 600)}" class="am-playlist-detail-art" alt="">
+        </div>
+        <div class="am-playlist-detail-info">
+          <h1 class="am-playlist-detail-title">${escapeHTML(plName)}</h1>
+          <a class="am-playlist-detail-curator" href="javascript:void(0)">Apple Music</a>
+          <div class="am-playlist-detail-meta">Updated Monday • ${tracks.length} songs</div>
+          <p class="am-playlist-detail-desc">All your favorite tracks in one playlist.</p>
+          <div class="am-playlist-detail-actions">
+            <button class="am-playlist-action-pill" id="local-pl-shuffle-btn">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+              <span>Shuffle</span>
+            </button>
+            <button class="am-playlist-action-pill primary" id="local-pl-play-btn">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              <span>Play</span>
+            </button>
+            <button class="am-playlist-action-pill" id="local-pl-added-btn">
+              <span>✓ Added</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="am-tracklist-table-header">
+        <div style="flex: 2;">Song</div>
+        <div style="flex: 1.5;">Artist</div>
+        <div style="flex: 1.5;">Album</div>
+        <div style="width: 70px; text-align: right;">Time</div>
+        <div style="width: 40px; text-align: center;"></div>
+      </div>
+
+      <div class="am-tracklist" id="local-pl-tracks-list">
+        ${tracks.length === 0 ? `<p class="am-empty-msg">${t('playlists_empty_tracks')}</p>` : tracks.map((t, idx) => `
+          <div class="am-track-row" data-id="${t.id}" data-idx="${idx}">
+            <div class="am-track-num">${idx + 1}</div>
+            <img src="${cleanArtworkUrl(t.artUrl || t.artworkUrl100, 60, 60)}" class="am-song-row-art" loading="lazy" alt="">
+            <div class="am-track-info">
+              <div class="am-track-title">${escapeHTML(t.name || t.title || 'Track')}</div>
+              <div class="am-track-sub">${escapeHTML(t.artist || '')}</div>
+            </div>
+            <div style="flex: 1.5; color: rgba(255,255,255,0.7); font-size: 0.9rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(t.album || '')}</div>
+            <div class="am-track-duration">3:30</div>
+            <button class="am-song-more-btn" data-id="${t.id}">•••</button>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Suggested Songs Box -->
+      <div class="am-suggested-songs-box">
+        <div class="am-suggested-header">
+          <div>
+            <h3 class="am-suggested-title">Suggested Songs</h3>
+            <p class="am-suggested-sub">Based on the music in this playlist</p>
+          </div>
+          <button class="am-suggested-refresh-btn" id="local-suggested-refresh-btn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            <span>Refresh</span>
+          </button>
+        </div>
+        <div class="am-suggested-list" id="local-suggested-songs-list">
+          <div class="am-loading-msg">${t('loading')}</div>
+        </div>
+      </div>
+    `;
+
+    const backBtn = playlistDetail.querySelector('#local-playlist-back-btn');
+    if (backBtn) backBtn.onclick = () => renderPlaylistsPage();
+
+    const playBtn = playlistDetail.querySelector('#local-pl-play-btn');
+    if (playBtn && tracks.length > 0) {
+      playBtn.onclick = () => {
+        queueContextualWithSimilar({
+          trackId: tracks[0].amTrackId || tracks[0].id,
+          trackName: tracks[0].name || tracks[0].title,
+          artistName: tracks[0].artist,
+          collectionName: tracks[0].album || plName,
+          artworkUrl100: cleanArtworkUrl(tracks[0].artUrl, 100, 100)
+        }, tracks.map(t => ({
+          id: t.amTrackId || t.id,
+          title: t.name || t.title,
+          artist: t.artist,
+          album: t.album,
+          artUrl: t.artUrl,
+          durationMs: 180000
+        })), 0);
+      };
     }
 
-    renderTrackGrid(playlistTracksGrid, tracks, false);
+    const shuffleBtn = playlistDetail.querySelector('#local-pl-shuffle-btn');
+    if (shuffleBtn && tracks.length > 0) {
+      shuffleBtn.onclick = () => {
+        const randIdx = Math.floor(Math.random() * tracks.length);
+        const tr = tracks[randIdx];
+        queueContextualWithSimilar({
+          trackId: tr.amTrackId || tr.id,
+          trackName: tr.name || tr.title,
+          artistName: tr.artist,
+          collectionName: tr.album || plName,
+          artworkUrl100: cleanArtworkUrl(tr.artUrl, 100, 100)
+        }, tracks.map(t => ({
+          id: t.amTrackId || t.id,
+          title: t.name || t.title,
+          artist: t.artist,
+          album: t.album,
+          artUrl: t.artUrl,
+          durationMs: 180000
+        })), randIdx);
+      };
+    }
+
+    playlistDetail.querySelectorAll('#local-pl-tracks-list .am-track-row').forEach(row => {
+      row.onclick = (e) => {
+        const idx = parseInt(row.dataset.idx, 10);
+        const tr = tracks[idx];
+        if (!tr) return;
+        queueContextualWithSimilar({
+          trackId: tr.amTrackId || tr.id,
+          trackName: tr.name || tr.title,
+          artistName: tr.artist,
+          collectionName: tr.album || plName,
+          artworkUrl100: cleanArtworkUrl(tr.artUrl, 100, 100)
+        }, tracks.map(t => ({
+          id: t.amTrackId || t.id,
+          title: t.name || t.title,
+          artist: t.artist,
+          album: t.album,
+          artUrl: t.artUrl,
+          durationMs: 180000
+        })), idx);
+      };
+    });
+
+    // Local suggested songs loader
+    const loadLocalSuggestions = async () => {
+      const box = playlistDetail.querySelector('#local-suggested-songs-list');
+      if (!box) return;
+      box.innerHTML = `<div class="am-loading-msg">${t('loading')}</div>`;
+      try {
+        const sampleArtist = tracks[0]?.artist || 'Taylor Swift';
+        const sRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(sampleArtist)}&types=songs&limit=10&l=en-US`);
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          const sSongs = sData.results?.songs?.data || [];
+          const existingIds = new Set(tracks.map(t => String(t.amTrackId || t.id)));
+          const filtered = sSongs.filter(s => !existingIds.has(String(s.id))).slice(0, 6);
+          if (filtered.length === 0) {
+            box.innerHTML = `<p class="am-empty-msg">No suggestions found.</p>`;
+            return;
+          }
+          box.innerHTML = filtered.map(s => {
+            const a = s.attributes || {};
+            const art = cleanArtworkUrl(a.artwork?.url, 100, 100);
+            return `
+              <div class="am-suggested-song-row" data-id="${s.id}">
+                <img src="${art}" class="am-suggested-art" loading="lazy" alt="">
+                <div class="am-suggested-info">
+                  <div class="am-suggested-title">${escapeHTML(a.name || 'Song')}</div>
+                  <div class="am-suggested-artist">${escapeHTML(a.artistName || '')}</div>
+                </div>
+                <button class="am-suggested-add-btn" data-id="${s.id}" title="Add to Playlist">+</button>
+              </div>
+            `;
+          }).join('');
+
+          box.querySelectorAll('.am-suggested-song-row').forEach(sRow => {
+            sRow.onclick = async (e) => {
+              const sId = sRow.dataset.id;
+              if (e.target.closest('.am-suggested-add-btn')) {
+                e.stopPropagation();
+                const songObj = filtered.find(x => String(x.id) === String(sId));
+                if (songObj) {
+                  const sAttr = songObj.attributes || {};
+                  await addTrackToPlaylist(playlistId, {
+                    name: sAttr.name,
+                    artist: sAttr.artistName,
+                    album: sAttr.albumName,
+                    artUrl: cleanArtworkUrl(sAttr.artwork?.url, 500, 500),
+                    amTrackId: sId
+                  }, null);
+                  showToast({ message: 'Added to playlist!' });
+                  openLocalPlaylistDetail(playlistId);
+                }
+                return;
+              }
+              if (sId) loadTrackById(sId);
+            };
+          });
+        }
+      } catch (_) {
+        box.innerHTML = '';
+      }
+    };
+
+    loadLocalSuggestions();
+
+    const refBtn = playlistDetail.querySelector('#local-suggested-refresh-btn');
+    if (refBtn) refBtn.onclick = () => loadLocalSuggestions();
   }
 
   if (playlistBackBtn) {
@@ -4891,29 +6633,55 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="am-playlist-desktop-info">
               <h1 class="am-playlist-desktop-title">${escapeHTML(name)}</h1>
               <h2 class="am-playlist-desktop-curator">${escapeHTML(curator)}</h2>
+              <div class="am-playlist-desktop-meta">Updated Monday • ${tracks.length} songs</div>
               ${description ? `<p class="am-playlist-desktop-desc">${escapeHTML(description.replace(/<[^>]*>/g, ''))}</p>` : ''}
               <div class="am-playlist-desktop-actions">
-                <button class="am-playlist-pill-play-btn" id="playlist-play-all-btn">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <button class="am-playlist-action-pill" id="playlist-shuffle-btn">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+                  <span>Shuffle</span>
+                </button>
+                <button class="am-playlist-action-pill primary" id="playlist-play-all-btn">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                   <span>Play</span>
                 </button>
-                <button class="am-artist-mob-nav-btn" id="playlist-desktop-share-btn" title="Share" style="background: rgba(255,255,255,0.08); border-radius: 50%; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #fa586a;">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                <button class="am-playlist-action-pill" id="playlist-added-btn">
+                  <span>✓ Added</span>
+                </button>
+                <button class="am-artist-mob-nav-btn" id="playlist-desktop-share-btn" title="Share" style="background: rgba(255,255,255,0.08); border-radius: 50%; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #fa586a;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                 </button>
               </div>
             </div>
           </div>
 
-          <div class="am-tracklist-table-header" style="display: flex; padding: 12px 18px; color: rgba(255,255,255,0.5); font-size: 0.82rem; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.08);">
+          <div class="am-tracklist-table-header">
             <div style="flex: 2;">Song</div>
             <div style="flex: 1.5;">Artist</div>
             <div style="flex: 1.5;">Album</div>
             <div style="width: 70px; text-align: right;">Time</div>
+            <div style="width: 40px; text-align: center;"></div>
           </div>
 
           <div class="am-tracklist">${tracksHTML}</div>
           <div class="am-album-footer-info">
             <p class="am-footer-date">${escapeHTML(curator)} • ${t('lib_songs_count', { count: tracks.length })}</p>
+          </div>
+
+          <!-- Suggested Songs Section (Screenshots 3 & 4) -->
+          <div class="am-suggested-songs-box">
+            <div class="am-suggested-header">
+              <div>
+                <h3 class="am-suggested-title">Suggested Songs</h3>
+                <p class="am-suggested-sub">Based on the music in this playlist</p>
+              </div>
+              <button class="am-suggested-refresh-btn" id="suggested-refresh-btn">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                <span>Refresh</span>
+              </button>
+            </div>
+            <div class="am-suggested-list" id="suggested-songs-list">
+              <div class="am-loading-msg">${t('loading')}</div>
+            </div>
           </div>
         `;
       }
@@ -4941,40 +6709,23 @@ document.addEventListener('DOMContentLoaded', () => {
       // Play All / Play Playlist Button Handler — Starts stream directly through audio pipeline
       const playAllBtn = playlistViewContent.querySelector('#playlist-play-all-btn');
       if (playAllBtn && tracks.length > 0) {
-        playAllBtn.onclick = async () => {
-          const first = tracks[0];
-          const albumId = first.relationships?.albums?.data?.[0]?.id || first.artwork_url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
-          const artistId = first.relationships?.artists?.data?.[0]?.id || null;
-
-          // 1. Play first track directly
-          loadRemoteTrack({
-            trackId: first.id,
-            trackName: first.title,
-            artistName: first.artist,
-            collectionName: first.album || name,
-            albumId: albumId,
-            artistId: artistId,
-            artworkUrl100: cleanArtworkUrl(first.artwork_url, 100, 100)
-          });
-
-          // 2. Asynchronously populate the remaining queue
-          if (tracks.length > 1) {
-            try {
-              const { addTrackToQueue } = await import('./router.js');
-              for (let i = 1; i < tracks.length; i++) {
-                const tr = tracks[i];
-                await addTrackToQueue(null, {
-                  name: tr.title,
-                  artist: tr.artist || 'Unknown Artist',
-                  album: tr.album || name,
-                  artUrl: cleanArtworkUrl(tr.artwork_url, 300, 300),
-                  type: 'audio/mp4',
-                  ttml: '__AUTO_FETCH__',
-                  amTrackId: tr.id
-                });
-              }
-            } catch (_) { }
-          }
+        playAllBtn.onclick = () => {
+          queueContextualWithSimilar({
+            trackId: tracks[0].id,
+            trackName: tracks[0].title,
+            artistName: tracks[0].artist,
+            collectionName: tracks[0].album || name,
+            albumId: tracks[0].relationships?.albums?.data?.[0]?.id || null,
+            artworkUrl100: cleanArtworkUrl(tracks[0].artwork_url, 100, 100),
+            durationMs: tracks[0].duration_ms
+          }, tracks.map(t => ({
+            id: t.id,
+            title: t.title,
+            artist: t.artist,
+            album: t.album || name,
+            artUrl: t.artwork_url,
+            durationMs: t.duration_ms || 180000
+          })), 0);
         };
       }
 
@@ -4984,20 +6735,26 @@ document.addEventListener('DOMContentLoaded', () => {
         shuffleBtn.onclick = () => {
           const randIdx = Math.floor(Math.random() * tracks.length);
           const tr = tracks[randIdx];
-          const albumId = tr.relationships?.albums?.data?.[0]?.id || tr.artwork_url?.match(/\/album\/[^/]+\/(\d+)/)?.[1] || null;
-          const artistId = tr.relationships?.artists?.data?.[0]?.id || null;
-          loadRemoteTrack({
+          queueContextualWithSimilar({
             trackId: tr.id,
             trackName: tr.title,
             artistName: tr.artist,
             collectionName: tr.album || name,
-            albumId: albumId,
-            artistId: artistId,
-            artworkUrl100: cleanArtworkUrl(tr.artwork_url, 100, 100)
-          });
+            albumId: tr.relationships?.albums?.data?.[0]?.id || null,
+            artworkUrl100: cleanArtworkUrl(tr.artwork_url, 100, 100),
+            durationMs: tr.duration_ms
+          }, tracks.map(t => ({
+            id: t.id,
+            title: t.title,
+            artist: t.artist,
+            album: t.album || name,
+            artUrl: t.artwork_url,
+            durationMs: t.duration_ms || 180000
+          })), randIdx);
         };
       }
 
+      // Row clicks
       playlistViewContent.querySelectorAll('.am-track-row').forEach((row, idx) => {
         row.onclick = (e) => {
           const track = tracks[idx];
@@ -5018,17 +6775,84 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             return;
           }
-          loadRemoteTrack({
+          queueContextualWithSimilar({
             trackId: track.id,
             trackName: track.title,
             artistName: track.artist,
             collectionName: track.album || name,
             albumId: albumId,
             artistId: artistId,
-            artworkUrl100: cleanArtworkUrl(track.artwork_url, 100, 100)
-          });
+            artworkUrl100: cleanArtworkUrl(track.artwork_url, 100, 100),
+            durationMs: track.duration_ms
+          }, tracks.map(t => ({
+            id: t.id,
+            title: t.title,
+            artist: t.artist,
+            album: t.album || name,
+            artUrl: t.artwork_url,
+            durationMs: t.duration_ms || 180000
+          })), idx);
         };
       });
+
+      // Fetch and render Suggested Songs
+      const loadSuggestedSongs = async () => {
+        const suggestedContainer = playlistViewContent.querySelector('#suggested-songs-list');
+        if (!suggestedContainer) return;
+        suggestedContainer.innerHTML = `<div class="am-loading-msg">${t('loading')}</div>`;
+        try {
+          const sampleArtist = tracks[0]?.artist || name;
+          const sRes = await fetch(`${API_BASE}/search?term=${encodeURIComponent(sampleArtist)}&types=songs&limit=10&l=en-US`);
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            const sSongs = sData.results?.songs?.data || [];
+            const existingIds = new Set(tracks.map(t => String(t.id)));
+            const filtered = sSongs.filter(s => !existingIds.has(String(s.id))).slice(0, 6);
+            if (filtered.length === 0) {
+              suggestedContainer.innerHTML = `<p class="am-empty-msg">No suggestions found.</p>`;
+              return;
+            }
+            suggestedContainer.innerHTML = filtered.map(s => {
+              const a = s.attributes || {};
+              const art = cleanArtworkUrl(a.artwork?.url, 100, 100);
+              return `
+                <div class="am-suggested-song-row" data-id="${s.id}">
+                  <img src="${art}" class="am-suggested-art" loading="lazy" alt="">
+                  <div class="am-suggested-info">
+                    <div class="am-suggested-title">${escapeHTML(a.name || 'Song')}</div>
+                    <div class="am-suggested-artist">${escapeHTML(a.artistName || '')}</div>
+                  </div>
+                  <button class="am-suggested-add-btn" data-id="${s.id}" title="Add to Playlist">+</button>
+                </div>
+              `;
+            }).join('');
+
+            suggestedContainer.querySelectorAll('.am-suggested-song-row').forEach(sRow => {
+              sRow.onclick = (e) => {
+                if (e.target.closest('.am-suggested-add-btn')) {
+                  e.stopPropagation();
+                  showToast({ message: 'Added to playlist!' });
+                  const addBtn = e.target.closest('.am-suggested-add-btn');
+                  if (addBtn) addBtn.textContent = '✓';
+                  return;
+                }
+                const sId = sRow.dataset.id;
+                if (sId) loadTrackById(sId);
+              };
+            });
+          }
+        } catch (_) {
+          suggestedContainer.innerHTML = '';
+        }
+      };
+
+      loadSuggestedSongs();
+
+      const refreshBtn = playlistViewContent.querySelector('#suggested-refresh-btn');
+      if (refreshBtn) {
+        refreshBtn.onclick = () => loadSuggestedSongs();
+      }
+
     } catch (err) {
       console.error("Failed to load playlist:", err);
       playlistViewContent.innerHTML = `<div class="am-error-msg">${t('error')}: ${err.message}</div>`;
@@ -5121,9 +6945,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function addToRecent(track) {
+    if (!track) return;
+    const trackId = track.id || track.trackId || track.amTrackId;
+    if (!trackId) return;
+
     let recent = JSON.parse(localStorage.getItem('lyricsflow_recent_tracks') || '[]');
-    recent = recent.filter(t => (t.trackId || t.id) !== (track.trackId || track.id));
-    recent.unshift(track);
+    recent = recent.filter(t => String(t.trackId || t.id || t.amTrackId) !== String(trackId));
+    
+    // Normalize properties so Recently Played, Algorithm, and History render completely with artwork and names
+    const normalized = {
+      id: trackId,
+      trackId: trackId,
+      amTrackId: trackId,
+      title: track.title || track.name || track.trackName || 'Song',
+      name: track.title || track.name || track.trackName || 'Song',
+      trackName: track.title || track.name || track.trackName || 'Song',
+      artist: track.artist || track.artistName || 'Unknown Artist',
+      artistName: track.artist || track.artistName || 'Unknown Artist',
+      album: track.album || track.collectionName || '',
+      collectionName: track.album || track.collectionName || '',
+      albumId: track.albumId || null,
+      artistId: track.artistId || null,
+      artUrl: cleanArtworkUrl(track.artUrl || track.artworkUrl100 || track.rawArtwork, 600, 600),
+      artworkUrl100: cleanArtworkUrl(track.artUrl || track.artworkUrl100 || track.rawArtwork, 600, 600),
+      durationMs: track.durationMs || track.durationInMillis || 180000,
+      timestamp: Date.now()
+    };
+
+    recent.unshift(normalized);
     if (recent.length > 50) recent.pop();
     localStorage.setItem('lyricsflow_recent_tracks', JSON.stringify(recent));
     syncHomeNavVisibility();

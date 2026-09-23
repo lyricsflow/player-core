@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-The following versions of `lyricsflow-amll-player` are currently supported with security updates.
+The following versions of `player-core` are currently supported with security updates.
 
 | Version | Supported |
 | ------- | ---------- |
@@ -14,7 +14,7 @@ The following versions of `lyricsflow-amll-player` are currently supported with 
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in `lyricsflow-amll-player`, please report it responsibly.
+If you discover a security vulnerability in `player-core`, please report it responsibly.
 
 ### How to Report
 

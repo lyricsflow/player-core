@@ -123,10 +123,22 @@ const TRANSLATIONS = {
     artist_albums: 'Albums',
     artist_top_songs: 'Top Songs',
     artist_about: 'About',
+    artist_about_title: 'About Artist',
     artist_show_more: 'More',
     artist_show_less: 'Less',
     artist_genre: 'Genre',
     artist_play_top: 'Play Top Song',
+    artist_upcoming_concerts: 'Upcoming Concerts',
+    artist_tour_date: 'Tour Date',
+    artist_similar: 'Similar Artists',
+    artist_compilations: 'Compilations',
+    artist_appeared_on: 'Appeared On',
+    artist_essentials: 'Essential Albums',
+    artist_playlists: 'Playlists',
+    artist_videos: 'Music Videos',
+    artist_station: 'Radio Station',
+    artist_latest_release: 'Latest Release',
+    artist_live: 'LIVE',
     album_preview: 'Preview',
     album_more_by: 'More by {artist}',
     album_songs_count: '{count} songs',
@@ -351,10 +363,22 @@ const TRANSLATIONS = {
     artist_albums: 'الألبومات',
     artist_top_songs: 'أفضل الأغاني',
     artist_about: 'عن الفنان',
+    artist_about_title: 'معلومات عن الفنان',
     artist_show_more: 'المزيد',
     artist_show_less: 'أقل',
     artist_genre: 'النوع',
     artist_play_top: 'تشغيل أفضل أغنية',
+    artist_upcoming_concerts: 'الحفلات الموسيقية القادمة',
+    artist_tour_date: 'موعد الجولة',
+    artist_similar: 'فنانون مشابهون',
+    artist_compilations: 'تجميعات ومجموعات',
+    artist_appeared_on: 'ظهر في',
+    artist_essentials: 'ألبومات أساسية',
+    artist_playlists: 'قوائم التشغيل',
+    artist_videos: 'فيديوهات موسيقية',
+    artist_station: 'محطة الراديو',
+    artist_latest_release: 'أحدث إصدار',
+    artist_live: 'مباشر',
     album_preview: 'معاينة',
     album_more_by: 'المزيد بواسطة {artist}',
     album_songs_count: '{count} أغانٍ',
@@ -2189,6 +2213,25 @@ const TRANSLATIONS = {
     date_year: '{year}'
   }
 };
+
+const COMING_SOON_I18N = {
+  'en-US': 'Coming Soon...',
+  'ar': 'قريبًا...',
+  'es-ES': 'Próximamente...',
+  'es-MX': 'Próximamente...',
+  'pt-BR': 'Em breve...',
+  'zh-Hans': '敬请期待...',
+  'ja': '近日公開...',
+  'ko': '출시 예정...',
+  'de': 'Demnächst...',
+  'fr': 'Bientôt disponible...'
+};
+
+Object.keys(COMING_SOON_I18N).forEach(lang => {
+  if (TRANSLATIONS[lang]) {
+    TRANSLATIONS[lang].common_coming_soon = COMING_SOON_I18N[lang];
+  }
+});
 
 let currentLanguage = 'en-US';
 

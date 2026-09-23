@@ -123,8 +123,9 @@
 
 /* ── Layout ── */
 .am-layout {
+  position: relative;
   display: grid;
-  grid-template-columns: 215px 1fr;
+  grid-template-columns: 220px 1fr;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -132,38 +133,40 @@
 }
 
 /* ══════════════════════════════════════════════════
-   SIDEBAR
+   SIDEBAR (Wave / macOS Apple Music Split View Style)
    ══════════════════════════════════════════════════ */
 .am-sidebar {
-  background: rgba(18, 18, 20, 0.95);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  width: 220px !important;
+  flex: 0 0 220px !important;
+  background: rgba(28, 28, 30, 0.72) !important;
+  backdrop-filter: blur(40px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(190%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
   display: flex;
   flex-direction: column;
-  padding: 14px 0 12px 0;
+  padding: 16px 0 12px 0;
   overflow-y: auto;
   user-select: none;
   -webkit-user-select: none;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  position: relative;
+  z-index: 100;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", sans-serif;
 }
 
 .am-sidebar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.am-sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  display: none;
 }
 
 .am-sidebar-brand {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 2px 14px 14px 14px;
+  padding: 2px 18px 16px 18px;
 }
 
 .am-sidebar-logo {
-  height: 19px;
+  height: 20px;
   width: auto;
   max-width: 160px;
   object-fit: contain;
@@ -171,18 +174,17 @@
 
 /* ── Sidebar Sections ── */
 .am-sidebar-section {
-  padding: 0 6px;
-  margin-bottom: 12px;
+  padding: 0 10px;
+  margin-bottom: 16px;
 }
 
 .am-section-label {
-  font-size: 0.64rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.42);
   padding: 0 10px;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
 .am-sidebar-nav {
@@ -191,50 +193,108 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .am-nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 7px;
+  gap: 10px;
+  padding: 7px 12px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
-  font-size: 0.82rem;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.65);
-  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.25;
 }
 
 .am-nav-item:hover {
   background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.95);
+  color: #ffffff;
 }
 
 .am-nav-item.am-nav-active {
-  background: rgba(255, 255, 255, 0.16);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
   font-weight: 600;
 }
 
 .am-nav-item svg {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   flex-shrink: 0;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .am-nav-item.am-nav-active svg {
   opacity: 1;
 }
 
+/* Distinct red accent icon for New tab matching Wave / Apple Music */
+.am-nav-item[data-page="new"] svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  opacity: 0.95;
+}
+
+.am-nav-item.am-nav-active[data-page="new"] svg {
+  color: #fa586a !important;
+  stroke: #fa586a !important;
+  opacity: 1;
+}
+
 /* ── Sidebar Footer ── */
 .am-sidebar-footer {
   margin-top: auto;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.am-sidebar-profile-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px 10px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+}
+
+.am-sidebar-profile-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.am-sidebar-profile-btn .user-profile-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.am-sidebar-profile-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.user-profile-name-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .am-sidebar-footer p {
@@ -262,7 +322,8 @@
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
-  background: #0a0a0a;
+  background: var(--am-page-theme-bg, #0a0a0a);
+  transition: background 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ── Subtle Animated Background (Mix of both) ── */
@@ -330,8 +391,9 @@
 .am-content {
   position: relative;
   z-index: 1;
-  padding: 48px 56px;
-  max-width: 1100px;
+  padding: 36px clamp(24px, 4vw, 56px);
+  max-width: 100%;
+  box-sizing: border-box;
   animation: amFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -826,53 +888,204 @@
 }
 
 /* ══════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════
    INDEX.HTML THEMES & ACCENTS
    ══════════════════════════════════════════════════ */
-/* OLED Black Theme: Pure blacks and crisp borders */
+
+/* 1. Frosted Glass Sidebar & Content Mirroring (Dark Mode & Default) */
+.am-sidebar {
+  background: rgba(18, 18, 22, 0.65) !important;
+  backdrop-filter: blur(50px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(50px) saturate(210%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[dir="rtl"] .am-sidebar {
+  border-right: none !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 2. OLED Dark Theme: 100% PURE BLACK (#000000) EVERYWHERE */
 [data-theme="oled-black"],
+[data-theme="oled-black"] body,
 [data-theme="oled-black"] .am-layout,
+[data-theme="oled-black"] .am-main,
 [data-theme="oled-black"] .am-main-content,
-[data-theme="oled-black"] body {
+[data-theme="oled-black"] .am-content,
+[data-theme="oled-black"] .am-page,
+[data-theme="oled-black"] .am-sidebar,
+[data-theme="oled-black"] .am-preview-player-bar,
+[data-theme="oled-black"] .am-macos-window,
+[data-theme="oled-black"] .am-about-sheet-card,
+[data-theme="oled-black"] .aero-menu {
   background-color: #000000 !important;
+  background: #000000 !important;
+}
+
+[data-theme="oled-black"] .am-bg-glow {
+  display: none !important;
 }
 
 [data-theme="oled-black"] .am-sidebar {
-  background: #050505 !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-[data-theme="oled-black"] .am-preview-player-bar {
-  background: #000000 !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.95) !important;
-}
-
-/* Aero Glass / Tint Theme: Frosted transparency & vibrancy */
-[data-theme="aero-glass-tint"] .am-sidebar {
-  background: rgba(18, 18, 22, 0.65) !important;
-  backdrop-filter: blur(35px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(190%) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
-[data-theme="aero-glass-tint"] .am-preview-player-bar {
-  background: rgba(22, 22, 28, 0.7) !important;
+[data-theme="oled-black"][dir="rtl"] .am-sidebar {
+  border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-right: none !important;
+}
+
+[data-theme="oled-black"] .am-preview-player-bar {
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.98) !important;
+}
+
+[data-theme="oled-black"] .am-standard-media-card,
+[data-theme="oled-black"] .am-concert-card,
+[data-theme="oled-black"] .am-artist-song-card,
+[data-theme="oled-black"] .am-category-card,
+[data-theme="oled-black"] .am-artist-station-card {
+  background: #050505 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="oled-black"] .am-apple-search-input-wrapper #catalog-search {
+  background: #000000 !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* 3. Light Mode Theme (Apple Music macOS Light Aesthetic) */
+[data-theme="light-mode"],
+[data-theme="light-mode"] body,
+[data-theme="light-mode"] .am-layout,
+[data-theme="light-mode"] .am-main,
+[data-theme="light-mode"] .am-content {
+  background-color: #f5f5f7 !important;
+  background: #f5f5f7 !important;
+  color: #1d1d1f !important;
+}
+
+[data-theme="light-mode"] .am-sidebar {
+  background: rgba(240, 240, 243, 0.75) !important;
+  backdrop-filter: blur(50px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(50px) saturate(200%) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme="light-mode"][dir="rtl"] .am-sidebar {
+  border-left: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-right: none !important;
+}
+
+[data-theme="light-mode"] .am-sidebar .am-nav-item,
+[data-theme="light-mode"] .am-sidebar .am-sidebar-brand span,
+[data-theme="light-mode"] .am-sidebar .user-profile-name-text {
+  color: #1d1d1f !important;
+}
+
+[data-theme="light-mode"] .am-sidebar-logo {
+  filter: brightness(0.15) !important;
+}
+
+[data-theme="light-mode"] .am-sidebar .am-section-label {
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-theme="light-mode"] .am-sidebar .am-nav-item:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme="light-mode"] .am-sidebar .am-nav-item.am-nav-active {
+  background: rgba(250, 88, 106, 0.14) !important;
+  color: #fa586a !important;
+}
+
+[data-theme="light-mode"] .am-preview-player-bar {
+  background: rgba(255, 255, 255, 0.88) !important;
   backdrop-filter: blur(40px) saturate(200%) !important;
   -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+  color: #1d1d1f !important;
 }
 
-/* Dynamic Vibrant Theme: High saturation & glowing accents */
-[data-theme="dynamic-vibrant"] .am-sidebar-item.active,
-[data-theme="dynamic-vibrant"] .am-nav-item.active {
-  background: linear-gradient(135deg, rgba(250, 88, 106, 0.35) 0%, rgba(225, 45, 75, 0.15) 100%) !important;
-  border-left: 3px solid #fa586a !important;
-  color: #ffffff !important;
+[data-theme="light-mode"] .am-preview-player-bar .am-preview-track-title {
+  color: #1d1d1f !important;
 }
 
-[data-theme="dynamic-vibrant"] .am-preview-player-bar {
-  box-shadow: 0 10px 40px rgba(250, 88, 106, 0.25) !important;
-  border-color: rgba(250, 88, 106, 0.4) !important;
+[data-theme="light-mode"] .am-preview-player-bar .am-preview-track-artist {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light-mode"] .am-preview-player-bar button svg {
+  fill: #1d1d1f !important;
+}
+
+[data-theme="light-mode"] .am-hero-title,
+[data-theme="light-mode"] .am-section-title,
+[data-theme="light-mode"] .am-search-section-title,
+[data-theme="light-mode"] .am-media-card-title,
+[data-theme="light-mode"] .am-artist-song-title {
+  color: #1d1d1f !important;
+}
+
+[data-theme="light-mode"] .am-hero-subtitle,
+[data-theme="light-mode"] .am-media-card-sub,
+[data-theme="light-mode"] .am-artist-song-artist {
+  color: rgba(0, 0, 0, 0.55) !important;
+}
+
+[data-theme="light-mode"] .am-standard-media-card,
+[data-theme="light-mode"] .am-concert-card,
+[data-theme="light-mode"] .am-artist-song-card,
+[data-theme="light-mode"] .am-category-card,
+[data-theme="light-mode"] .am-artist-station-card {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light-mode"] .am-apple-search-input-wrapper #catalog-search {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1d1d1f !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme="light-mode"] .am-macos-window {
+  background: rgba(248, 248, 250, 0.95) !important;
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.14) !important;
+}
+
+[data-theme="light-mode"] .am-macos-title {
+  color: #1d1d1f !important;
+}
+
+[data-theme="light-mode"] .am-macos-input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1d1d1f !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-theme="light-mode"] .am-macos-select {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1d1d1f !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-theme="light-mode"] .aero-menu {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #1d1d1f !important;
+}
+
+[data-theme="light-mode"] .aero-menu-item {
+  color: #1d1d1f !important;
+}
+
+[data-theme="light-mode"] .aero-menu-item:hover {
+  background: rgba(250, 88, 106, 0.12) !important;
+  color: #fa586a !important;
 }
 
 /* .am-mobile-nav-item rules removed */
@@ -1313,6 +1526,155 @@
 }
 
 /* ══════════════════════════════════════════════════
+   SONG VIEW (Apple Music Style Song Detail Page)
+   ══════════════════════════════════════════════════ */
+.am-song-view {
+  animation: amFadeIn 0.5s ease;
+  padding-top: 10px;
+  width: 100%;
+}
+.am-song-header {
+  display: flex;
+  gap: 30px;
+  align-items: flex-end;
+  margin-bottom: 36px;
+}
+.am-song-cover {
+  width: 250px;
+  height: 250px;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.am-song-details {
+  flex: 1;
+  min-width: 0;
+}
+.am-song-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 8px;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+.am-song-meta-line {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.am-song-meta-link {
+  color: #fc3c44;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+.am-song-meta-link:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+.am-song-meta-dot {
+  color: rgba(255, 255, 255, 0.35);
+}
+.am-song-section {
+  padding: 24px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.am-song-section-heading {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 16px;
+  letter-spacing: -0.01em;
+}
+.am-song-lyrics-preview {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: pre-line;
+  margin-bottom: 14px;
+}
+.am-song-view-full-lyrics-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #fc3c44;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+.am-song-view-full-lyrics-btn:hover {
+  opacity: 0.8;
+}
+.am-credits-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 36px;
+}
+.am-credit-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+}
+.am-credit-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+.am-credit-info {
+  display: flex;
+  flex-direction: column;
+}
+.am-credit-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}
+.am-credit-role {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+@media (max-width: 768px) {
+  .am-song-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+  }
+  .am-song-cover {
+    width: min(240px, 65vw);
+    height: min(240px, 65vw);
+  }
+  .am-song-title {
+    font-size: 2rem;
+  }
+  .am-song-meta-line {
+    justify-content: center;
+  }
+}
+
+/* ══════════════════════════════════════════════════
    ALBUM VIEW
    ══════════════════════════════════════════════════ */
 .am-album-view {
@@ -1384,6 +1746,17 @@
   flex: 1;
   font-weight: 600;
   font-size: 1rem;
+}
+.am-track-title-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-block;
+  transition: opacity 0.15s ease, text-decoration 0.15s ease;
+}
+.am-track-title-link:hover {
+  text-decoration: underline;
+  opacity: 0.9;
 }
 .am-track-duration {
   color: rgba(255,255,255,0.5);
@@ -1959,3 +2332,486 @@
   color: rgba(255, 255, 255, 0.5);
   margin: 0;
 }
+
+/* Apple Music Full Lyrics Modal Sheet */
+.am-full-lyrics-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: amFadeInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.am-full-lyrics-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  max-height: 84vh;
+  background: #18181a;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: scale(0.96) translateY(10px);
+  animation: amScaleUpModal 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.am-full-lyrics-modal-header {
+  position: relative;
+  padding: 24px 28px 16px 28px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: #18181a;
+}
+
+.am-full-lyrics-modal-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: all 0.18s ease;
+  padding: 0;
+  align-self: flex-start;
+}
+
+.am-full-lyrics-modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.am-full-lyrics-modal-title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.am-full-lyrics-modal-meta {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.am-full-lyrics-modal-body {
+  padding: 24px 28px 36px 28px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.am-full-lyrics-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.am-full-lyrics-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.am-full-lyrics-stanza {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.am-full-lyrics-line {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.8;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', 'SF Arabic', 'Vazirmatn', Inter, sans-serif;
+}
+
+.am-full-lyrics-modal-body[dir="rtl"] .am-full-lyrics-line {
+  text-align: right;
+  font-family: 'SF Arabic', 'SF Pro Arabic', 'Vazirmatn', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.95;
+  letter-spacing: 0;
+}
+
+.am-full-lyrics-modal-body[dir="ltr"] .am-full-lyrics-line {
+  text-align: left;
+}
+
+@keyframes amFadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes amScaleUpModal {
+  from { transform: scale(0.95) translateY(12px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════
+   PLAYLIST VIEW & ALL PLAYLISTS MODERN STYLING
+   ══════════════════════════════════════════════════ */
+.am-playlists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 24px 20px;
+  padding: 10px 0 40px;
+}
+
+.am-playlist-card {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.am-playlist-card:hover {
+  transform: translateY(-4px);
+}
+
+.am-playlist-card-art {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.am-playlist-card-art-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #000;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+.am-playlist-card-title {
+  margin-top: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.am-playlist-card-curator {
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Playlist Detail Header & Actions ── */
+.am-playlist-detail-header {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 32px;
+  align-items: flex-end;
+}
+
+.am-playlist-cover-large {
+  width: 240px;
+  height: 240px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+
+.am-playlist-meta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.am-playlist-page-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #fff;
+  margin: 0;
+}
+
+.am-playlist-page-curator {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fa586a;
+  cursor: pointer;
+}
+
+.am-playlist-page-updated {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.am-playlist-page-desc {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 8px;
+}
+
+.am-playlist-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.am-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  border-radius: 100px;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.am-pill-btn.primary {
+  background: #ffffff;
+  color: #000000;
+  padding: 0 24px;
+}
+
+.am-pill-btn.secondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  width: 38px;
+  padding: 0;
+}
+
+.am-pill-btn:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+.am-pill-btn:active {
+  transform: scale(0.97);
+}
+
+/* ── Songs Table ── */
+.am-playlist-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.am-playlist-table-head {
+  display: grid;
+  grid-template-columns: 44px minmax(180px, 3fr) minmax(130px, 2fr) minmax(130px, 2fr) 60px 40px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.am-playlist-table-row {
+  display: grid;
+  grid-template-columns: 44px minmax(180px, 3fr) minmax(130px, 2fr) minmax(130px, 2fr) 60px 40px;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.am-playlist-table-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.am-playlist-table-row.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.am-playlist-row-art {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.am-playlist-row-title {
+  color: #ffffff;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 12px;
+}
+
+.am-playlist-row-artist,
+.am-playlist-row-album {
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 12px;
+}
+
+.am-playlist-row-time {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Suggested Songs Card Section ── */
+.am-suggested-songs-box {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-top: 40px;
+  margin-bottom: 60px;
+}
+
+.am-suggested-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.am-suggested-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+}
+
+.am-suggested-sub {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+}
+
+.am-suggested-refresh-btn {
+  background: none;
+  border: none;
+  color: #fa586a;
+  font-weight: 600;
+  font-size: 0.84rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.am-suggested-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px 18px;
+}
+
+.am-suggested-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.am-suggested-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.am-suggested-item-art {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.am-suggested-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.am-suggested-item-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.am-suggested-item-artist {
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.am-suggested-add-btn {
+  background: none;
+  border: none;
+  color: #fa586a;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.am-suggested-add-btn:hover {
+  transform: scale(1.18);
+}
+

@@ -8,11 +8,59 @@
   display: none;
 }
 
+.pc-top-left-bar {
+  display: none;
+}
+
 .pc-bottom-right-bar {
   display: none;
 }
 
 @media (min-width: 1024px) {
+
+  /* Top-Left Window Controls (Close & Mini Player) */
+  .pc-top-left-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 100000;
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    padding: 5px 8px;
+    border-radius: 999px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  }
+
+  .pc-top-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+  }
+
+  .pc-top-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.08);
+  }
+
+  .pc-top-btn:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.3);
+  }
 
   /* Encase AirPlay and Volume together inside unified frosted glass capsule */
   .pc-top-right-bar {
@@ -20,8 +68,8 @@
     align-items: center;
     gap: 5px;
     position: fixed;
-    top: 10px;
-    right: 10px;
+    top: 14px;
+    right: 14px;
     z-index: 100000;
     pointer-events: auto;
     background: rgba(255, 255, 255, 0.12);
@@ -256,57 +304,7 @@
 }
 
 .Grabber {
-  width: 60px;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 10px;
-  margin-bottom: 1.5cqh;
-  flex-shrink: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    height 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    background 0.25s ease,
-    border-radius 0.25s ease,
-    transform 0.2s ease;
-  position: relative;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: pan-y;
-}
-
-.Grabber::after {
-  content: 'X';
-  font-size: 13px;
-  font-weight: 700;
-  color: #ffffff;
-  opacity: 0;
-  transform: scale(0.6);
-  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  line-height: 1;
-}
-
-.Grabber:hover,
-.Grabber.touch-active {
-  width: 67px;
-  height: 67px;
-  border-radius: 20%;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
-.Grabber:hover::after,
-.Grabber.touch-active::after {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.Grabber:active {
-  transform: scale(0.92);
+  display: none !important;
 }
 
 #LyricsflowPage .ContentBox .NowBar .Header {
@@ -362,13 +360,6 @@
 
 .animated-art-video.loaded {
   opacity: 1;
-}
-
-/* When not in centered mode (e.g. lyrics or queue active), crossfade animated video out cleanly */
-#LyricsflowPage .ContentBox .NowBar:not(.centered) .animated-art-video {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transition: opacity 0.4s cubic-bezier(0.25, 1, 0.2, 1) !important;
 }
 
 /* ── Metadata Row ── */
@@ -946,6 +937,56 @@
 .LyricsflowLoader.active {
   z-index: 105;
   animation: LyricsflowLoader_FadeIn 0.34s forwards;
+}
+
+/* Authentic AeroUI Loading Spinner */
+.aero-spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  color: #ffffff;
+}
+
+.aero-spinner svg {
+  width: 100%;
+  height: 100%;
+}
+
+.aero-spinner rect {
+  animation: aero-spinner-fade 1s ease-in-out infinite;
+}
+
+.aero-spinner rect:nth-child(1) { animation-delay: 0s; }
+.aero-spinner rect:nth-child(2) { animation-delay: -0.875s; }
+.aero-spinner rect:nth-child(3) { animation-delay: -0.75s; }
+.aero-spinner rect:nth-child(4) { animation-delay: -0.625s; }
+.aero-spinner rect:nth-child(5) { animation-delay: -0.5s; }
+.aero-spinner rect:nth-child(6) { animation-delay: -0.375s; }
+.aero-spinner rect:nth-child(7) { animation-delay: -0.25s; }
+.aero-spinner rect:nth-child(8) { animation-delay: -0.125s; }
+
+@keyframes aero-spinner-fade {
+  0%, 100% { opacity: 0.15; }
+  12.5% { opacity: 0.95; }
+}
+
+#btn-play-pause .aero-spinner {
+  width: 38px;
+  height: 38px;
+  display: inline-block;
+}
+
+.LyricsflowLoader .aero-spinner {
+  width: 52px;
+  height: 52px;
+  display: inline-block;
+}
+
+@media (max-width: 768px) {
+  #btn-play-pause .aero-spinner {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 /* ── Back button ── */
@@ -2819,15 +2860,16 @@ body.is-rendering .NowBar {
   background: #e5e5e5;
 }
 
-/* ── Lyrics Container Hidden State ── */
+/* ── Lyrics Container Hidden State (Apple Music Smooth Slide Down) ── */
 .LyricsContainer {
-  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(0);
 }
 
 .LyricsContainer.hidden {
   opacity: 0 !important;
   pointer-events: none;
-  transform: translateX(50px);
+  transform: translateY(40px) scale(0.98);
 }
 
 /* ── NowBar Animations ── */

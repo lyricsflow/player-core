@@ -58,10 +58,13 @@
   padding-left: var(--LyricsLeftSidePadding);
   padding-right: var(--LyricsRightSidePadding);
   font-family: var(--lyricsflow-custom-font, inherit);
+  font-synthesis: none !important;
+  text-rendering: optimizeLegibility !important;
 }
 
-#LyricsflowPage .LyricsContainer .LyricsContent:not(:has(.LyricsNotice)) * {
-  font-weight: 700 !important;
+#LyricsflowPage .LyricsContainer .LyricsContent .line {
+  font-weight: 700;
+  font-synthesis: none !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent.HiddenTransitioned {
@@ -114,7 +117,7 @@
 #LyricsflowPage .LyricsContainer .LyricsContent .line .letter,
 #LyricsflowPage .LyricsContainer .LyricsContent .line {
   cursor: pointer;
-  font-weight: 700 !important;
+  font-weight: 700;
   -webkit-text-fill-color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
@@ -122,6 +125,8 @@
   white-space: pre-wrap;
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+  font-synthesis: none !important;
 }
 
 /* GPU-promote only active and nearby lines to avoid 500+ compositing layers */
@@ -307,7 +312,15 @@
   direction: rtl !important;
   unicode-bidi: isolate !important;
   transform-origin: center center !important;
-  font-weight: 1000 !important;
+  font-weight: 700 !important;
+  font-synthesis: none !important;
+  font-variant-ligatures: normal;
+  font-feature-settings: "liga" 1, "calt" 1, "kern" 1;
+  letter-spacing: 0 !important;
+  --lyrics-line-height: 1.45;
+  line-height: var(--lyrics-line-height) !important;
+  padding-top: 0.35em !important;
+  overflow: visible !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl.OppositeAligned {
@@ -315,26 +328,61 @@
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .word,
-#LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .letter {
+#LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .letter,
+#LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .word-group {
   --gradient-degrees: -90deg !important;
   transform-origin: center center;
   font-weight: 1000 !important;
+  vertical-align: baseline !important;
+  font-variant-ligatures: normal;
+  font-feature-settings: "liga" 1, "calt" 1, "kern" 1;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .word-group {
+  display: inline-block;
+  white-space: nowrap;
+  letter-spacing: 0 !important;
+  vertical-align: baseline !important;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .word-group .word {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  letter-spacing: 0 !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl :is(.word, .letterGroup).PartOfWord {
+  display: inline !important;
   transform-origin: left center;
+  margin-inline-end: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  letter-spacing: 0 !important;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .line.rtl :is(.word, .letterGroup).PartOfWord::after {
+  content: none !important;
+  margin: 0 !important;
+  width: 0 !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl :is(.word, .letterGroup).PartOfWord+ :is(.word, .letterGroup) {
+  display: inline !important;
   transform-origin: center center;
+  margin-inline-end: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  letter-spacing: 0 !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl :is(.word, .letterGroup).PartOfWord+ :is(.word, .letterGroup):not(.PartOfWord) {
   transform-origin: right center;
+  margin-inline-end: 0.3ch;
 }
 
 /* ═══════════════════════════════════════════════
-   Opposite Aligned Lines
+   Opposite Aligned Lines (Duet Mode)
    ═══════════════════════════════════════════════ */
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.OppositeAligned {
@@ -342,23 +390,45 @@
   transform-origin: right center !important;
 }
 
+/* Duet Singer Distinction: subtle singer-2 styling */
+#LyricsflowPage .LyricsContainer .LyricsContent .line.singer-2 {
+  filter: drop-shadow(0 0 16px rgba(130, 180, 255, 0.15));
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .line.singer-1 {
+  filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.1));
+}
+
 /* Word spacing for OppositeAligned is inherited from the base ::after rule (margin-inline-end: 0.3ch) */
 
-/* Padding for opposite-aligned layouts */
-#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line.OppositeAligned:not(.rtl) {
-  padding-left: 25cqw;
+/* Padding for opposite-aligned layouts (Duets) */
+#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line.OppositeAligned {
+  padding-left: 20cqw !important;
+  padding-right: 2cqw !important;
+  text-align: right !important;
+  transform-origin: right center !important;
 }
 
-#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line:not(.OppositeAligned, .rtl) {
-  padding-right: 25cqw;
+#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line:not(.OppositeAligned) {
+  padding-right: 20cqw !important;
+  padding-left: 2cqw !important;
+  text-align: left !important;
+  transform-origin: left center !important;
 }
 
-#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned.rtl) .line.OppositeAligned {
-  padding-right: 25cqw;
+/* RTL Duet Alignment: In RTL (Arabic), primary singer is right-aligned, opposite singer is indented to left */
+#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line.rtl:not(.OppositeAligned) {
+  padding-right: 2cqw !important;
+  padding-left: 20cqw !important;
+  text-align: right !important;
+  transform-origin: right center !important;
 }
 
-#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned.rtl) .line:not(.OppositeAligned) {
-  padding-left: 25cqw;
+#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line.rtl.OppositeAligned {
+  padding-left: 2cqw !important;
+  padding-right: 20cqw !important;
+  text-align: left !important;
+  transform-origin: left center !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent:not(:has(.OppositeAligned)) .line {
@@ -567,6 +637,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.5cqw;
+  transform: translate3d(0, var(--ty, 0px), 0);
+  transition: opacity 0.3s ease;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .CreditLine {
@@ -642,7 +714,9 @@
    ═══════════════════════════════════════════════ */
 
 #LyricsflowPage .LyricsContainer .LyricsContent.HideLineBlur .line {
+  --blur-amount: 0px !important;
   --BlurAmount: 0px !important;
+  filter: none !important;
 }
 
 /* Spacer for centering last line */

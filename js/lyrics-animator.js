@@ -79,7 +79,7 @@ const DotOpacitySpline = getSpline(DotAnimations.OpacityRange);
 const YOffsetDamping = 0.4, YOffsetFrequency = 1.25;
 const ScaleDamping = 0.6, ScaleFrequency = 0.7;
 const GlowDamping = 0.5, GlowFrequency = 1;
-const BlurMultiplier = 2.5;
+const BlurMultiplier = 2.15;
 const LetterGlowMultiplier_Opacity = 123.2;
 
 const SimpleLyricsMode_LetterEffectsStrengthConfig = {
@@ -97,6 +97,7 @@ const SimpleLyricsMode_LetterEffectsStrengthConfig = {
 };
 
 let _activeLineIndex = -1;
+let _needsResumeScroll = false;
 
 // ── AMLL Spring Policy Constants (from base/spring.ts) ──
 const SLOW_STIFFNESS = 90;
@@ -202,7 +203,7 @@ function tickPerLineY(now) {
   }
 }
 
-function setLineAnimTargets(arr, activeIndex) {
+function setLineAnimTargets(arr, activeIndex, activeIndices = [activeIndex]) {
   if (activeIndex < 0) return;
   _activeLineIndex = activeIndex;
 
@@ -241,10 +242,6 @@ function setLineAnimTargets(arr, activeIndex) {
   // Calculate AMLL spring policy
   const springPolicy = getPosYSpringPolicy(isSeeking, isInterludeActive, intervalMs);
 
-  // Visible window for blur computation
-  const lineTotal = (activeEl.offsetHeight || 60) + 25;
-  const visibleRange = Math.ceil(containerHeight / lineTotal) + 3;
-
   // Stagger calculation matching AMLL base/index.ts lines 811-840
   let delay = 0; // seconds
   let baseDelay = 0.05; // Always keep stagger active during playback!
@@ -268,9 +265,10 @@ function setLineAnimTargets(arr, activeIndex) {
     line._posYSpring.updateParams(springPolicy);
     line._posYSpring.setTargetPosition(targetTy, delay);
 
-    // AMLL-style spring-driven scale: current line full size, others 0.98
+    // AMLL-style spring-driven scale: all active lines full size, others 0.98
+    const isLineActive = activeIndices.includes(i);
     const activeScale = arr === LyricsObject.Types.Line.Lines ? 1.05 : 1;
-    const scaleGoal = i === activeIndex ? activeScale : DEFAULT_LINE_SCALE;
+    const scaleGoal = isLineActive ? activeScale : DEFAULT_LINE_SCALE;
     if (!line._scaleSpring) {
       line._scaleSpring = new Spring(scaleGoal, 140, 22, 1);
       line._scaleSpring.SetGoal(scaleGoal, true);
@@ -289,34 +287,24 @@ function setLineAnimTargets(arr, activeIndex) {
       }
     }
 
-    // AMLL Blur calculation matching base/index.ts resolveBlurLevel
+    // Blur calculation: all simultaneously active lines are 0px (unblurred).
+    // Non-active lines measure distance from nearest active line with a gentle, softened gradient.
     const lineBlurEnabled = window.lyricsflowSettingsManager?.get('lineBlur');
     let blurPx = 0;
     if (lineBlurEnabled !== false) {
-      const isFocused = (i === activeIndex);
-      if (isFocused) {
-        blurPx = 0;
-      } else if (line.BGLine || line.DotLine) {
-        // AMLL: interlude dots / bg vocal lines are never blurred
+      if (isLineActive || line.BGLine || line.DotLine) {
         blurPx = 0;
       } else {
         let effectiveIdx = i;
-        if (line.BGLine || line.DotLine) {
-          for (let p = i - 1; p >= 0; p--) {
-            if (!arr[p].BGLine && !arr[p].DotLine) { effectiveIdx = p; break; }
-          }
-        }
-        const distance = effectiveIdx < activeIndex
-          ? Math.abs(activeIndex - effectiveIdx) + 1
-          : Math.abs(effectiveIdx - activeIndex);
-
+        const minDistance = Math.min(...activeIndices.map(a => Math.abs(effectiveIdx - a)));
         const isNarrow = checkIsMobile();
-        const level = 1 + distance;
-        const rawBlur = isNarrow ? level * 0.8 : level;
-        blurPx = Math.min(5, Math.max(1.2, rawBlur));
+        const level = minDistance * 1.125;
+        const rawBlur = isNarrow ? level * 0.7 : level;
+        blurPx = Math.min(4.8, Math.max(1.2, rawBlur));
       }
     }
     el.style.setProperty('--blur-amount', `${blurPx.toFixed(1)}px`);
+    el.style.setProperty('--BlurAmount', `${blurPx.toFixed(1)}px`);
 
     line._baseY = targetTy;
   }
@@ -546,24 +534,35 @@ let lastActiveLineIdx = null;
 let blurringLastLine = null;
 let lastFrameTime = performance.now();
 
-function applyBlur(arr, activeIndex) {
-  if (!arr[activeIndex]) return;
-  const max = BlurMultiplier * 5 + BlurMultiplier * 0.465;
+function applyBlur(arr, activeIndex, activeIndices = [activeIndex]) {
+  if (!arr || !arr.length) return;
+  const lineBlurEnabled = window.lyricsflowSettingsManager?.get('lineBlur');
+  if (lineBlurEnabled === false) {
+    for (let i = 0; i < arr.length; i++) {
+      setStyleIfChanged(arr[i].HTMLElement, "--blur-amount", "0px");
+      setStyleIfChanged(arr[i].HTMLElement, "--BlurAmount", "0px");
+    }
+    return;
+  }
 
-  const startIdx = Math.max(0, activeIndex - 15);
-  const endIdx = Math.min(arr.length, activeIndex + 15);
+  const focusIdx = activeIndex >= 0 ? activeIndex : (activeIndices[0] || 0);
+  const startIdx = Math.max(0, focusIdx - 15);
+  const endIdx = Math.min(arr.length, focusIdx + 15);
 
   for (let i = startIdx; i < endIdx; i++) {
     const line = arr[i];
     const el = line.HTMLElement;
-    // AMLL: interlude dots / bg vocal lines are never blurred
-    if (line.DotLine || line.BGLine) {
+    if (!el) continue;
+    // All active lines, interlude dots, and background vocal lines are never blurred
+    if (activeIndices.includes(i) || line.DotLine || line.BGLine) {
+      setStyleIfChanged(el, "--blur-amount", "0px");
       setStyleIfChanged(el, "--BlurAmount", "0px");
       continue;
     }
-    const distance = Math.abs(i - activeIndex);
-    const blurAmount = distance === 0 ? 0 : Math.min(BlurMultiplier * distance, max);
-    const value = distance === 0 ? "0px" : `${blurAmount.toFixed(2)}px`;
+    const minDistance = Math.min(...activeIndices.map(a => Math.abs(i - a)));
+    const blurAmount = Math.min(4.8, Math.max(1.2, minDistance * 1.125));
+    const value = `${blurAmount.toFixed(1)}px`;
+    setStyleIfChanged(el, "--blur-amount", value);
     setStyleIfChanged(el, "--BlurAmount", value);
   }
 }
@@ -824,13 +823,58 @@ function animateSyllable(position, deltaTime) {
   // Pass 1: Update status classes for ALL lines
   let activeIdx = -1;
   let scrollActiveIdx = -1;
+  const activeIndices = [];
   for (let i = 0; i < arr.length; i++) {
     const line = arr[i];
     const effStart = getEffectiveStart(arr, i);
-    const status = position >= effStart && position <= line.EndTime ? "Active" : (position > line.EndTime ? "Sung" : "NotSung");
-    if (status === "Active") {
+    const isAct = position >= effStart && position <= line.EndTime;
+    if (isAct) {
+      activeIndices.push(i);
       activeIdx = i;
-      if (!line.BGLine && !line.DotLine) scrollActiveIdx = i;
+      if (!line.BGLine && !line.DotLine) {
+        scrollActiveIdx = i;
+      }
+    }
+  }
+
+  // If two lines overlap in playback (e.g. background vocals or quick transition):
+  // When line A ends but line B is still playing, do not scroll yet:
+  // keep line A marked active/white, and only scroll when line B finishes!
+  if (
+    lastActiveLineIdx !== -1 &&
+    lastActiveLineIdx !== null &&
+    lastActiveLineIdx !== undefined &&
+    lastActiveLineIdx < arr.length
+  ) {
+    const currentFocusedLine = arr[lastActiveLineIdx];
+    if (currentFocusedLine) {
+      const isCurStillPlaying = position >= currentFocusedLine.StartTime && position <= currentFocusedLine.EndTime;
+      // Check if an overlapping line that started while current line was playing is STILL singing
+      let isOverlappingStillPlaying = false;
+      for (let j = 0; j < arr.length; j++) {
+        if (j !== lastActiveLineIdx) {
+          const otherLine = arr[j];
+          // Other line started before current line ended, and other line is STILL playing
+          if (
+            otherLine.StartTime <= currentFocusedLine.EndTime &&
+            otherLine.StartTime >= currentFocusedLine.StartTime &&
+            position >= otherLine.StartTime &&
+            position <= otherLine.EndTime
+          ) {
+            isOverlappingStillPlaying = true;
+            activeIndices.push(j);
+            break;
+          }
+        }
+      }
+
+      if (isCurStillPlaying || isOverlappingStillPlaying) {
+        scrollActiveIdx = lastActiveLineIdx;
+        activeIdx = lastActiveLineIdx;
+        if (!activeIndices.includes(lastActiveLineIdx)) {
+          activeIndices.push(lastActiveLineIdx);
+        }
+      }
     }
   }
 
@@ -841,14 +885,13 @@ function animateSyllable(position, deltaTime) {
     }
   }
 
-  // Update status classes using overridden activeIdx
+  // Update status classes using activeIndices & activeIdx
   for (let i = 0; i < arr.length; i++) {
     const line = arr[i];
     const effStart = getEffectiveStart(arr, i);
-    let status = position >= effStart && position <= line.EndTime ? "Active" : (position > line.EndTime ? "Sung" : "NotSung");
-    if (i === activeIdx) {
-      status = "Active";
-    }
+    let isAct = (position >= effStart && position <= line.EndTime) || activeIndices.includes(i) || (i === activeIdx);
+    const isSung = position > line.EndTime && !isAct;
+    const status = isAct ? "Active" : (isSung ? "Sung" : "NotSung");
 
     if (line._lastAppliedStatus !== status) {
       line.HTMLElement.classList.remove("Active", "Sung", "NotSung");
@@ -862,9 +905,17 @@ function animateSyllable(position, deltaTime) {
   const isAML = settingsManager.get("amlAnimation");
   const isAML_lyrics = settingsManager.get("amlLyricsAnimations");
 
-  // Advance scroll focus: lead the next line in early when it follows a gap >= 1s
+  // Advance scroll focus: lead the next line in early when it follows a gap >= 1s,
+  // BUT ONLY IF the current line is no longer actively being sung!
   let scrollIdx = scrollActiveIdx;
-  if ((isSimpleMode || isAML || isAML_lyrics) && scrollActiveIdx !== -1) {
+  const isCurrentStillSinging =
+    lastActiveLineIdx !== -1 &&
+    lastActiveLineIdx !== null &&
+    lastActiveLineIdx !== undefined &&
+    lastActiveLineIdx < arr.length &&
+    position <= arr[lastActiveLineIdx].EndTime;
+
+  if (!isCurrentStillSinging && (isSimpleMode || isAML || isAML_lyrics) && scrollActiveIdx !== -1) {
     let nextIdx = -1;
     for (let i = scrollActiveIdx + 1; i < arr.length; i++) {
       if (!arr[i].BGLine && !arr[i].DotLine) { nextIdx = i; break; }
@@ -877,10 +928,17 @@ function animateSyllable(position, deltaTime) {
     }
   }
 
-  // Trigger staggered targets if scroll index changed
-  if ((isSimpleMode || isAML || isAML_lyrics) && scrollIdx !== -1 && scrollIdx !== lastActiveLineIdx) {
-    setLineAnimTargets(arr, scrollIdx);
-    lastActiveLineIdx = scrollIdx;
+  // Trigger staggered targets if scroll index changed (do not fight active user scroll)
+  if ((isSimpleMode || isAML || isAML_lyrics) && scrollIdx !== -1) {
+    if (!isUserScrolling()) {
+      if (scrollIdx !== lastActiveLineIdx || _needsResumeScroll) {
+        setLineAnimTargets(arr, scrollIdx, activeIndices.length > 0 ? activeIndices : [scrollIdx]);
+        lastActiveLineIdx = scrollIdx;
+        _needsResumeScroll = false;
+      }
+    } else {
+      _needsResumeScroll = true;
+    }
   }
 
   const searchIdx = scrollIdx !== -1 ? scrollIdx : (lastActiveLineIdx || 0);
@@ -888,28 +946,15 @@ function animateSyllable(position, deltaTime) {
   const startIdx = Math.max(0, searchIdx - offsetSearch);
   const endIdx = Math.min(arr.length, searchIdx + offsetSearch + (checkIsMobile() ? 3 : 5));
 
-  // If user is scrolling, stop per-line springs and clear transforms
-  if (isUserScrolling()) {
-    if (_perLineRafId) { cancelAnimationFrame(_perLineRafId); _perLineRafId = null; }
-    for (const line of arr) {
-      const el = line.HTMLElement;
-      if (el) {
-        el.style.removeProperty('--ty');
-        el.style.removeProperty('--stagger-delay');
-        el.style.removeProperty('--blur-amount');
-      }
-      line._posYSpring = null;
-      line._staggerRemaining = 0;
-      line._baseY = 0;
-    }
-  }
-
-  // Credits move with container scroll, no additional transform needed
+  // Sync Credits with the final line's position so it appears at the bottom
   const lastLine = arr[arr.length - 1];
-  if (lastLine) {
+  if (lastLine && lastLine.HTMLElement) {
     const creditsEl = lastLine.HTMLElement.parentElement?.querySelector(".Credits");
     if (creditsEl) {
-      creditsEl.style.removeProperty("transform");
+      const lastTy = lastLine.HTMLElement.style.getPropertyValue('--ty');
+      if (lastTy) {
+        creditsEl.style.setProperty('--ty', lastTy);
+      }
     }
   }
 
@@ -1377,6 +1422,28 @@ function animateSyllable(position, deltaTime) {
         });
       }
     }
+
+    // Pronunciation words karaoke animation (if available)
+    if (line.PronunciationWords && line.PronunciationWords.length > 0) {
+      for (let pwi = 0; pwi < line.PronunciationWords.length; pwi++) {
+        const pw = line.PronunciationWords[pwi];
+        const pwEl = pw.HTMLElement;
+        if (!pwEl) continue;
+
+        if (position < pw.StartTime) {
+          setStyleIfChanged(pwEl, "--pron-gradient-position", "-20%");
+          if (pwEl.classList.contains("active")) pwEl.classList.remove("active");
+        } else if (position > pw.EndTime) {
+          setStyleIfChanged(pwEl, "--pron-gradient-position", "100%");
+          if (pwEl.classList.contains("active")) pwEl.classList.remove("active");
+        } else {
+          const p = getProgressPercentage(position, pw.StartTime, pw.EndTime);
+          const gp = -20 + 120 * p;
+          setStyleIfChanged(pwEl, "--pron-gradient-position", `${gp.toFixed(2)}%`);
+          if (!pwEl.classList.contains("active")) pwEl.classList.add("active");
+        }
+      }
+    }
   }
   flushStyleBatch();
 }
@@ -1389,12 +1456,53 @@ function animateLine(position, deltaTime) {
   const isAML = settingsManager.get("amlAnimation");
   let activeIdx = -1;
   let scrollActiveIdx = -1;
+  const activeIndices = [];
   for (let i = 0; i < arr.length; i++) {
     const line = arr[i];
     const isAct = position >= getEffectiveStart(arr, i) && position <= line.EndTime;
     if (isAct) {
+      activeIndices.push(i);
       activeIdx = i;
       if (!line.BGLine && !line.DotLine) scrollActiveIdx = i;
+    }
+  }
+
+  // If two lines overlap in playback (e.g. background vocals or quick transition):
+  // When line A ends but line B is still playing, do not scroll yet:
+  // keep line A marked active/white, and only scroll when line B finishes!
+  if (
+    lastActiveLineIdx !== -1 &&
+    lastActiveLineIdx !== null &&
+    lastActiveLineIdx !== undefined &&
+    lastActiveLineIdx < arr.length
+  ) {
+    const currentFocusedLine = arr[lastActiveLineIdx];
+    if (currentFocusedLine) {
+      const isCurStillPlaying = position >= currentFocusedLine.StartTime && position <= currentFocusedLine.EndTime;
+      let isOverlappingStillPlaying = false;
+      for (let j = 0; j < arr.length; j++) {
+        if (j !== lastActiveLineIdx) {
+          const otherLine = arr[j];
+          if (
+            otherLine.StartTime <= currentFocusedLine.EndTime &&
+            otherLine.StartTime >= currentFocusedLine.StartTime &&
+            position >= otherLine.StartTime &&
+            position <= otherLine.EndTime
+          ) {
+            isOverlappingStillPlaying = true;
+            activeIndices.push(j);
+            break;
+          }
+        }
+      }
+
+      if (isCurStillPlaying || isOverlappingStillPlaying) {
+        scrollActiveIdx = lastActiveLineIdx;
+        activeIdx = lastActiveLineIdx;
+        if (!activeIndices.includes(lastActiveLineIdx)) {
+          activeIndices.push(lastActiveLineIdx);
+        }
+      }
     }
   }
 
@@ -1408,8 +1516,8 @@ function animateLine(position, deltaTime) {
   // Update status classes using overridden activeIdx
   for (let i = 0; i < arr.length; i++) {
     const line = arr[i];
-    const isAct = i === activeIdx;
-    const isSung = position > line.EndTime && i !== activeIdx;
+    const isAct = (position >= getEffectiveStart(arr, i) && position <= line.EndTime) || activeIndices.includes(i) || (i === activeIdx);
+    const isSung = position > line.EndTime && !isAct;
     const status = isAct ? "Active" : (isSung ? "Sung" : "NotSung");
 
     if (line._lastAppliedStatus !== status) {
@@ -1419,9 +1527,17 @@ function animateLine(position, deltaTime) {
     }
   }
 
-  // Advance scroll focus: lead the next line in early when it follows a gap >= 1s
+  // Advance scroll focus: lead the next line in early when it follows a gap >= 1s,
+  // BUT ONLY IF the current line is no longer actively being sung!
   let scrollIdx = scrollActiveIdx;
-  if ((isSimpleMode || isAML) && scrollActiveIdx !== -1) {
+  const isCurrentStillSinging =
+    lastActiveLineIdx !== -1 &&
+    lastActiveLineIdx !== null &&
+    lastActiveLineIdx !== undefined &&
+    lastActiveLineIdx < arr.length &&
+    position <= arr[lastActiveLineIdx].EndTime;
+
+  if (!isCurrentStillSinging && (isSimpleMode || isAML) && scrollActiveIdx !== -1) {
     let nextIdx = -1;
     for (let i = scrollActiveIdx + 1; i < arr.length; i++) {
       if (!arr[i].BGLine && !arr[i].DotLine) { nextIdx = i; break; }
@@ -1434,10 +1550,17 @@ function animateLine(position, deltaTime) {
     }
   }
 
-  // Trigger staggered targets if scroll index changed
-  if ((isSimpleMode || isAML) && scrollIdx !== -1 && scrollIdx !== lastActiveLineIdx) {
-    setLineAnimTargets(arr, scrollIdx);
-    lastActiveLineIdx = scrollIdx;
+  // Trigger staggered targets if scroll index changed (do not fight active user scroll)
+  if ((isSimpleMode || isAML) && scrollIdx !== -1) {
+    if (!isUserScrolling()) {
+      if (scrollIdx !== lastActiveLineIdx || _needsResumeScroll) {
+        setLineAnimTargets(arr, scrollIdx, activeIndices.length > 0 ? activeIndices : [scrollIdx]);
+        lastActiveLineIdx = scrollIdx;
+        _needsResumeScroll = false;
+      }
+    } else {
+      _needsResumeScroll = true;
+    }
   }
 
   const searchIdx = scrollIdx !== -1 ? scrollIdx : (lastActiveLineIdx || 0);
@@ -1445,28 +1568,15 @@ function animateLine(position, deltaTime) {
   const startIdx = Math.max(0, searchIdx - offsetSearch);
   const endIdx = Math.min(arr.length, searchIdx + offsetSearch + (checkIsMobile() ? 3 : 5));
 
-  // Credits move with container scroll, no additional transform needed
+  // Sync Credits with the final line's position so it appears at the bottom
   const lastLine = arr[arr.length - 1];
-  if (lastLine) {
+  if (lastLine && lastLine.HTMLElement) {
     const creditsEl = lastLine.HTMLElement.parentElement?.querySelector(".Credits");
     if (creditsEl) {
-      creditsEl.style.removeProperty("transform");
-    }
-  }
-
-  // If user is scrolling, stop per-line springs and clear transforms
-  if (isUserScrolling()) {
-    if (_perLineRafId) { cancelAnimationFrame(_perLineRafId); _perLineRafId = null; }
-    for (const line of arr) {
-      const el = line.HTMLElement;
-      if (el) {
-        el.style.removeProperty('--ty');
-        el.style.removeProperty('--stagger-delay');
-        el.style.removeProperty('--blur-amount');
+      const lastTy = lastLine.HTMLElement.style.getPropertyValue('--ty');
+      if (lastTy) {
+        creditsEl.style.setProperty('--ty', lastTy);
       }
-      line._posYSpring = null;
-      line._staggerRemaining = 0;
-      line._baseY = 0;
     }
   }
 

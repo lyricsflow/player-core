@@ -7,8 +7,8 @@ import { GeniusService } from "./genius-service.js";
 import { getQueue, getCurrentIndex } from "./router.js";
 import { escapeHTML } from "./security-utils.js";
 import extensionManager from "./extensions.js";
-import { t } from "./i18n.js";
-import { initDropdowns } from "https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js";
+import { t, SUPPORTED_LANGUAGES, setLanguage, getCurrentLang } from "./i18n.js";
+import { initDropdowns, closeMenu } from "https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js";
 
 /**
  * settings-ui.js
@@ -262,32 +262,36 @@ class SettingsUI {
     this.addRow(container, label, description, wrap);
   }
 
-  addDropdown(container, label, description, key, options) {
+  addDropdown(container, label, description, key, options, onChangeCallback = null) {
     const current = settingsManager.get(key);
 
     const dropdown = document.createElement("div");
     dropdown.className = "aero-dropdown";
 
+    const normalizedOptions = options.map(opt => {
+      if (typeof opt === 'object' && opt !== null) {
+        return { value: opt.value, label: opt.label || opt.name || opt.value };
+      }
+      return { value: opt, label: opt };
+    });
+
+    const currentOpt = normalizedOptions.find(o => o.value === current) || normalizedOptions[0];
+
     const trigger = document.createElement("button");
     trigger.className = "lf-select";
     trigger.setAttribute("data-aero-dropdown", "");
-    trigger.textContent = current ?? options[0];
+    trigger.setAttribute("data-selected", currentOpt ? currentOpt.value : "");
+    trigger.textContent = currentOpt ? currentOpt.label : (current ?? "");
 
     const menu = document.createElement("div");
     menu.className = "aero-menu";
 
-    options.forEach(opt => {
+    normalizedOptions.forEach(opt => {
       const item = document.createElement("button");
       item.className = "aero-menu-item";
-      item.setAttribute("data-value", opt);
-      item.textContent = opt;
-      if (opt === current) item.setAttribute("aria-current", "true");
-      item.addEventListener("click", () => {
-        settingsManager.set(key, opt);
-        trigger.textContent = opt;
-        menu.querySelectorAll(".aero-menu-item").forEach(i => i.removeAttribute("aria-current"));
-        item.setAttribute("aria-current", "true");
-      });
+      item.setAttribute("data-value", opt.value);
+      item.textContent = opt.label;
+      if (opt.value === current) item.setAttribute("aria-current", "true");
       menu.appendChild(item);
     });
 
@@ -296,6 +300,41 @@ class SettingsUI {
     this.addRow(container, label, description, dropdown);
 
     initDropdowns(dropdown.parentElement);
+
+    const applySelection = (val, displayLabel) => {
+      settingsManager.set(key, val);
+      trigger.textContent = displayLabel;
+      trigger.setAttribute("data-selected", val);
+      menu.querySelectorAll(".aero-menu-item").forEach(i => {
+        if (i.getAttribute("data-value") === val) i.setAttribute("aria-current", "true");
+        else i.removeAttribute("aria-current");
+      });
+      if (key === "language") {
+        setLanguage(val);
+        // Dispatch to parent and iframes
+        window.dispatchEvent(new CustomEvent("lyricsflow-lang-changed", { detail: { lang: val } }));
+      }
+      if (onChangeCallback) onChangeCallback(val);
+    };
+
+    // Listen on local menu
+    menu.addEventListener("click", (e) => {
+      const item = e.target.closest(".aero-menu-item");
+      if (!item || item.disabled) return;
+      const val = item.getAttribute("data-value") || item.textContent.trim();
+      applySelection(val, item.textContent.trim());
+      try { closeMenu(menu); } catch (_) {}
+    });
+
+    // Also listen to global document click in case AeroUI detaches menus to body
+    document.addEventListener("click", (e) => {
+      const item = e.target.closest(".aero-menu-item");
+      if (!item || !item.hasAttribute("data-value")) return;
+      if (item.parentElement === menu || item.closest(`[data-dropdown-id="${key}"]`)) {
+        const val = item.getAttribute("data-value");
+        applySelection(val, item.textContent.trim());
+      }
+    });
   }
 
   renderAppearance(container) {
@@ -433,7 +472,7 @@ class SettingsUI {
   renderLyrics(container) {
     this.addGroup(container, "Preferred Language");
     const langCard = this.createCard(container);
-    this.addDropdown(langCard, "Preferred Language", "Fallback language used during track search queries.", "language", ["en-US", "zh-CN", "ja-JP", "es-ES", "ko-KR", "fr-FR"]);
+    this.addDropdown(langCard, "Preferred Language", "Language used throughout the interface and search queries.", "language", SUPPORTED_LANGUAGES.map(l => ({ value: l.code, label: l.name })));
 
     this.addGroup(container, "Lyrics Providers");
     const providerCard = this.createCard(container);
@@ -682,7 +721,23 @@ my-extension.zip/
       this.hide();
       window.dispatchEvent(new CustomEvent("lyricsflow-export-video"));
     };
-    this.addRow(exportCard, "Export Video Movie", "Beta utility to export full synchronized song videos.", exportBtn);
+    this.addGroup(container, "Community & Support");
+    const communityCard = this.createCard(container);
+    const discordBtn = document.createElement("a");
+    discordBtn.className = "lf-btn lf-btn-accent";
+    discordBtn.href = "https://discord.gg/VBU2BuqsC";
+    discordBtn.target = "_blank";
+    discordBtn.rel = "noopener noreferrer";
+    discordBtn.style.display = "inline-flex";
+    discordBtn.style.alignItems = "center";
+    discordBtn.style.justifyContent = "center";
+    discordBtn.style.gap = "8px";
+    discordBtn.style.textDecoration = "none";
+    discordBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+      <span>Join Discord Server</span>
+    `;
+    this.addRow(communityCard, "Discord Community", "Get support, share custom lyrics, and suggest new features.", discordBtn);
 
     this.addGroup(container, "Developer Mode");
     const devCard = this.createCard(container);

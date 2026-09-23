@@ -7,7 +7,7 @@ let userScrollTimeout = null;
 let userIsScrolling = false;
 let lastUserScrollTime = 0;
 
-const USER_SCROLL_COOLDOWN = 3000;
+const USER_SCROLL_COOLDOWN = 1400;
 
 export function initScrollManager(lyricsContent) {
   lyricsContent.style.scrollBehavior = 'auto';

@@ -496,3 +496,76 @@
 .lf-eq-slider::-webkit-slider-thumb:hover {
   transform: scale(1.25);
 }
+
+/* ── AeroUI Dropdown & Popover Layering Fix ── */
+.aero-dropdown,
+[data-component="dropdown"] {
+  position: relative;
+  z-index: 999999 !important;
+}
+
+.aero-dropdown .aero-menu,
+.aero-menu,
+.aero-dropdown-menu {
+  z-index: 9999999 !important;
+  position: absolute !important;
+}
+
+.lf-settings-row,
+.lf-settings-card,
+.am-setup-field,
+.am-macos-window,
+.am-macos-content {
+  overflow: visible !important;
+}
+
+/* ── Apple Music / macOS Toggle Switch ── */
+.am-macos-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.am-macos-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.am-macos-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 24px;
+}
+
+.am-macos-slider::before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #ffffff;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+.am-macos-switch input:checked + .am-macos-slider {
+  background-color: #fa586a;
+}
+
+.am-macos-switch input:checked + .am-macos-slider::before {
+  transform: translateX(20px);
+}

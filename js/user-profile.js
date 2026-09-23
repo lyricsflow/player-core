@@ -7,7 +7,7 @@
 import { SUPPORTED_LANGUAGES, getCurrentLang, setLanguage, t, detectBrowserLanguage } from './i18n.js';
 import { settingsUI } from './settings-ui.js';
 import { escapeHTML, cleanArtworkUrl } from './security-utils.js';
-import { initDropdowns } from "https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js";
+import { initDropdowns, closeMenu } from "https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js";
 
 function langDropdownHTML(id, selectedCode) {
   const current = SUPPORTED_LANGUAGES.find(l => l.code === selectedCode) || SUPPORTED_LANGUAGES[0];
@@ -32,11 +32,12 @@ export const PRESET_AVATARS = [
   'icons/account_avatar.png',
   'favicon.svg',
   'icon.png'
-];const THEME_OPTIONS = [
-  { value: 'aero-dark', label: 'Aero Dark' },
-  { value: 'aero-glass-tint', label: 'Aero Glass / Tint' },
-  { value: 'oled-black', label: 'OLED Black' },
-  { value: 'dynamic-vibrant', label: 'Dynamic Vibrant' }
+];
+
+export const THEME_OPTIONS = [
+  { value: 'dark-mode', label: 'Dark Mode' },
+  { value: 'light-mode', label: 'Light Mode' },
+  { value: 'oled-black', label: 'OLED Dark' }
 ];
 
 const AUDIO_QUALITY_OPTIONS = [
@@ -80,7 +81,9 @@ export function getUserProfile() {
         name: p.name || DEFAULT_NAME,
         pfp: p.pfp || DEFAULT_PFP,
         lang: p.lang || getCurrentLang(),
-        theme: p.theme || 'aero-dark',
+        theme: (p.theme === 'aero-dark' || p.theme === 'aero-glass-tint' || p.theme === 'dynamic-vibrant') ? 'dark-mode' : (p.theme || 'dark-mode'),
+        enableAlac: p.enableAlac !== undefined ? Boolean(p.enableAlac) : true,
+        enableDolby: p.enableDolby !== undefined ? Boolean(p.enableDolby) : true,
         audioQuality: p.audioQuality || 'alac'
       };
     }
@@ -91,13 +94,19 @@ export function getUserProfile() {
     name: DEFAULT_NAME,
     pfp: DEFAULT_PFP,
     lang: getCurrentLang(),
-    theme: 'aero-dark',
+    theme: 'dark-mode',
+    enableAlac: true,
+    enableDolby: true,
     audioQuality: 'alac'
   };
 }
 
+
 export function applyMainTheme(theme) {
-  const targetTheme = theme || 'aero-dark';
+  let targetTheme = theme || 'dark-mode';
+  if (targetTheme === 'aero-dark' || targetTheme === 'aero-glass-tint' || targetTheme === 'dynamic-vibrant') {
+    targetTheme = 'dark-mode';
+  }
   document.documentElement.setAttribute('data-theme', targetTheme);
   document.body.setAttribute('data-theme', targetTheme);
 }
@@ -318,7 +327,7 @@ export function showSetupAssistant() {
 
         <div class="am-macos-actions">
           <button id="setup-step3-skip" class="am-macos-btn secondary">${t('setup_btn_skip')}</button>
-          <button id="setup-step3-finish" class="am-macos-btn primary">${t('setup_btn_finish')}</button>
+          <button id="setup-step3-finish" class="am-macos-btn primary">${t('setup_btn_next')}</button>
         </div>
       `;
 
@@ -361,6 +370,58 @@ export function showSetupAssistant() {
         });
       }
 
+      const goToStep4 = () => {
+        currentStep = 4;
+        renderStep();
+      };
+
+      const skipBtn = content.querySelector('#setup-step3-skip');
+      skipBtn.addEventListener('click', () => {
+        tempPfp = DEFAULT_PFP;
+        goToStep4();
+      });
+
+      const finishBtn = content.querySelector('#setup-step3-finish');
+      finishBtn.addEventListener('click', goToStep4);
+    } else if (currentStep === 4) {
+      // Step 4: Recommendations & Welcome Launch
+      content.innerHTML = `
+        <div class="am-setup-step-icon">✨</div>
+        <h2 class="am-setup-step-title">You're All Set!</h2>
+        <p class="am-setup-step-desc">Here are a few quick recommendations to make the most of Lyricsflow:</p>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; margin: 16px 0; text-align: left;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+            <span style="font-size: 1.4rem;">🔍</span>
+            <div>
+              <div style="font-weight: 600; font-size: 0.92rem; color: #fff;">Search Any Track</div>
+              <div style="font-size: 0.78rem; color: rgba(255,255,255,0.65);">Explore artists, albums, or tracks with live synced Apple Music lyrics.</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+            <span style="font-size: 1.4rem;">🎙️</span>
+            <div>
+              <div style="font-weight: 600; font-size: 0.92rem; color: #fff;">Dynamic Syllable Lyrics</div>
+              <div style="font-size: 0.78rem; color: rgba(255,255,255,0.65);">Sing along with karaoke word-sync animations and background effects.</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(88,101,242,0.12); border: 1px solid rgba(88,101,242,0.3);">
+            <span style="font-size: 1.4rem;">💬</span>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; font-size: 0.92rem; color: #fff;">Join Our Discord Community</div>
+              <div style="font-size: 0.78rem; color: rgba(255,255,255,0.7);">Share lyrics, request songs, and connect with other listeners.</div>
+            </div>
+            <a href="https://discord.gg/VBU2BuqsC" target="_blank" rel="noopener noreferrer" class="am-macos-btn primary" style="font-size: 0.75rem; padding: 4px 10px; background: #5865F2; text-decoration: none;">Join</a>
+          </div>
+        </div>
+
+        <div class="am-macos-actions">
+          <button id="setup-step4-finish" class="am-macos-btn primary">${t('setup_btn_finish')}</button>
+        </div>
+      `;
+
       const finishSetup = () => {
         saveUserProfile({
           name: tempName || DEFAULT_NAME,
@@ -371,14 +432,8 @@ export function showSetupAssistant() {
         overlay.remove();
       };
 
-      const skipBtn = content.querySelector('#setup-step3-skip');
-      skipBtn.addEventListener('click', () => {
-        tempPfp = DEFAULT_PFP;
-        finishSetup();
-      });
-
-      const finishBtn = content.querySelector('#setup-step3-finish');
-      finishBtn.addEventListener('click', finishSetup);
+      const finishBtn = content.querySelector('#setup-step4-finish');
+      if (finishBtn) finishBtn.addEventListener('click', finishSetup);
     }
 
     windowBox.appendChild(content);
@@ -415,11 +470,14 @@ export function openProfileSettingsModal() {
   let tempPfp = profile.pfp;
   let tempLang = profile.lang;
   let tempTheme = profile.theme || 'aero-dark';
+  let tempAlac = profile.enableAlac !== undefined ? profile.enableAlac : true;
+  let tempDolby = profile.enableDolby !== undefined ? profile.enableDolby : true;
   let tempQuality = profile.audioQuality || 'alac';
 
   const overlay = document.createElement('div');
   overlay.className = 'am-macos-modal-overlay';
   overlay.id = 'lyricsflow-profile-modal';
+
 
   const modalBox = document.createElement('div');
   modalBox.className = 'am-macos-window am-profile-settings-window';
@@ -470,11 +528,36 @@ export function openProfileSettingsModal() {
         ${themeDropdownHTML('prof-modal-theme-select', tempTheme)}
       </div>
 
-      <!-- Audio Quality Selector -->
-      <div class="am-setup-field" style="margin-top: 14px;">
-        <label class="am-setup-label">Audio Streaming Quality</label>
-        ${audioQualityDropdownHTML('prof-modal-quality-select', tempQuality)}
+      <!-- Audio Quality Toggles: Lossless (ALAC) & Dolby Atmos -->
+      <div class="am-setup-field" style="margin-top: 16px;">
+        <label class="am-setup-label" style="margin-bottom: 8px;">Audio Quality</label>
+        <div style="display: flex; flex-direction: column; gap: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 12px 14px; border-radius: 12px;">
+          
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 0.9rem; font-weight: 600; color: #fff;">Lossless Audio (ALAC)</div>
+              <div style="font-size: 0.76rem; color: rgba(255,255,255,0.6);">Up to 24-bit/192kHz uncompressed Apple Lossless audio.</div>
+            </div>
+            <label class="am-macos-switch" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; cursor: pointer;">
+              <input type="checkbox" id="prof-toggle-alac" ${tempAlac ? 'checked' : ''} style="opacity: 0; width: 0; height: 0;">
+              <span class="am-macos-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: ${tempAlac ? '#fa586a' : 'rgba(255,255,255,0.2)'}; transition: .2s; border-radius: 24px;"></span>
+            </label>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px;">
+            <div>
+              <div style="font-size: 0.9rem; font-weight: 600; color: #fff;">Dolby Atmos / Spatial Audio</div>
+              <div style="font-size: 0.76rem; color: rgba(255,255,255,0.6);">Immersive multi-channel surround sound experience.</div>
+            </div>
+            <label class="am-macos-switch" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; cursor: pointer;">
+              <input type="checkbox" id="prof-toggle-dolby" ${tempDolby ? 'checked' : ''} style="opacity: 0; width: 0; height: 0;">
+              <span class="am-macos-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: ${tempDolby ? '#fa586a' : 'rgba(255,255,255,0.2)'}; transition: .2s; border-radius: 24px;"></span>
+            </label>
+          </div>
+
+        </div>
       </div>
+
 
       <!-- Actions -->
       <div class="am-macos-actions" style="margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 18px;">
@@ -494,38 +577,74 @@ export function openProfileSettingsModal() {
   const langDrop = modalBox.querySelector('#prof-modal-lang-select');
   if (langDrop) {
     initDropdowns(langDrop.parentElement);
-    langDrop.addEventListener('click', (e) => {
-      const item = e.target.closest('.aero-menu-item');
-      if (!item) return;
+    const menu = langDrop.querySelector('.aero-menu');
+    const trg = langDrop.querySelector('[data-aero-dropdown]');
+    const handleLangSelect = (item) => {
       tempLang = item.dataset.value;
       setLanguage(tempLang);
-      langDrop.querySelector('[data-aero-dropdown]').textContent = item.textContent;
-      langDrop.querySelector('[data-aero-dropdown]').setAttribute('data-selected', tempLang);
-    });
+      if (trg) {
+        trg.textContent = item.textContent.trim();
+        trg.setAttribute('data-selected', tempLang);
+      }
+      if (menu) {
+        menu.querySelectorAll('.aero-menu-item').forEach(i => i.removeAttribute('aria-current'));
+        item.setAttribute('aria-current', 'true');
+        try { closeMenu(menu); } catch (_) {}
+      }
+    };
+    if (menu) {
+      menu.addEventListener('click', (e) => {
+        const item = e.target.closest('.aero-menu-item');
+        if (!item) return;
+        e.stopPropagation();
+        handleLangSelect(item);
+      });
+    }
   }
 
   const themeDrop = modalBox.querySelector('#prof-modal-theme-select');
   if (themeDrop) {
     initDropdowns(themeDrop.parentElement);
-    themeDrop.addEventListener('click', (e) => {
-      const item = e.target.closest('.aero-menu-item');
-      if (!item) return;
+    const menu = themeDrop.querySelector('.aero-menu');
+    const trg = themeDrop.querySelector('[data-aero-dropdown]');
+    const handleThemeSelect = (item) => {
       tempTheme = item.dataset.value;
       applyMainTheme(tempTheme);
-      themeDrop.querySelector('[data-aero-dropdown]').textContent = item.textContent;
-      themeDrop.querySelector('[data-aero-dropdown]').setAttribute('data-selected', tempTheme);
+      if (trg) {
+        trg.textContent = item.textContent.trim();
+        trg.setAttribute('data-selected', tempTheme);
+      }
+      if (menu) {
+        menu.querySelectorAll('.aero-menu-item').forEach(i => i.removeAttribute('aria-current'));
+        item.setAttribute('aria-current', 'true');
+        try { closeMenu(menu); } catch (_) {}
+      }
+    };
+    if (menu) {
+      menu.addEventListener('click', (e) => {
+        const item = e.target.closest('.aero-menu-item');
+        if (!item) return;
+        e.stopPropagation();
+        handleThemeSelect(item);
+      });
+    }
+  }
+
+  const alacCheckbox = modalBox.querySelector('#prof-toggle-alac');
+  if (alacCheckbox) {
+    alacCheckbox.addEventListener('change', (e) => {
+      tempAlac = e.target.checked;
+      const slider = alacCheckbox.nextElementSibling;
+      if (slider) slider.style.backgroundColor = tempAlac ? '#fa586a' : 'rgba(255,255,255,0.2)';
     });
   }
 
-  const qualityDrop = modalBox.querySelector('#prof-modal-quality-select');
-  if (qualityDrop) {
-    initDropdowns(qualityDrop.parentElement);
-    qualityDrop.addEventListener('click', (e) => {
-      const item = e.target.closest('.aero-menu-item');
-      if (!item) return;
-      tempQuality = item.dataset.value;
-      qualityDrop.querySelector('[data-aero-dropdown]').textContent = item.textContent;
-      qualityDrop.querySelector('[data-aero-dropdown]').setAttribute('data-selected', tempQuality);
+  const dolbyCheckbox = modalBox.querySelector('#prof-toggle-dolby');
+  if (dolbyCheckbox) {
+    dolbyCheckbox.addEventListener('change', (e) => {
+      tempDolby = e.target.checked;
+      const slider = dolbyCheckbox.nextElementSibling;
+      if (slider) slider.style.backgroundColor = tempDolby ? '#fa586a' : 'rgba(255,255,255,0.2)';
     });
   }
 
@@ -588,10 +707,13 @@ export function openProfileSettingsModal() {
       pfp: tempPfp,
       lang: tempLang,
       theme: tempTheme,
-      audioQuality: tempQuality
+      enableAlac: tempAlac,
+      enableDolby: tempDolby,
+      audioQuality: tempAlac ? 'alac' : (tempDolby ? 'dolby' : 'aac')
     });
     overlay.remove();
   });
+
 
   // Open Player Settings directly
   const playerSettingsBtn = modalBox.querySelector('#prof-modal-player-settings-btn');

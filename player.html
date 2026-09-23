@@ -11,8 +11,7 @@
 
   <!-- AeroUI Design System (no SRI pins: the CDN tracks a mutable branch,
        so pinned hashes break on every upstream update — always load live) -->
-  <link rel="stylesheet" href="https://nurislamaibekuly.github.io/aeroui/src/aeroui.css"
-    crossorigin="anonymous">
+  <link rel="stylesheet" href="https://nurislamaibekuly.github.io/aeroui/src/aeroui.css" crossorigin="anonymous">
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/spinner/spinner.js"
     crossorigin="anonymous"></script>
   <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/button/button.js"
@@ -47,13 +46,195 @@
   <link rel="stylesheet" href="css/player.css">
   <link rel="stylesheet" href="css/lyrics.css">
 
-  <!-- Favicon & Icons -->
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="apple-touch-icon" href="icon.png">
+  <style>
+    /* ── Apple Music Translation / Pronunciation Sub-lines ── */
+    #LyricsflowPage .LyricsContainer .LyricsContent .line .line-subtext {
+      display: block;
+      width: fit-content;
+      max-width: 100%;
+      text-align: left !important;
+      direction: ltr !important;
+      line-height: 1.3;
+      user-select: none;
+      pointer-events: none;
+      white-space: pre-wrap;
+      transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      -webkit-text-fill-color: initial !important;
+      background: none !important;
+      text-shadow: none !important;
+    }
 
+    /* When parent line is RTL (e.g. Arabic): anchor subtext block to the right, but keep its text reading LTR */
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .line-subtext {
+      margin-left: auto !important;
+      margin-right: 0 !important;
+      text-align: left !important;
+      direction: ltr !important;
+    }
 
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.OppositeAligned .line-subtext {
+      margin-left: auto !important;
+      margin-right: 0 !important;
+      text-align: left !important;
+      direction: ltr !important;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl.OppositeAligned .line-subtext {
+      margin-right: auto !important;
+      margin-left: 0 !important;
+      text-align: left !important;
+      direction: ltr !important;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.bg-line .line-subtext {
+      margin-top: 2px !important;
+      font-size: 0.75em !important;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line .line-pronunciation {
+      font-size: 0.54em;
+      font-weight: 600;
+      margin-top: 6px;
+      color: rgba(255, 255, 255, 0.9);
+      letter-spacing: -0.01em;
+      -webkit-text-fill-color: initial !important;
+      background: none !important;
+      text-shadow: none !important;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line .line-translation {
+      font-size: 0.48em;
+      font-weight: 500;
+      margin-top: 4px;
+      color: rgba(255, 255, 255, 0.72);
+      letter-spacing: -0.01em;
+      -webkit-text-fill-color: initial !important;
+      background: none !important;
+      text-shadow: none !important;
+    }
+
+    /* Word-by-word pronunciation karaoke word span */
+    #LyricsflowPage .LyricsContainer .LyricsContent .line .line-pronunciation .pron-word {
+      display: inline-block;
+      white-space: pre;
+      background-image: linear-gradient(to right,
+          rgba(255, 255, 255, 1) 0%,
+          rgba(255, 255, 255, 1) var(--pron-gradient-position, -20%),
+          rgba(255, 255, 255, 0.45) calc(var(--pron-gradient-position, -20%) + 25%),
+          rgba(255, 255, 255, 0.45) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      transition: text-shadow 0.2s ease;
+      will-change: transform;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.NotSung .line-pronunciation .pron-word {
+      background-image: none !important;
+      -webkit-text-fill-color: rgba(255, 255, 255, 0.45) !important;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.Sung .line-pronunciation .pron-word {
+      background-image: none !important;
+      -webkit-text-fill-color: rgba(255, 255, 255, 0.85) !important;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line .line-pronunciation .pron-word.active {
+      text-shadow: 0 0 14px rgba(255, 255, 255, 0.4);
+    }
+
+    /* Subtext animation synchronization with line status */
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.NotSung .line-subtext {
+      opacity: 0.35;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.Sung .line-subtext {
+      opacity: 0.7;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.Active .line-subtext {
+      opacity: 1;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.Active .line-pronunciation {
+      color: #ffffff;
+    }
+
+    #LyricsflowPage .LyricsContainer .LyricsContent .line.Active .line-translation {
+      color: rgba(255, 255, 255, 0.88);
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+    }
+
+    /* ── Apple Music Style Translation & Pronunciation Popup Menu ── */
+    .lyrics-translation-popup {
+      position: fixed;
+      z-index: 1000000;
+      min-width: 215px;
+      background: rgba(38, 44, 52, 0.78);
+      backdrop-filter: blur(40px) saturate(190%);
+      -webkit-backdrop-filter: blur(40px) saturate(190%);
+      border: 0.5px solid rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(0, 0, 0, 0.2);
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      animation: amMenuPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes amMenuPop {
+      0% {
+        opacity: 0;
+        transform: translateY(6px) scale(0.96);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .am-popup-menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 9px;
+      cursor: pointer;
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      transition: background 0.15s ease, color 0.15s ease;
+      gap: 16px;
+    }
+
+    .am-popup-menu-item:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .am-popup-menu-item:active {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .am-popup-menu-item.active {
+      color: #ffffff;
+    }
+
+    .am-menu-item-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.85;
+      color: inherit;
+    }
+
+    .am-popup-menu-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.12);
+      margin: 4px 6px;
+    }
+  </style>
 </head>
 
 <body>
@@ -190,8 +371,22 @@
       </div>
     </div>
 
-    <!-- PC Desktop Bottom-Right Controls (Lyrics & Queue Glass Buttons) -->
+    <!-- PC Desktop Bottom-Right Controls (Translation Menu, Lyrics & Queue Glass Buttons) -->
     <div class="pc-bottom-right-bar" id="pc-bottom-right-bar">
+      <button class="pc-dock-glass-btn translation-menu-btn" id="pc-btn-translation-menu"
+        title="Translations & Pronunciations" style="display: none;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28" role="presentation">
+          <g transform="translate(3, 3) scale(1.294)">
+            <path
+              d="M12.46-.44c0-12.76 8.13-20.17 20.37-20.17h47.4c12.24 0 20.4 7.41 20.4 20.17v4.47H98.3c-1.98 0-3.83.18-5.55.52v-4.7c0-8.62-4.82-13.14-13-13.14H33.3c-8.13-.01-13 4.52-13 13.14v28.34c0 8.62 4.88 13.04 12.99 13.04h5.16c2.07 0 3.76 1.24 3.76 4v12.32l15.71-14.03c1.92-1.7 3.1-2.3 5.76-2.3h14.24v7.37H63.37l-16.3 13.92c-2.92 2.56-4.53 3.87-6.9 3.87-3.41 0-5.27-2.38-5.27-6.07V48.59h-2.07c-12.24 0-20.37-7.39-20.37-20.2z"
+              transform="translate(-.51 4.44)scale(.101)" fill="white"></path>
+            <path
+              d="M39.43 28.52c-1.04 2.73.48 5.21 3.3 5.21 1.85 0 3-.98 3.71-3.05l2.96-8.6h14.37l3.01 8.6c.66 2.07 1.8 3.05 3.68 3.05 2.87 0 4.3-2.5 3.34-5.2L61.7-3.8c-.88-2.4-2.66-3.71-5.16-3.71-2.47 0-4.25 1.3-5.13 3.7L39.43 28.53ZM51.4 16.07l5.14-14.95 5.2 14.95H51.41Zm80.04 71.09-16.31-13.93H98.3c-12.77 0-20.38-7.38-20.38-20.13V24.2c0-12.77 7.6-20.17 20.38-20.17h47.38c12.24 0 20.37 7.4 20.37 20.16v28.83c0 12.81-8.13 20.2-20.37 20.2h-2.02v11.72c0 3.69-1.92 6.07-5.26 6.07-2.39 0-3.98-1.3-6.97-3.85Zm-6.9-66.08-2.42-4.92c-.93-1.85-2.8-2.68-4.58-1.7a3.35 3.35 0 0 0-1.55 4.57l2.37 4.97a3.35 3.35 0 0 0 4.47 1.66c1.84-.9 2.53-2.87 1.7-4.58Zm-21.63 9.57c0 1.87 1.5 3.25 3.46 3.25h3.74a32.44 32.44 0 0 0 7.25 13.18 35.9 35.9 0 0 1-11.69 4.86c-1.87.45-3 2.25-2.62 4.22.55 1.93 2.5 2.8 4.6 2.23a38.7 38.7 0 0 0 14.74-6.69 38.3 38.3 0 0 0 14.14 6.69c2.42.52 4.41-.2 4.9-2.23.6-2.12-.37-3.77-2.5-4.22a34.4 34.4 0 0 1-11.64-4.86 30.5 30.5 0 0 0 7.2-13.18h3.74c2.02 0 3.5-1.38 3.5-3.25s-1.48-3.26-3.5-3.26h-31.86c-1.97 0-3.46 1.4-3.46 3.26m19.48 12.3a26.45 26.45 0 0 1-5.46-9.05h10.74a27.3 27.3 0 0 1-5.28 9.05"
+              transform="translate(-.51 4.44)scale(.101)" fill="white"></path>
+          </g>
+        </svg>
+
+      </button>
       <button class="pc-dock-glass-btn active" id="pc-btn-lyrics" title="Lyrics" data-i18n-title="player_btn_lyrics">
         <img src="icons/lyrics.png" alt="Lyrics" style="width: 22px; height: 22px; filter: brightness(0) invert(1);">
       </button>
@@ -200,11 +395,29 @@
       </button>
     </div>
 
+    <!-- PC Desktop Top-Left Controls (Close Drawer & Mini-Player Popout) -->
+    <div class="pc-top-left-bar" id="pc-top-left-bar">
+      <button class="pc-top-btn" id="pc-btn-close" title="Close" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <button class="pc-top-btn" id="pc-btn-mini" title="Mini Player" data-i18n-title="mini_player_title"
+        aria-label="Mini Player">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"
+          stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect>
+          <rect x="11" y="11" width="8" height="8" rx="1.5" ry="1.5" fill="currentColor" fill-opacity="0.25"></rect>
+        </svg>
+      </button>
+    </div>
+
     <!-- Content Box -->
     <div class="ContentBox">
       <!-- NowBar (Album Art + Metadata + Controls) — Apple Music Style -->
       <div class="NowBar Active LeftSide" id="now-bar">
-        <div class="Grabber"></div>
         <div class="Header">
 
           <div class="MediaBox" id="media-box">
@@ -240,12 +453,12 @@
               </div>
             </div>
 
-            <!-- Quality Badge -->
-            <div class="quality-badge-container">
+            <!-- Quality Badge (Hidden by default, shown dynamically if audioTraits match) -->
+            <div class="quality-badge-container" id="quality-badge-container" style="display: none;">
               <div class="quality-badge" id="quality-badge">
-                <img src="icons/lossless.png" alt="Lossless" id="quality-badge-icon"
-                  style="width: 17px; height: 14px; margin-right: 4px;">
-                <span id="quality-badge-text" data-i18n="player_quality_lossless">Lossless</span>
+                <img src="" alt="" id="quality-badge-icon"
+                  style="width: 17px; height: 14px; margin-right: 4px; display: none;">
+                <span id="quality-badge-text"></span>
               </div>
             </div>
 
@@ -261,7 +474,9 @@
               </button>
               <button class="playback-control aero-player play-pause" id="btn-play-pause" title="Play/Pause"
                 data-i18n-title="player_btn_play_pause" aria-label="Play">
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6.8 4 17.2Q4 21 7.31 19.14L18.26 12.98Q20 12 18.26 11.02L7.31 4.86Q4 3 4 6.8Z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M4 6.8 4 17.2Q4 21 7.31 19.14L18.26 12.98Q20 12 18.26 11.02L7.31 4.86Q4 3 4 6.8Z" />
+                </svg>
               </button>
               <button class="playback-control aero-player skip-forward" id="skip-forward" title="Next"
                 data-i18n-title="player_btn_next" aria-label="Next">
@@ -311,18 +526,35 @@
       </div>
     </div>
 
-    <!-- Translation Toggle -->
-    <button class="translation-toggle" id="btn-translation" style="display: none;">
-      <span style="font-size: 13px;">文/A</span>
-      <span class="text">Translation: Off</span>
-    </button>
-    <!-- Romanization Toggle -->
-    <button class="romanization-toggle" id="btn-romanization" style="display: none;">
-      <span style="font-size: 13px;">A/あ</span>
-      <span class="text">Romanized: Off</span>
-    </button>
     <!-- Lyrics Source Badge -->
     <div class="lyrics-source-badge" id="lyrics-source-badge"></div>
+  </div>
+
+  <!-- Apple Music Style Translation & Pronunciation Popup Menu -->
+  <div class="lyrics-translation-popup" id="lyrics-translation-popup" style="display: none;">
+    <div class="am-popup-menu-item" id="menu-item-translation">
+      <span class="am-menu-item-text" id="menu-text-translation">Hide translations</span>
+      <span class="am-menu-item-icon">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          <line x1="2" y1="2" x2="22" y2="22"></line>
+        </svg>
+      </span>
+    </div>
+    <div class="am-popup-menu-divider"></div>
+    <div class="am-popup-menu-item" id="menu-item-pronunciation">
+      <span class="am-menu-item-text" id="menu-text-pronunciation">Show pronunciations</span>
+      <span class="am-menu-item-icon">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          <path d="M8 9h2"></path>
+          <path d="M12 9h4"></path>
+          <path d="M8 13h5"></path>
+        </svg>
+      </span>
+    </div>
   </div>
 
   <script type="module">
@@ -432,21 +664,7 @@
       videoExporter.startExport(songMetadata);
     });
 
-    // Prompt for microphone permission once to unlock audio output device names
-    function requestMicrophonePermission() {
-      if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
-        navigator.mediaDevices.getUserMedia({ audio: true })
-          .then(stream => {
-            // Stop the stream immediately so the microphone indicator doesn't stay on
-            stream.getTracks().forEach(track => track.stop());
-            updateBluetoothState();
-          })
-          .catch(err => {
-            console.warn("Microphone permission denied; device labels will remain empty:", err);
-            updateBluetoothState();
-          });
-      }
-    }
+    // ── Audio Device State (Static AirPods Icon) ──
 
     // ── TTML Test Listener ──
     window.addEventListener('lyricsflow_ttml_test_loaded', (e) => {
@@ -581,10 +799,10 @@
 
       showGlobalLoader();
       await refreshQueue();
-      await loadTrack(getCurrentIndex());
+      await loadTrack(getCurrentIndex(), false, false);
 
-      // Request mic permission to unlock device names (AirPods / Bluetooth)
-      requestMicrophonePermission();
+      // Update audio output icon (static AirPods)
+      updateBluetoothState();
 
       // Default view mode on mobile: normal (centered cover art, no lyrics/queue)
       const isMobile = window.innerWidth <= 768;
@@ -690,11 +908,24 @@
 
     let _currentLoader = null;
 
+    const AERO_SPINNER_HTML = `
+      <svg class="aero-spinner-svg" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+        <rect x="487.50" y="176.00" width="105" height="230" rx="52.50" fill="currentColor" transform="rotate(0.0 540 540)" />
+        <rect x="487.50" y="176.00" width="105" height="230" rx="52.50" fill="currentColor" transform="rotate(45.0 540 540)" />
+        <rect x="487.50" y="176.00" width="105" height="230" rx="52.50" fill="currentColor" transform="rotate(90.0 540 540)" />
+        <rect x="487.50" y="176.00" width="105" height="230" rx="52.50" fill="currentColor" transform="rotate(135.0 540 540)" />
+        <rect x="487.50" y="176.00" width="105" height="230" rx="52.50" fill="currentColor" transform="rotate(180.0 540 540)" />
+        <rect x="487.50" y="176.00" width="105" height="230" rx="52.50" fill="currentColor" transform="rotate(225.0 540 540)" />
+        <rect x="487.50" y="176.00" width="105" height="230" rx="52.50" fill="currentColor" transform="rotate(270.0 540 540)" />
+        <rect x="487.50" y="176.00" width="105" height="230" rx="52.50" fill="currentColor" transform="rotate(315.0 540 540)" />
+      </svg>
+    `;
+
     function showTrackLoader() {
       if (_currentLoader) return;
       const loader = document.createElement('div');
       loader.className = 'LyricsflowLoader active';
-      loader.innerHTML = '<div class="aero-spinner" style="width: 36px; height: 36px; border-width: 3px;"></div>';
+      loader.innerHTML = `<div class="aero-spinner" style="width: 36px; height: 36px;">${AERO_SPINNER_HTML}</div>`;
       document.body.appendChild(loader);
       _currentLoader = loader;
       setPlayButtonBuffering(true);
@@ -715,15 +946,15 @@
     function setPlayButtonBuffering(isBuffering) {
       if (!btnPlayPause) return;
       let spinner = btnPlayPause.querySelector('.aero-spinner');
-      const iconEl = btnPlayPause.querySelector('svg, .aero-player-icon, [data-icon]');
+      const iconEl = btnPlayPause.querySelector('.aero-player-label') || btnPlayPause.querySelector('svg:not(.aero-spinner-svg), .aero-player-icon, [data-icon]');
       if (isBuffering) {
         if (!spinner) {
           spinner = document.createElement('div');
           spinner.className = 'aero-spinner';
-          spinner.style.cssText = 'width: 20px; height: 20px; border-width: 2.5px;';
+          spinner.innerHTML = AERO_SPINNER_HTML;
           btnPlayPause.appendChild(spinner);
         }
-        spinner.style.display = 'block';
+        spinner.style.display = 'inline-block';
         if (iconEl) iconEl.style.display = 'none';
       } else {
         if (spinner) spinner.style.display = 'none';
@@ -774,9 +1005,73 @@
         showNotice(`⬇️ ${t('loading_download')}`);
         try {
           const apiBase = window.API_BASE || 'https://api.spicyamll.online';
-          // Stream directly so playback begins instantaneously without waiting for full file download
-          const streamUrl = `${apiBase}/stream?song=${track.amTrackId}&l=en-US`;
-          
+
+          // Determine codec fallback chain according to user preferences:
+          // Read enableAlac & enableDolby from localStorage (lyricsflow_user_profile)
+          let enableAlac = true;
+          let enableDolby = true;
+          try {
+            const rawProf = localStorage.getItem('lyricsflow_user_profile');
+            if (rawProf) {
+              const p = JSON.parse(rawProf);
+              if (p.enableAlac !== undefined) enableAlac = Boolean(p.enableAlac);
+              if (p.enableDolby !== undefined) enableDolby = Boolean(p.enableDolby);
+            }
+          } catch (_) { }
+
+          let codecChain = [];
+          if (enableDolby && enableAlac) {
+            codecChain = ['atmos', 'alac', 'aac', 'aac-web'];
+          } else if (enableAlac) {
+            codecChain = ['alac', 'aac', 'aac-web'];
+          } else if (enableDolby) {
+            codecChain = ['atmos', 'aac', 'aac-web'];
+          } else {
+            codecChain = ['aac', 'aac-web'];
+          }
+
+          let currentCodecIdx = 0;
+          const buildStreamUrl = (codec) => {
+            let u = `${apiBase}/stream?song=${track.amTrackId}&codec=${codec}&fallback=false&l=en-US`;
+            if (codec === 'atmos' || codec === 'alac') {
+              u += '&websupport=true';
+            }
+            return u;
+          };
+
+          const updateActiveQualityBadge = (activeCodec) => {
+            const badgeContainer = document.getElementById('quality-badge-container');
+            const qualityText = document.getElementById('quality-badge-text');
+            const qualityIcon = document.getElementById('quality-badge-icon');
+            if (!badgeContainer || !qualityIcon || !qualityText) return;
+
+            if (activeCodec === 'atmos') {
+              qualityIcon.src = 'icons/dolby_atmos.png';
+              qualityIcon.style.display = 'inline-block';
+              qualityText.textContent = '';
+              qualityText.style.display = 'none';
+              qualityIcon.style.width = '82px';
+              qualityIcon.style.height = '18px';
+              qualityIcon.style.marginRight = '0px';
+              badgeContainer.style.display = 'flex';
+            } else if (activeCodec === 'alac') {
+              qualityIcon.src = 'icons/lossless.png';
+              qualityIcon.style.display = 'inline-block';
+              qualityText.style.display = 'inline';
+              qualityText.textContent = t('player_quality_lossless') || 'Lossless';
+              qualityIcon.style.width = '17px';
+              qualityIcon.style.height = '14px';
+              qualityIcon.style.marginRight = '4px';
+              badgeContainer.style.display = 'flex';
+            } else {
+              // AAC or aac-web standard quality
+              badgeContainer.style.display = 'none';
+            }
+          };
+
+          window._activePlaybackCodec = codecChain[0];
+          updateActiveQualityBadge(codecChain[0]);
+
           track.type = 'audio/mp4';
           // Background download for IndexedDB caching while audio streams
           fetch(`${apiBase}/download?song=${track.amTrackId}&l=en-US`)
@@ -793,7 +1088,7 @@
                 track.buffer = buf;
               }
             })
-            .catch(() => {});
+            .catch(() => { });
 
           // Reset UI
           parsedLyrics = null;
@@ -814,14 +1109,48 @@
             title: track.name || '',
             artist: track.artist || '',
             album: track.album || '',
-            artUrl: track.artUrl || null
+            artUrl: track.artUrl || null,
+            year: track.year || (track.releaseDate ? formatLocalizedYear(track.releaseDate) : null),
+            releaseDate: track.releaseDate || null,
+            audioTraits: track.audioTraits || [],
+            songwriters: track.songwriters || []
           };
           window._lyricsflowSongMetadata = songMetadata;
           updateMetadataUI(songMetadata);
           fetchAnimatedArt(songMetadata.artist, songMetadata.album, songMetadata.title);
-          autoFetchLyrics(songMetadata, track.amTrackId);
 
-          player.setSource(streamUrl);
+          if (track.ttml && track.ttml !== '__AUTO_FETCH__') {
+            try {
+              parsedLyrics = parseTTMLToLyrics(track.ttml);
+              window._lyricsflowCurrentLyrics = parsedLyrics;
+              applyLyricsToUI(parsedLyrics);
+              if (sourceBadge) sourceBadge.textContent = 'Lyrics: Apple Music (AMP)';
+            } catch (err) {
+              console.warn('AMP TTML parse failed, falling back to auto-fetch:', err);
+              autoFetchLyrics(songMetadata, track.amTrackId);
+            }
+          } else {
+            autoFetchLyrics(songMetadata, track.amTrackId);
+          }
+
+          // Wire graceful error fallback for audio decoding
+          player.onError = () => {
+            currentCodecIdx++;
+            if (currentCodecIdx < codecChain.length) {
+              const nextCodec = codecChain[currentCodecIdx];
+              window._activePlaybackCodec = nextCodec;
+              updateActiveQualityBadge(nextCodec);
+              console.warn(`[CodecFallback] Switching audio format to: ${nextCodec}`);
+              showToast(`Switching to ${nextCodec.toUpperCase()}...`);
+              player.setSource(buildStreamUrl(nextCodec));
+              if (autoPlay) player.play();
+            } else {
+              console.error("[CodecFallback] All stream codecs in fallback chain exhausted.");
+              showToast(`❌ ${t('player_stream_failed')}`);
+            }
+          };
+
+          player.setSource(buildStreamUrl(codecChain[0]));
           if (autoPlay) {
             player.play();
             updatePlayPauseIcon(true);
@@ -1051,6 +1380,40 @@
         nowBar.setAttribute('data-album-name', metadata.album || '');
       }
 
+      // Automatically reflect active playback codec (e.g. dolby atmos, lossless) or audioTraits
+      const badgeContainer = document.getElementById('quality-badge-container');
+      const qualityText = document.getElementById('quality-badge-text');
+      const qualityIcon = document.getElementById('quality-badge-icon');
+      let badgeShown = false;
+
+      const activeCodec = window._activePlaybackCodec || (metadata.audioTraits?.includes('spatial') || metadata.audioTraits?.includes('dolby-atmos') ? 'atmos' : (metadata.audioTraits?.includes('lossless') ? 'alac' : null));
+
+      if (activeCodec && qualityIcon && qualityText && !settingsManager.get('airPodsIcon')) {
+        if (activeCodec === 'atmos') {
+          qualityIcon.src = 'icons/dolby_atmos.png';
+          qualityIcon.style.display = 'inline-block';
+          qualityText.textContent = '';
+          qualityText.style.display = 'none';
+          qualityIcon.style.width = '82px';
+          qualityIcon.style.height = '18px';
+          qualityIcon.style.marginRight = '0px';
+          badgeShown = true;
+        } else if (activeCodec === 'alac') {
+          qualityIcon.src = 'icons/lossless.png';
+          qualityIcon.style.display = 'inline-block';
+          qualityText.style.display = 'inline';
+          qualityText.textContent = (metadata.audioTraits?.includes('hi-res-lossless')) ? 'Hi-Res Lossless' : (t('player_quality_lossless') || 'Lossless');
+          qualityIcon.style.width = '17px';
+          qualityIcon.style.height = '14px';
+          qualityIcon.style.marginRight = '4px';
+          badgeShown = true;
+        }
+      }
+
+      if (badgeContainer) {
+        badgeContainer.style.display = badgeShown ? 'flex' : 'none';
+      }
+
       mediaSessionManager.updateMetadata(metadata.title, metadata.artist, metadata.album, metadata.artUrl);
     }
 
@@ -1145,46 +1508,67 @@
       return data;
     }
 
+    function normalizeLyricText(str) {
+      if (!str) return "";
+      return str.toLowerCase().replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/[.,!?;:'"()[\]{}\-—–…@#$%^&*~`]/g, '').replace(/\s+/g, ' ').trim();
+    }
+
     function applyLyricsToUI(lyrics) {
       if (!lyrics) return;
 
-      // Check if Romanization is available
+      // Check if genuine Romanization and Translation are available (distinct from native lyrics)
       let hasRomanization = false;
       let hasTranslation = false;
+
+      const checkLineRoman = (l) => {
+        const native = normalizeLyricText(l.Lead?.Syllables ? l.Lead.Syllables.map(s => s.Text || '').join('') : (l.Text || ''));
+        if (l.RomanizedText && normalizeLyricText(l.RomanizedText) && normalizeLyricText(l.RomanizedText) !== native) return true;
+        if (l.Lead?.Syllables && l.Lead.Syllables.some(s => s.RomanizedText && normalizeLyricText(s.RomanizedText) && normalizeLyricText(s.RomanizedText) !== normalizeLyricText(s.Text || ''))) return true;
+        return false;
+      };
+
+      const checkLineTrans = (l) => {
+        const native = normalizeLyricText(l.Lead?.Syllables ? l.Lead.Syllables.map(s => s.Text || '').join('') : (l.Text || ''));
+        return !!(l.TranslatedText && normalizeLyricText(l.TranslatedText) && normalizeLyricText(l.TranslatedText) !== native);
+      };
+
       if (lyrics.Content) {
-        hasRomanization = lyrics.Content.some(line => {
-          if (line.RomanizedText) return true;
-          if (line.Lead && line.Lead.Syllables) {
-            return line.Lead.Syllables.some(s => s.RomanizedText);
-          }
-          return false;
-        });
-        hasTranslation = lyrics.Content.some(line => line.TranslatedText !== undefined);
+        hasRomanization = lyrics.Content.some(checkLineRoman);
+        hasTranslation = lyrics.Content.some(checkLineTrans);
       } else if (lyrics.Lines) {
-        hasRomanization = lyrics.Lines.some(l => l.RomanizedText);
-        hasTranslation = lyrics.Lines.some(l => l.TranslatedText !== undefined);
+        hasRomanization = lyrics.Lines.some(checkLineRoman);
+        hasTranslation = lyrics.Lines.some(checkLineTrans);
       }
 
       const isRomanized = settingsManager.get("showRomanized");
       const isTranslated = settingsManager.get("showTranslation");
 
-      if (btnRomanization) {
-        if (hasRomanization) {
-          btnRomanization.style.display = 'flex';
-          updateRomanizationBtnState(isRomanized);
+      const hasAnyTranslationFeature = hasRomanization || hasTranslation;
+      if (pcBtnTranslationMenu) {
+        pcBtnTranslationMenu.style.display = hasAnyTranslationFeature ? 'flex' : 'none';
+        if (isRomanized || isTranslated) {
+          pcBtnTranslationMenu.classList.add('active');
         } else {
-          btnRomanization.style.display = 'none';
+          pcBtnTranslationMenu.classList.remove('active');
         }
       }
 
-      if (btnTranslation) {
-        if (hasTranslation) {
-          btnTranslation.style.display = 'flex';
-          updateTranslationBtnState(isTranslated);
+      if (btnMobileTranslationMenu) {
+        btnMobileTranslationMenu.style.display = hasAnyTranslationFeature ? 'flex' : 'none';
+        if (isRomanized || isTranslated) {
+          btnMobileTranslationMenu.classList.add('active');
         } else {
-          btnTranslation.style.display = 'none';
+          btnMobileTranslationMenu.classList.remove('active');
         }
       }
+
+      if (menuItemTranslation) {
+        menuItemTranslation.style.display = hasTranslation ? 'flex' : 'none';
+      }
+      if (menuItemPronunciation) {
+        menuItemPronunciation.style.display = hasRomanization ? 'flex' : 'none';
+      }
+      updateTranslationMenuUI(isTranslated, isRomanized);
 
       let typeToRender = lyrics.Type;
       // Handle line lyrics as syllable/word lyrics
@@ -1206,7 +1590,24 @@
       initScrollManager(lyricsContent);
     }
 
-    function showNotice(text) {
+    function showToast(text, duration = 2400) {
+      const toast = document.getElementById('lyricsflow-toast');
+      if (toast) {
+        const toastText = toast.querySelector('.toast-text');
+        if (toastText) toastText.textContent = text;
+        toast.classList.add('active');
+        clearTimeout(toast._timeout);
+        toast._timeout = setTimeout(() => toast.classList.remove('active'), duration);
+      }
+    }
+
+    function showNotice(text, forceInView = false) {
+      // If we already have lyrics loaded in the UI and this is a transient notice, display as AeroUI toast to protect lyrics view
+      if (!forceInView && (window._lyricsflowCurrentLyrics || parsedLyrics)) {
+        showToast(text);
+        return;
+      }
+
       if (lyricsNotice) {
         // Clear static/scrolled lyrics dynamic items
         lyricsContent.innerHTML = '';
@@ -1274,66 +1675,16 @@
       }
     });
 
-    // ── AirPods / AirPlay Bluetooth Detection ──
+    // ── AirPods / Audio Output Icon (Static AirPods Icon, No Device Name) ──
     async function updateBluetoothState() {
       const airplayIcon = document.getElementById('airplay-icon');
       const deviceNameEl = document.getElementById('airplay-device-name');
-      if (!airplayIcon || !deviceNameEl) return;
-
-      if (settingsManager.get('airPodsIcon')) {
+      if (airplayIcon) {
         airplayIcon.src = 'icons/earphone.png';
-        deviceNameEl.textContent = settingsManager.get('bluetoothDeviceName') || 'AirPods Pro';
-        deviceNameEl.style.display = 'block';
-        return;
       }
-
-      let bluetoothName = null;
-      let isBluetooth = false;
-
-      try {
-        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
-
-          for (const device of audioOutputs) {
-            const label = device.label ? device.label.toLowerCase() : '';
-            if (
-              label.includes('airpod') ||
-              label.includes('bluetooth') ||
-              label.includes('headphone') ||
-              label.includes('earphone') ||
-              label.includes('buds') ||
-              label.includes('wireless') ||
-              label.includes('hands-free') ||
-              label.includes('audio') ||
-              label.includes('hifi') ||
-              label.includes('stereo')
-            ) {
-              if (label.includes('speaker') && !label.includes('bluetooth') && !label.includes('wireless')) {
-                continue;
-              }
-              bluetoothName = device.label;
-              isBluetooth = true;
-              break;
-            }
-          }
-
-          if (!isBluetooth && audioOutputs.length > 1) {
-            isBluetooth = true;
-          }
-        }
-      } catch (err) {
-        console.warn("enumerateDevices failed:", err);
-      }
-
-      if (isBluetooth) {
-        airplayIcon.src = 'icons/earphone.png';
-        deviceNameEl.textContent = bluetoothName || 'Headphones';
-        deviceNameEl.style.display = 'block';
-      } else {
-        airplayIcon.src = 'icons/airplay.png';
-        deviceNameEl.textContent = '';
+      if (deviceNameEl) {
         deviceNameEl.style.display = 'none';
+        deviceNameEl.textContent = '';
       }
     }
 
@@ -1391,6 +1742,14 @@
     player.onPause = () => {
       setPlayButtonBuffering(false);
       updatePlayPauseIcon(false);
+    };
+
+    player.onWaiting = () => {
+      setPlayButtonBuffering(true);
+    };
+
+    player.onCanPlay = () => {
+      setPlayButtonBuffering(false);
     };
 
     player.onEnded = () => {
@@ -1578,17 +1937,27 @@
       }
     });
 
-    // Broadcast playback state to parent window for mini-player progress & controls sync
+    // Broadcast playback state to parent window and popped-out mini-player window
+    let _miniPlayerWin = null;
     const parentTargetOrigin = (window.location.origin && window.location.origin !== 'null') ? window.location.origin : '*';
     setInterval(() => {
+      const isBuffering = !!(_currentLoader || (btnPlayPause && btnPlayPause.querySelector('.aero-spinner')?.style.display !== 'none'));
+      const activeLyrics = window._lyricsflowCurrentLyrics || parsedLyrics || null;
+      const statePayload = {
+        type: 'player-state',
+        isPlaying: player.isPlaying,
+        isBuffering: isBuffering,
+        position: player.getPosition ? player.getPosition() : 0,
+        duration: player.duration || 0,
+        songMetadata: songMetadata,
+        lyricsData: activeLyrics,
+        ttml: currentQueue[getCurrentIndex()]?.ttml || null
+      };
       if (window.parent && window.parent !== window) {
-        window.parent.postMessage({
-          type: 'player-state',
-          isPlaying: player.isPlaying,
-          position: player.getPosition ? player.getPosition() : 0,
-          duration: player.duration || 0,
-          songMetadata: songMetadata
-        }, parentTargetOrigin);
+        window.parent.postMessage(statePayload, parentTargetOrigin);
+      }
+      if (_miniPlayerWin && !_miniPlayerWin.closed) {
+        _miniPlayerWin.postMessage(statePayload, '*');
       }
     }, 250);
 
@@ -1854,6 +2223,73 @@
     const pcBtnLyrics = document.getElementById('pc-btn-lyrics');
     const pcBtnQueue = document.getElementById('pc-btn-queue');
     const pcBtnAirplay = document.getElementById('pc-btn-airplay');
+    const pcBtnClose = document.getElementById('pc-btn-close');
+    const pcBtnMini = document.getElementById('pc-btn-mini');
+    const pcBtnTranslationMenu = document.getElementById('pc-btn-translation-menu');
+    const btnMobileTranslationMenu = document.getElementById('btn-mobile-translation-menu');
+    const lyricsTranslationPopup = document.getElementById('lyrics-translation-popup');
+    const menuItemTranslation = document.getElementById('menu-item-translation');
+    const menuItemPronunciation = document.getElementById('menu-item-pronunciation');
+    const menuTextTranslation = document.getElementById('menu-text-translation');
+    const menuTextPronunciation = document.getElementById('menu-text-pronunciation');
+
+    function toggleTranslationPopup(btn) {
+      if (!lyricsTranslationPopup) return;
+      const isVisible = lyricsTranslationPopup.style.display !== 'none';
+      if (isVisible) {
+        lyricsTranslationPopup.style.display = 'none';
+      } else {
+        const rect = btn.getBoundingClientRect();
+        lyricsTranslationPopup.style.display = 'flex';
+        // Position right above the button
+        const popupW = 210;
+        const left = Math.max(10, Math.min(window.innerWidth - popupW - 10, rect.left + (rect.width / 2) - (popupW / 2)));
+        lyricsTranslationPopup.style.left = `${left}px`;
+        lyricsTranslationPopup.style.bottom = `${window.innerHeight - rect.top + 10}px`;
+      }
+    }
+
+    if (pcBtnTranslationMenu) {
+      pcBtnTranslationMenu.onclick = (e) => {
+        e.stopPropagation();
+        toggleTranslationPopup(pcBtnTranslationMenu);
+      };
+    }
+
+    if (btnMobileTranslationMenu) {
+      btnMobileTranslationMenu.onclick = (e) => {
+        e.stopPropagation();
+        toggleTranslationPopup(btnMobileTranslationMenu);
+      };
+    }
+
+    document.addEventListener('click', (e) => {
+      if (lyricsTranslationPopup && lyricsTranslationPopup.style.display !== 'none') {
+        if (!lyricsTranslationPopup.contains(e.target) && !e.target.closest('.translation-menu-btn')) {
+          lyricsTranslationPopup.style.display = 'none';
+        }
+      }
+    });
+
+    if (pcBtnClose) {
+      pcBtnClose.onclick = () => {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ action: 'closePlayerDrawer' }, '*');
+        }
+      };
+    }
+
+    if (pcBtnMini) {
+      pcBtnMini.onclick = () => {
+        const toast = document.getElementById('lyricsflow-toast');
+        if (toast) {
+          const toastText = toast.querySelector('.toast-text');
+          if (toastText) toastText.textContent = t('common_coming_soon') || 'Coming Soon...';
+          toast.classList.add('active');
+          setTimeout(() => toast.classList.remove('active'), 2200);
+        }
+      };
+    }
 
     if (pcBtnLyrics) {
       pcBtnLyrics.onclick = () => {
@@ -2128,55 +2564,58 @@
       }
     };
 
-    function updateRomanizationBtnState(isRomanized) {
-      if (isRomanized) {
-        btnRomanization.classList.add('active');
-        btnRomanization.querySelector('.text').textContent = t('player_romanized_on');
-      } else {
-        btnRomanization.classList.remove('active');
-        btnRomanization.querySelector('.text').textContent = t('player_romanized_off');
+    function updateTranslationMenuUI(isTranslated, isRomanized) {
+      if (menuTextTranslation) {
+        menuTextTranslation.textContent = isTranslated ? 'Hide translations' : 'Show translations';
+      }
+      if (menuTextPronunciation) {
+        menuTextPronunciation.textContent = isRomanized ? 'Hide pronunciations' : 'Show pronunciations';
+      }
+      if (menuItemTranslation) {
+        if (isTranslated) menuItemTranslation.classList.add('active');
+        else menuItemTranslation.classList.remove('active');
+      }
+      if (menuItemPronunciation) {
+        if (isRomanized) menuItemPronunciation.classList.add('active');
+        else menuItemPronunciation.classList.remove('active');
+      }
+
+      const anyActive = isTranslated || isRomanized;
+      if (pcBtnTranslationMenu) {
+        if (anyActive) pcBtnTranslationMenu.classList.add('active');
+        else pcBtnTranslationMenu.classList.remove('active');
+      }
+      if (btnMobileTranslationMenu) {
+        if (anyActive) btnMobileTranslationMenu.classList.add('active');
+        else btnMobileTranslationMenu.classList.remove('active');
       }
     }
 
-    function updateTranslationBtnState(isTranslated) {
-      if (isTranslated) {
-        btnTranslation.classList.add('active');
-        btnTranslation.querySelector('.text').textContent = t('player_translation_on');
-      } else {
-        btnTranslation.classList.remove('active');
-        btnTranslation.querySelector('.text').textContent = t('player_translation_off');
-      }
+    if (menuItemTranslation) {
+      menuItemTranslation.onclick = (e) => {
+        e.stopPropagation();
+        const next = !settingsManager.get("showTranslation");
+        settingsManager.set("showTranslation", next);
+        const isRomanized = settingsManager.get("showRomanized");
+        updateTranslationMenuUI(next, isRomanized);
+        if (lyricsTranslationPopup) lyricsTranslationPopup.style.display = 'none';
+        if (parsedLyrics) applyLyricsToUI(parsedLyrics);
+        queueForceScroll();
+      };
     }
 
-    btnRomanization.onclick = () => {
-      const isRomanized = !settingsManager.get("showRomanized");
-      settingsManager.set("showRomanized", isRomanized);
-
-      // Disable translation if romanization is on
-      if (isRomanized) {
-        settingsManager.set("showTranslation", false);
-        updateTranslationBtnState(false);
-      }
-
-      updateRomanizationBtnState(isRomanized);
-      if (parsedLyrics) applyLyricsToUI(parsedLyrics);
-      queueForceScroll();
-    };
-
-    btnTranslation.onclick = () => {
-      const isTranslated = !settingsManager.get("showTranslation");
-      settingsManager.set("showTranslation", isTranslated);
-
-      // Disable romanization if translation is on
-      if (isTranslated) {
-        settingsManager.set("showRomanized", false);
-        updateRomanizationBtnState(false);
-      }
-
-      updateTranslationBtnState(isTranslated);
-      if (parsedLyrics) applyLyricsToUI(parsedLyrics);
-      queueForceScroll();
-    };
+    if (menuItemPronunciation) {
+      menuItemPronunciation.onclick = (e) => {
+        e.stopPropagation();
+        const next = !settingsManager.get("showRomanized");
+        settingsManager.set("showRomanized", next);
+        const isTranslated = settingsManager.get("showTranslation");
+        updateTranslationMenuUI(isTranslated, next);
+        if (lyricsTranslationPopup) lyricsTranslationPopup.style.display = 'none';
+        if (parsedLyrics) applyLyricsToUI(parsedLyrics);
+        queueForceScroll();
+      };
+    }
 
     function updatePlayPauseIcon(playing) {
       if (btnPlayPause) setPlayerIcon(btnPlayPause, playing ? 'pause' : 'play');
@@ -2362,6 +2801,18 @@
       </button>
     </div>
     <div class="bottom-bar-right">
+      <button class="lyrics-button translation-menu-btn" id="btn-mobile-translation-menu"
+        title="Translations & Pronunciations" style="display: none;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" style="color: white;">
+          <path d="m5 8 6 6" />
+          <path d="m4 14 6-6 2-3" />
+          <path d="M2 5h12" />
+          <path d="M7 2h1" />
+          <path d="m22 22-5-10-5 10" />
+          <path d="M14 18h6" />
+        </svg>
+      </button>
       <button class="lyrics-button" id="btn-lyrics" title="Lyrics">
         <img src="icons/lyricson.png" alt="Lyrics" id="lyrics-icon">
       </button>

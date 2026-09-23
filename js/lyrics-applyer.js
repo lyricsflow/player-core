@@ -493,24 +493,46 @@ export function applySyllableLyrics(data, lyricsContentEl) {
 
 function normalizeLyricText(str) {
   if (!str) return "";
-  return str.toLowerCase().replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/[.,!?;:'"()[\]{}\-—–…@#$%^&*~`]/g, '').replace(/\s+/g, ' ').trim();
+  return str
+    .toLowerCase()
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[\u2018\u2019']/g, '') // remove straight and curly apostrophes
+    .replace(/[.,!?;:"()[\]{}\-—–…@#$%^&*~`]/g, '')
+    .replace(/\s+/g, '') // collapse all whitespace completely so word spacing differences don't prevent match
+    .trim();
 }
 
     // Determine if genuine Romanization (distinct from native text) exists
     const nativeLeadRaw = line.Lead?.Syllables ? line.Lead.Syllables.map(s => s.Text || '').join('').trim() : '';
+    const nativeLineRaw = (line.Text || '').trim();
     const nativeLeadNormalized = normalizeLyricText(nativeLeadRaw);
-    const hasDistinctSyllableRomanization = line.Lead?.Syllables && line.Lead.Syllables.some(s => s.RomanizedText && normalizeLyricText(s.RomanizedText) && normalizeLyricText(s.RomanizedText) !== normalizeLyricText(s.Text || ''));
-    const hasDistinctLineRomanization = line.RomanizedText && normalizeLyricText(line.RomanizedText) && normalizeLyricText(line.RomanizedText) !== nativeLeadNormalized;
+    const nativeLineNormalized = normalizeLyricText(nativeLineRaw);
+
+    const matchesNative = (candidate) => {
+      const norm = normalizeLyricText(candidate);
+      if (!norm) return true;
+      return norm === nativeLeadNormalized || norm === nativeLineNormalized;
+    };
+
+    const hasDistinctSyllableRomanization = line.Lead?.Syllables && line.Lead.Syllables.some(s => {
+      const sRomNorm = normalizeLyricText(s.RomanizedText);
+      const sTxtNorm = normalizeLyricText(s.Text || '');
+      return sRomNorm && sRomNorm !== sTxtNorm;
+    });
+    const hasDistinctLineRomanization = line.RomanizedText && !matchesNative(line.RomanizedText);
 
     let lineRomanizedText = null;
     if (hasDistinctLineRomanization) {
       lineRomanizedText = line.RomanizedText.trim();
     } else if (hasDistinctSyllableRomanization) {
-      lineRomanizedText = line.Lead.Syllables.map(s => s.RomanizedText || s.Text || '').join(settingsManager.get("trimSyllableSpaces") ? " " : "").trim();
+      const cand = line.Lead.Syllables.map(s => s.RomanizedText || s.Text || '').join(settingsManager.get("trimSyllableSpaces") ? " " : "").trim();
+      if (!matchesNative(cand)) {
+        lineRomanizedText = cand;
+      }
     }
 
     // Pronunciation (Romanization) sub-line
-    if (showRomanized && lineRomanizedText) {
+    if (showRomanized && lineRomanizedText && !matchesNative(lineRomanizedText)) {
       const pronElem = document.createElement("div");
       pronElem.classList.add("line-subtext", "line-pronunciation");
       pronElem.setAttribute("dir", isRtl(lineRomanizedText) ? "rtl" : "ltr");
@@ -567,8 +589,13 @@ function normalizeLyricText(str) {
       lineElem.appendChild(pronElem);
     }
 
-    // Translation sub-line (only if distinct from native text when normalized)
-    const hasDistinctTranslation = line.TranslatedText && normalizeLyricText(line.TranslatedText) && normalizeLyricText(line.TranslatedText) !== nativeLeadNormalized;
+    // Translation sub-line (only if distinct from native text AND distinct from Romanized text when normalized)
+    const normTrans = normalizeLyricText(line.TranslatedText);
+    const hasDistinctTranslation = line.TranslatedText && 
+      normTrans && 
+      !matchesNative(line.TranslatedText) && 
+      (!lineRomanizedText || normTrans !== normalizeLyricText(lineRomanizedText));
+
     if (showTranslation && hasDistinctTranslation) {
       const transElem = document.createElement("div");
       transElem.classList.add("line-subtext", "line-translation");
@@ -803,17 +830,32 @@ function normalizeLyricText(str) {
         // Background line pronunciation & translation sub-lines
         const bgNativeRaw = bg.Syllables ? bg.Syllables.map(s => s.Text || '').join('').trim() : (bg.Text || '').trim();
         const bgNativeNormalized = normalizeLyricText(bgNativeRaw);
-        const hasBgDistinctRoman = (bg.RomanizedText && normalizeLyricText(bg.RomanizedText) !== bgNativeNormalized) ||
-          (bg.Syllables && bg.Syllables.some(s => s.RomanizedText && normalizeLyricText(s.RomanizedText) && normalizeLyricText(s.RomanizedText) !== normalizeLyricText(s.Text || '')));
+        const bgLineNormalized = normalizeLyricText(bg.Text || '');
+
+        const matchesBgNative = (candidate) => {
+          const norm = normalizeLyricText(candidate);
+          if (!norm) return true;
+          return norm === bgNativeNormalized || norm === bgLineNormalized;
+        };
+
+        const hasBgDistinctRoman = (!matchesBgNative(bg.RomanizedText)) ||
+          (bg.Syllables && bg.Syllables.some(s => {
+            const sRomNorm = normalizeLyricText(s.RomanizedText);
+            const sTxtNorm = normalizeLyricText(s.Text || '');
+            return sRomNorm && sRomNorm !== sTxtNorm;
+          }));
         
         let bgRomanText = null;
-        if (bg.RomanizedText && normalizeLyricText(bg.RomanizedText) !== bgNativeNormalized) {
+        if (bg.RomanizedText && !matchesBgNative(bg.RomanizedText)) {
           bgRomanText = bg.RomanizedText.trim();
         } else if (hasBgDistinctRoman) {
-          bgRomanText = bg.Syllables.map(s => s.RomanizedText || s.Text || '').join(settingsManager.get("trimSyllableSpaces") ? " " : "").trim();
+          const cand = bg.Syllables.map(s => s.RomanizedText || s.Text || '').join(settingsManager.get("trimSyllableSpaces") ? " " : "").trim();
+          if (!matchesBgNative(cand)) {
+            bgRomanText = cand;
+          }
         }
 
-        if (showRomanized && bgRomanText) {
+        if (showRomanized && bgRomanText && !matchesBgNative(bgRomanText)) {
           const bgPron = document.createElement("div");
           bgPron.classList.add("line-subtext", "line-pronunciation");
           bgPron.setAttribute("dir", isRtl(bgRomanText) ? "rtl" : "ltr");
@@ -868,7 +910,13 @@ function normalizeLyricText(str) {
           bgLine.appendChild(bgPron);
         }
 
-        if (showTranslation && bg.TranslatedText && normalizeLyricText(bg.TranslatedText) && normalizeLyricText(bg.TranslatedText) !== bgNativeNormalized) {
+        const normBgTrans = normalizeLyricText(bg.TranslatedText);
+        const hasBgDistinctTrans = bg.TranslatedText &&
+          normBgTrans &&
+          !matchesBgNative(bg.TranslatedText) &&
+          (!bgRomanText || normBgTrans !== normalizeLyricText(bgRomanText));
+
+        if (showTranslation && hasBgDistinctTrans) {
           const bgTrans = document.createElement("div");
           bgTrans.classList.add("line-subtext", "line-translation");
           bgTrans.setAttribute("dir", isRtl(bg.TranslatedText) ? "rtl" : "ltr");
@@ -1073,7 +1121,11 @@ export function applyStaticLyrics(data, lyricsContentEl) {
     wordElem.textContent = transformText(originalText);
     lineElem.appendChild(wordElem);
 
-    if (showRomanized && line.RomanizedText) {
+    const normOriginal = normalizeLyricText(originalText);
+    const normStaticRom = normalizeLyricText(line.RomanizedText);
+    const hasStaticRom = line.RomanizedText && normStaticRom && normStaticRom !== normOriginal;
+
+    if (showRomanized && hasStaticRom) {
       const pronElem = document.createElement("div");
       pronElem.classList.add("line-subtext", "line-pronunciation");
       pronElem.setAttribute("dir", "auto");
@@ -1081,7 +1133,13 @@ export function applyStaticLyrics(data, lyricsContentEl) {
       lineElem.appendChild(pronElem);
     }
 
-    if (showTranslation && line.TranslatedText) {
+    const normStaticTrans = normalizeLyricText(line.TranslatedText);
+    const hasStaticTrans = line.TranslatedText && 
+      normStaticTrans && 
+      normStaticTrans !== normOriginal && 
+      (!hasStaticRom || normStaticTrans !== normStaticRom);
+
+    if (showTranslation && hasStaticTrans) {
       const transElem = document.createElement("div");
       transElem.classList.add("line-subtext", "line-translation");
       transElem.setAttribute("dir", "auto");

@@ -2041,6 +2041,10 @@ body.is-rendering .NowBar {
     height: 28px !important;
   }
 
+  body.lyrics-mode-active #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .NowBarBottomWrapper .MetadataRow {
+    display: flex !important;
+  }
+
   /* Touch-blocking backdrop: prevents taps from passing through lyrics to player controls behind */
   #LyricsflowPage .LyricsContainer:not(.hidden)::before {
     content: "";

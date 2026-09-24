@@ -124,22 +124,23 @@
           rgba(255, 255, 255, 0.45) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      transition: text-shadow 0.2s ease;
-      will-change: transform;
+      transform-origin: center bottom;
+      transition: text-shadow 0.15s ease;
+      text-shadow: 0 0 var(--text-shadow-blur-radius, 4px) rgba(255, 255, 255, var(--text-shadow-opacity, 0%));
     }
 
     #LyricsflowPage .LyricsContainer .LyricsContent .line.NotSung .line-pronunciation .pron-word {
-      background-image: none !important;
-      -webkit-text-fill-color: rgba(255, 255, 255, 0.45) !important;
+      --pron-gradient-position: -20%;
+      text-shadow: none;
     }
 
     #LyricsflowPage .LyricsContainer .LyricsContent .line.Sung .line-pronunciation .pron-word {
-      background-image: none !important;
-      -webkit-text-fill-color: rgba(255, 255, 255, 0.85) !important;
+      --pron-gradient-position: 100%;
+      text-shadow: none;
     }
 
     #LyricsflowPage .LyricsContainer .LyricsContent .line .line-pronunciation .pron-word.active {
-      text-shadow: 0 0 14px rgba(255, 255, 255, 0.4);
+      text-shadow: 0 0 var(--text-shadow-blur-radius, 8px) rgba(255, 255, 255, var(--text-shadow-opacity, 30%));
     }
 
     /* Subtext animation synchronization with line status */
@@ -168,14 +169,14 @@
     .lyrics-translation-popup {
       position: fixed;
       z-index: 1000000;
-      min-width: 215px;
-      background: rgba(38, 44, 52, 0.78);
+      min-width: 235px;
+      background: rgba(45, 45, 48, 0.88);
       backdrop-filter: blur(40px) saturate(190%);
       -webkit-backdrop-filter: blur(40px) saturate(190%);
-      border: 0.5px solid rgba(255, 255, 255, 0.2);
-      border-radius: 14px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(0, 0, 0, 0.2);
-      padding: 6px;
+      border: 0.5px solid rgba(255, 255, 255, 0.18);
+      border-radius: 18px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(0, 0, 0, 0.25);
+      padding: 7px;
       display: flex;
       flex-direction: column;
       user-select: none;
@@ -197,16 +198,15 @@
     .am-popup-menu-item {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      border-radius: 9px;
+      padding: 12px 14px;
+      border-radius: 12px;
       cursor: pointer;
       color: #ffffff;
-      font-size: 0.95rem;
+      font-size: 0.98rem;
       font-weight: 500;
       letter-spacing: -0.01em;
       transition: background 0.15s ease, color 0.15s ease;
-      gap: 16px;
+      gap: 12px;
     }
 
     .am-popup-menu-item:hover {
@@ -225,14 +225,92 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      opacity: 0.85;
+      opacity: 0.95;
       color: inherit;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .am-menu-item-text {
+      flex: 1;
     }
 
     .am-popup-menu-divider {
       height: 1px;
       background: rgba(255, 255, 255, 0.12);
       margin: 4px 6px;
+    }
+
+    /* Explicit Tag (Apple Music Style) */
+    .am-explicit-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.65rem;
+      font-weight: 800;
+      line-height: 1;
+      color: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.22);
+      border-radius: 4px;
+      padding: 2px 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+      user-select: none;
+      letter-spacing: 0;
+    }
+
+    /* Mobile Circular Button Masks & Placement */
+    @media (max-width: 768px) {
+      .lyrics-button.translation-menu-btn,
+      .lyrics-button#btn-mobile-translation-menu {
+        position: fixed !important;
+        bottom: calc(26dvh + 46px) !important;
+        left: 28px !important;
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 50% !important;
+        display: none !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(255, 255, 255, 0.16) !important;
+        backdrop-filter: blur(25px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+        border: 0.5px solid rgba(255, 255, 255, 0.25) !important;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32) !important;
+        z-index: 100000 !important;
+        transition: background 0.2s, transform 0.2s, opacity 0.25s !important;
+        padding: 0 !important;
+        pointer-events: auto !important;
+      }
+
+      /* Visible ONLY when lyrics mode is active and features exist */
+      body.lyrics-mode-active .lyrics-button#btn-mobile-translation-menu.has-feature {
+        display: flex !important;
+      }
+
+      .lyrics-button.translation-menu-btn.active,
+      .lyrics-button#btn-mobile-translation-menu.active {
+        background: rgba(255, 255, 255, 0.28) !important;
+        border-color: rgba(255, 255, 255, 0.45) !important;
+      }
+
+      .lyrics-button.translation-menu-btn:active,
+      .lyrics-button#btn-mobile-translation-menu:active {
+        transform: scale(0.92) !important;
+      }
+
+      /* Explicitly hidden when lyrics are not active */
+      body:not(.lyrics-mode-active) #btn-mobile-translation-menu,
+      body:not(.lyrics-mode-active) .lyrics-button.translation-menu-btn {
+        display: none !important;
+      }
+
+      .lyrics-button#btn-lyrics.active {
+        background: rgba(255, 255, 255, 0.25) !important;
+        border-radius: 50% !important;
+      }
     }
   </style>
 </head>
@@ -427,7 +505,10 @@
           <div class="NowBarBottomWrapper">
             <div class="MetadataRow">
               <div class="Metadata" id="metadata">
-                <div class="SongName" id="song-name"><span>Loading...</span></div>
+                <div class="SongName" id="song-name">
+                  <span>Loading...</span>
+                  <span class="am-explicit-tag" id="song-explicit-tag" style="display: none;">E</span>
+                </div>
                 <div class="Artists" id="artists">—</div>
               </div>
               <div class="MetadataActions">
@@ -532,21 +613,9 @@
 
   <!-- Apple Music Style Translation & Pronunciation Popup Menu -->
   <div class="lyrics-translation-popup" id="lyrics-translation-popup" style="display: none;">
-    <div class="am-popup-menu-item" id="menu-item-translation">
-      <span class="am-menu-item-text" id="menu-text-translation">Hide translations</span>
-      <span class="am-menu-item-icon">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          <line x1="2" y1="2" x2="22" y2="22"></line>
-        </svg>
-      </span>
-    </div>
-    <div class="am-popup-menu-divider"></div>
     <div class="am-popup-menu-item" id="menu-item-pronunciation">
-      <span class="am-menu-item-text" id="menu-text-pronunciation">Show pronunciations</span>
       <span class="am-menu-item-icon">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           <path d="M8 9h2"></path>
@@ -554,6 +623,18 @@
           <path d="M8 13h5"></path>
         </svg>
       </span>
+      <span class="am-menu-item-text" id="menu-text-pronunciation">Show Pronunciation</span>
+    </div>
+    <div class="am-popup-menu-divider"></div>
+    <div class="am-popup-menu-item" id="menu-item-translation">
+      <span class="am-menu-item-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          <text x="12" y="12.5" font-size="9" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="bold" fill="currentColor" stroke="none" text-anchor="middle" dominant-baseline="middle">A</text>
+        </svg>
+      </span>
+      <span class="am-menu-item-text" id="menu-text-translation">Show Translation</span>
     </div>
   </div>
 
@@ -1113,6 +1194,7 @@
             year: track.year || (track.releaseDate ? formatLocalizedYear(track.releaseDate) : null),
             releaseDate: track.releaseDate || null,
             audioTraits: track.audioTraits || [],
+            is_explicit: Boolean(track.is_explicit || track.contentRating === 'explicit'),
             songwriters: track.songwriters || []
           };
           window._lyricsflowSongMetadata = songMetadata;
@@ -1207,6 +1289,9 @@
         if (!songMetadata.title && track.name) {
           songMetadata.title = track.name.replace(/\.[^.]+$/, '');
         }
+        if (track.is_explicit !== undefined) {
+          songMetadata.is_explicit = Boolean(track.is_explicit);
+        }
 
         updateMetadataUI(songMetadata);
         fetchAnimatedArt(songMetadata.artist, songMetadata.album, songMetadata.title);
@@ -1254,6 +1339,7 @@
 
         refreshQueue();
         queueForceScroll();
+        checkFavoriteStatus();
 
         hideTrackLoader();
         if (contentBox) contentBox.style.opacity = '1';
@@ -1352,6 +1438,11 @@
         document.title = `Lyricsflow — ${metadata.title}`;
         songNameEl.classList.remove('rtl');
       }
+      const explicitTag = document.getElementById('song-explicit-tag');
+      if (explicitTag) {
+        const isExplicit = Boolean(metadata.is_explicit || metadata.contentRating === 'explicit');
+        explicitTag.style.display = isExplicit ? 'inline-flex' : 'none';
+      }
       if (metadata.artist) {
         const rawYear = metadata.year || (metadata.releaseDate ? formatLocalizedYear(metadata.releaseDate) : "");
         const yearStr = (rawYear && settingsManager.get("releaseYearPosition") !== "Off") ? formatLocalizedYear(rawYear) : "";
@@ -1362,11 +1453,12 @@
       }
 
       if (metadata.artUrl) {
-        albumArt.style.backgroundImage = `url(${metadata.artUrl})`;
-        extractColors(metadata.artUrl).then(async colors => {
+        const highResArt = cleanArtworkUrl(metadata.artUrl, 1200, 1200);
+        albumArt.style.backgroundImage = `url("${highResArt}")`;
+        extractColors(highResArt).then(async colors => {
           dynamicBg.innerHTML = '';
           dynamicBg.className = 'lyricsflow-dynamic-bg';
-          await applyLegacyBackground(dynamicBg, metadata.artUrl);
+          await applyLegacyBackground(dynamicBg, highResArt);
           setKawarpPlaybackState(!lyricsContainer.classList.contains('hidden'));
           if (colors.vibrant) document.documentElement.style.setProperty('--ArtworkGlowColor', colors.vibrant.join(', '));
         }).catch(e => console.warn('Color extraction failed:', e));
@@ -1554,7 +1646,12 @@
       }
 
       if (btnMobileTranslationMenu) {
-        btnMobileTranslationMenu.style.display = hasAnyTranslationFeature ? 'flex' : 'none';
+        if (hasAnyTranslationFeature) {
+          btnMobileTranslationMenu.classList.add('has-feature');
+        } else {
+          btnMobileTranslationMenu.classList.remove('has-feature');
+        }
+        btnMobileTranslationMenu.style.display = '';
         if (isRomanized || isTranslated) {
           btnMobileTranslationMenu.classList.add('active');
         } else {
@@ -1680,7 +1777,7 @@
       const airplayIcon = document.getElementById('airplay-icon');
       const deviceNameEl = document.getElementById('airplay-device-name');
       if (airplayIcon) {
-        airplayIcon.src = 'icons/earphone.png';
+        airplayIcon.src = 'icons/airplay.png';
       }
       if (deviceNameEl) {
         deviceNameEl.style.display = 'none';
@@ -1934,6 +2031,15 @@
         goNextTrack();
       } else if (data.action === 'prev') {
         goPrevTrack();
+      } else if (data.action === 'switchView' && data.view) {
+        setViewMode(data.view);
+        if (data.view === 'lyrics') {
+          if (pcBtnLyrics) pcBtnLyrics.classList.add('active');
+          if (pcBtnQueue) pcBtnQueue.classList.remove('active');
+        } else if (data.view === 'queue') {
+          if (pcBtnQueue) pcBtnQueue.classList.add('active');
+          if (pcBtnLyrics) pcBtnLyrics.classList.remove('active');
+        }
       }
     });
 
@@ -2006,33 +2112,6 @@
     if (btnAirplay) {
       btnAirplay.onclick = async () => {
         const activeAudio = window.lyricsflowPlayer?.audio;
-
-        // Check if headphones icon is currently displayed (indicating active headphones/AirPods)
-        const airplayIcon = document.getElementById('airplay-icon');
-        const hasHeadphones = airplayIcon && airplayIcon.src.includes('earphone.png');
-
-        // If no headphones are connected, trigger native casting dialog directly
-        if (!hasHeadphones) {
-          // iOS native AirPlay picker
-          if (activeAudio && typeof activeAudio.webkitShowPlaybackTargetPicker === 'function') {
-            try {
-              activeAudio.webkitShowPlaybackTargetPicker();
-              return;
-            } catch (err) {
-              console.warn("webkitShowPlaybackTargetPicker failed:", err);
-            }
-          }
-
-          // Android Chrome Google Cast prompt
-          if (activeAudio && activeAudio.remote && typeof activeAudio.remote.prompt === 'function') {
-            try {
-              await activeAudio.remote.prompt();
-              return;
-            } catch (err) {
-              console.warn("remote.prompt failed:", err);
-            }
-          }
-        }
 
         // Try browser audio output sink selection (e.g. desktop Chrome)
         if (navigator.mediaDevices && typeof navigator.mediaDevices.selectAudioOutput === 'function') {
@@ -2137,9 +2216,12 @@
       if (isHidden) {
         lyricsContainer.classList.add('hidden');
         lyricsContainer.classList.remove('lyrics-immersive');
+        document.body.classList.remove('lyrics-mode-active');
+        if (lyricsTranslationPopup) lyricsTranslationPopup.style.display = 'none';
       } else {
         lyricsContainer.classList.remove('hidden');
         lyricsContainer.classList.add('lyrics-immersive');
+        document.body.classList.add('lyrics-mode-active');
       }
 
       if (isQueueActive) {
@@ -2233,6 +2315,8 @@
     const menuTextTranslation = document.getElementById('menu-text-translation');
     const menuTextPronunciation = document.getElementById('menu-text-pronunciation');
 
+
+
     function toggleTranslationPopup(btn) {
       if (!lyricsTranslationPopup) return;
       const isVisible = lyricsTranslationPopup.style.display !== 'none';
@@ -2241,11 +2325,17 @@
       } else {
         const rect = btn.getBoundingClientRect();
         lyricsTranslationPopup.style.display = 'flex';
-        // Position right above the button
-        const popupW = 210;
-        const left = Math.max(10, Math.min(window.innerWidth - popupW - 10, rect.left + (rect.width / 2) - (popupW / 2)));
-        lyricsTranslationPopup.style.left = `${left}px`;
-        lyricsTranslationPopup.style.bottom = `${window.innerHeight - rect.top + 10}px`;
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+          // Align directly above the mobile button flush with its left edge
+          lyricsTranslationPopup.style.left = `${Math.max(16, rect.left)}px`;
+          lyricsTranslationPopup.style.bottom = `${window.innerHeight - rect.top + 10}px`;
+        } else {
+          const popupW = 235;
+          const left = Math.max(10, Math.min(window.innerWidth - popupW - 10, rect.left + (rect.width / 2) - (popupW / 2)));
+          lyricsTranslationPopup.style.left = `${left}px`;
+          lyricsTranslationPopup.style.bottom = `${window.innerHeight - rect.top + 10}px`;
+        }
       }
     }
 
@@ -2441,7 +2531,11 @@
       try {
         const queue = await getQueue();
         const currentTrack = queue[getCurrentIndex()];
-        if (!currentTrack) return;
+        if (!currentTrack) {
+          btnFavorite.classList.remove('active');
+          if (favoriteIcon) favoriteIcon.src = 'icons/favorite.png';
+          return;
+        }
 
         const playlists = await getPlaylists();
         const favPlaylist = playlists.find(p => p.name === 'Favorites');
@@ -2454,6 +2548,9 @@
             btnFavorite.classList.remove('active');
             if (favoriteIcon) favoriteIcon.src = 'icons/favorite.png';
           }
+        } else {
+          btnFavorite.classList.remove('active');
+          if (favoriteIcon) favoriteIcon.src = 'icons/favorite.png';
         }
       } catch (e) {
         console.error("Failed to check favorite status:", e);
@@ -2473,8 +2570,8 @@
           let playlists = await getPlaylists();
           let favPlaylist = playlists.find(p => p.name === 'Favorites');
           if (!favPlaylist) {
-            const id = await createPlaylist('Favorites');
-            favPlaylist = { id, name: 'Favorites' };
+            const id = await createPlaylist('Favorites', 'icons/favorites-playlist.png');
+            favPlaylist = { id, name: 'Favorites', coverUrl: 'icons/favorites-playlist.png' };
           }
 
           const isFav = await findTrackInPlaylist(favPlaylist.id, currentTrack.amTrackId, currentTrack.name, currentTrack.artist);
@@ -2487,9 +2584,10 @@
 
             const toast = document.getElementById('lyricsflow-toast');
             if (toast) {
-              toast.querySelector('.toast-text').textContent = 'Removed from Favorites';
-              toast.classList.add('show');
-              setTimeout(() => toast.classList.remove('show'), 2000);
+              const textEl = toast.querySelector('.toast-text');
+              if (textEl) textEl.textContent = 'Removed from Favorites';
+              toast.classList.add('active');
+              setTimeout(() => toast.classList.remove('active'), 2000);
             }
           } else {
             // FAVORITE
@@ -2510,9 +2608,10 @@
 
             const toast = document.getElementById('lyricsflow-toast');
             if (toast) {
-              toast.querySelector('.toast-text').textContent = 'Added to Favorites!';
-              toast.classList.add('show');
-              setTimeout(() => toast.classList.remove('show'), 2000);
+              const textEl = toast.querySelector('.toast-text');
+              if (textEl) textEl.textContent = 'Added to Favorites!';
+              toast.classList.add('active');
+              setTimeout(() => toast.classList.remove('active'), 2000);
             }
           }
         } catch (e) {
@@ -2566,10 +2665,10 @@
 
     function updateTranslationMenuUI(isTranslated, isRomanized) {
       if (menuTextTranslation) {
-        menuTextTranslation.textContent = isTranslated ? 'Hide translations' : 'Show translations';
+        menuTextTranslation.textContent = isTranslated ? 'Hide Translation' : 'Show Translation';
       }
       if (menuTextPronunciation) {
-        menuTextPronunciation.textContent = isRomanized ? 'Hide pronunciations' : 'Show pronunciations';
+        menuTextPronunciation.textContent = isRomanized ? 'Hide Pronunciation' : 'Show Pronunciation';
       }
       if (menuItemTranslation) {
         if (isTranslated) menuItemTranslation.classList.add('active');
@@ -2728,13 +2827,6 @@
           qualityIcon.style.width = '82px';
           qualityIcon.style.height = '18px';
           qualityIcon.style.marginRight = '0px';
-        } else if (settingsManager.get('airPodsIcon')) {
-          qualityIcon.src = 'icons/earphone.png';
-          qualityText.style.display = 'inline';
-          qualityText.textContent = 'AirPods';
-          qualityIcon.style.width = '17px';
-          qualityIcon.style.height = '14px';
-          qualityIcon.style.marginRight = '4px';
         } else {
           qualityIcon.src = 'icons/lossless.png';
           qualityText.style.display = 'inline';
@@ -2802,15 +2894,12 @@
     </div>
     <div class="bottom-bar-right">
       <button class="lyrics-button translation-menu-btn" id="btn-mobile-translation-menu"
-        title="Translations & Pronunciations" style="display: none;">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" style="color: white;">
-          <path d="m5 8 6 6" />
-          <path d="m4 14 6-6 2-3" />
-          <path d="M2 5h12" />
-          <path d="M7 2h1" />
-          <path d="m22 22-5-10-5 10" />
-          <path d="M14 18h6" />
+        title="Translations & Pronunciations">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="30" height="30" role="presentation">
+          <g transform="translate(1.5, 1.5) scale(1.50)">
+            <path d="M12.46-.44c0-12.76 8.13-20.17 20.37-20.17h47.4c12.24 0 20.4 7.41 20.4 20.17v4.47H98.3c-1.98 0-3.83.18-5.55.52v-4.7c0-8.62-4.82-13.14-13-13.14H33.3c-8.13-.01-13 4.52-13 13.14v28.34c0 8.62 4.88 13.04 12.99 13.04h5.16c2.07 0 3.76 1.24 3.76 4v12.32l15.71-14.03c1.92-1.7 3.1-2.3 5.76-2.3h14.24v7.37H63.37l-16.3 13.92c-2.92 2.56-4.53 3.87-6.9 3.87-3.41 0-5.27-2.38-5.27-6.07V48.59h-2.07c-12.24 0-20.37-7.39-20.37-20.2z" transform="translate(-.51 4.44)scale(.101)" fill="white"></path>
+            <path d="M39.43 28.52c-1.04 2.73.48 5.21 3.3 5.21 1.85 0 3-.98 3.71-3.05l2.96-8.6h14.37l3.01 8.6c.66 2.07 1.8 3.05 3.68 3.05 2.87 0 4.3-2.5 3.34-5.2L61.7-3.8c-.88-2.4-2.66-3.71-5.16-3.71-2.47 0-4.25 1.3-5.13 3.7L39.43 28.53ZM51.4 16.07l5.14-14.95 5.2 14.95H51.41Zm80.04 71.09-16.31-13.93H98.3c-12.77 0-20.38-7.38-20.38-20.13V24.2c0-12.77 7.6-20.17 20.38-20.17h47.38c12.24 0 20.37 7.4 20.37 20.16v28.83c0 12.81-8.13 20.2-20.37 20.2h-2.02v11.72c0 3.69-1.92 6.07-5.26 6.07-2.39 0-3.98-1.3-6.97-3.85Zm-6.9-66.08-2.42-4.92c-.93-1.85-2.8-2.68-4.58-1.7a3.35 3.35 0 0 0-1.55 4.57l2.37 4.97a3.35 3.35 0 0 0 4.47 1.66c1.84-.9 2.53-2.87 1.7-4.58Zm-21.63 9.57c0 1.87 1.5 3.25 3.46 3.25h3.74a32.44 32.44 0 0 0 7.25 13.18 35.9 35.9 0 0 1-11.69 4.86c-1.87.45-3 2.25-2.62 4.22.55 1.93 2.5 2.8 4.6 2.23a38.7 38.7 0 0 0 14.74-6.69 38.3 38.3 0 0 0 14.14 6.69c2.42.52 4.41-.2 4.9-2.23.6-2.12-.37-3.77-2.5-4.22a34.4 34.4 0 0 1-11.64-4.86 30.5 30.5 0 0 0 7.2-13.18h3.74c2.02 0 3.5-1.38 3.5-3.25s-1.48-3.26-3.5-3.26h-31.86c-1.97 0-3.46 1.4-3.46 3.26m19.48 12.3a26.45 26.45 0 0 1-5.46-9.05h10.74a27.3 27.3 0 0 1-5.28 9.05" transform="translate(-.51 4.44)scale(.101)" fill="white"></path>
+          </g>
         </svg>
       </button>
       <button class="lyrics-button" id="btn-lyrics" title="Lyrics">

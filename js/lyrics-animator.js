@@ -277,8 +277,10 @@ function setLineAnimTargets(arr, activeIndex, activeIndices = [activeIndex]) {
     }
 
     // AMLL stagger delay step: ONLY accumulate delay for lines visible on-screen (AMLL line 835)
-    const lineH = el.offsetHeight || 60;
-    const curPos = targetFocalTop + (el.offsetTop - activeOffsetTop);
+    // Avoid reading el.offsetHeight in a hot loop (causes forced synchronous reflow)
+    const lineH = line._cachedH || (line._cachedH = el.offsetHeight || 60);
+    const lineTop = line._cachedTop !== undefined ? line._cachedTop : (line._cachedTop = el.offsetTop);
+    const curPos = targetFocalTop + (lineTop - activeOffsetTop);
 
     if (curPos + lineH >= 0) {
       delay += baseDelay;
@@ -303,8 +305,12 @@ function setLineAnimTargets(arr, activeIndex, activeIndices = [activeIndex]) {
         blurPx = Math.min(4.8, Math.max(1.2, rawBlur));
       }
     }
-    el.style.setProperty('--blur-amount', `${blurPx.toFixed(1)}px`);
-    el.style.setProperty('--BlurAmount', `${blurPx.toFixed(1)}px`);
+    const blurStr = `${blurPx.toFixed(1)}px`;
+    if (line._lastBlurStr !== blurStr) {
+      el.style.setProperty('--blur-amount', blurStr);
+      el.style.setProperty('--BlurAmount', blurStr);
+      line._lastBlurStr = blurStr;
+    }
 
     line._baseY = targetTy;
   }
@@ -489,7 +495,8 @@ function flushStyleBatch() {
 }
 
 function promoteToGPU(el) {
-  el.style.willChange = "transform, opacity, scale, filter";
+  if (checkIsMobile()) return; // Prevent mobile VRAM layer exhaustion
+  el.style.willChange = "transform, opacity";
   el.style.backfaceVisibility = "hidden";
 }
 
@@ -1423,24 +1430,76 @@ function animateSyllable(position, deltaTime) {
       }
     }
 
-    // Pronunciation words karaoke animation (if available)
+    // Pronunciation words karaoke animation (AML lyrics physics & animation)
     if (line.PronunciationWords && line.PronunciationWords.length > 0) {
+      const isScrolling = isUserScrolling();
       for (let pwi = 0; pwi < line.PronunciationWords.length; pwi++) {
         const pw = line.PronunciationWords[pwi];
         const pwEl = pw.HTMLElement;
         if (!pwEl) continue;
 
-        if (position < pw.StartTime) {
-          setStyleIfChanged(pwEl, "--pron-gradient-position", "-20%");
-          if (pwEl.classList.contains("active")) pwEl.classList.remove("active");
-        } else if (position > pw.EndTime) {
-          setStyleIfChanged(pwEl, "--pron-gradient-position", "100%");
-          if (pwEl.classList.contains("active")) pwEl.classList.remove("active");
+        if (!pw.AnimatorStore) {
+          pw.AnimatorStore = createWordSprings();
+          pw.AnimatorStore.Scale.SetGoal(ScaleSpline.at(0), true);
+          pw.AnimatorStore.YOffset.SetGoal(YOffsetSpline.at(0), true);
+          pw.AnimatorStore.Glow.SetGoal(GlowSpline.at(0), true);
+          promoteToGPU(pwEl);
+        }
+
+        const isPwActive = position >= pw.StartTime && position <= pw.EndTime;
+        const isPwSung = position > pw.EndTime;
+        const pct = getProgressPercentage(position, pw.StartTime, pw.EndTime);
+
+        let targetScale, targetYOffset, targetGlow, targetGradientPos;
+
+        if (isPwActive) {
+          targetScale = ScaleSpline.at(pct);
+          targetYOffset = isScrolling ? 0 : YOffsetSpline.at(pct);
+          targetGlow = GlowSpline.at(pct);
+          targetGradientPos = -20 + 120 * pct;
+          if (isAML_lyrics) {
+            targetYOffset *= 1.5;
+          }
+        } else if (isPwSung) {
+          targetScale = ScaleSpline.at(1);
+          targetYOffset = isScrolling ? 0 : YOffsetSpline.at(1);
+          targetGlow = GlowSpline.at(1);
+          targetGradientPos = 100;
         } else {
-          const p = getProgressPercentage(position, pw.StartTime, pw.EndTime);
-          const gp = -20 + 120 * p;
-          setStyleIfChanged(pwEl, "--pron-gradient-position", `${gp.toFixed(2)}%`);
-          if (!pwEl.classList.contains("active")) pwEl.classList.add("active");
+          targetScale = ScaleSpline.at(0);
+          targetYOffset = isScrolling ? 0 : YOffsetSpline.at(0);
+          targetGlow = GlowSpline.at(0);
+          targetGradientPos = -20;
+        }
+
+        pw.AnimatorStore.Scale.SetGoal(targetScale);
+        pw.AnimatorStore.YOffset.SetGoal(targetYOffset);
+        pw.AnimatorStore.Glow.SetGoal(targetGlow);
+
+        const curScale = pw.AnimatorStore.Scale.Step(deltaTime);
+        const curYOffset = pw.AnimatorStore.YOffset.Step(deltaTime);
+        const curGlow = pw.AnimatorStore.Glow.Step(deltaTime);
+
+        if (!Number.isFinite(pw._pwsc) || Math.abs(curScale - pw._pwsc) > 0.0006) {
+          pw._pwsc = curScale;
+          setStyleIfChanged(pwEl, "scale", `${curScale.toFixed(4)}`);
+        }
+        if (!Number.isFinite(pw._pwty) || Math.abs(curYOffset - pw._pwty) > 0.001) {
+          pw._pwty = curYOffset;
+          setStyleIfChanged(pwEl, "transform",
+            `translate3d(0, calc(var(--DefaultLyricsSize) * ${curYOffset.toFixed(4)} * 0.5), 0)`);
+        }
+
+        setStyleIfChanged(pwEl, "--pron-gradient-position", `${targetGradientPos.toFixed(2)}%`, 0.05);
+        setStyleIfChanged(pwEl, "--text-shadow-blur-radius",
+          `${(3.2 + 2.0 * curGlow).toFixed(2)}px`, 0.1);
+        setStyleIfChanged(pwEl, "--text-shadow-opacity",
+          `${(curGlow * LetterGlowMultiplier_Opacity * 0.28).toFixed(2)}%`, 0.5);
+
+        if (isPwActive && !pwEl.classList.contains("active")) {
+          pwEl.classList.add("active");
+        } else if (!isPwActive && pwEl.classList.contains("active")) {
+          pwEl.classList.remove("active");
         }
       }
     }

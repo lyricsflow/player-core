@@ -260,6 +260,9 @@ export function applySyllableLyrics(data, lyricsContentEl) {
   if (settingsManager.get("simpleLyricsMode")) {
     container.classList.add("lf-simple-mode");
   }
+  if (data.Content?.some(l => l.OppositeAligned)) {
+    container.classList.add("has-opposite");
+  }
 
   // Leading interlude dots
   if (data.StartTime >= LYRICS_BETWEEN_SHOW) {
@@ -531,17 +534,92 @@ function normalizeLyricText(str) {
       }
     }
 
+    // Apple Music Standard: Extract any trailing parenthesized background phrase from Romanization / Translation
+    // e.g., "Ya samak sha'rah ya masabeeh (Masabeeh)" -> lead: "Ya samak sha'rah ya masabeeh", bg: "Masabeeh"
+    let extractedBgRoman = null;
+    if (lineRomanizedText) {
+      const pMatch = lineRomanizedText.match(/\s*\(([^)]+)\)\s*$/);
+      if (pMatch) {
+        extractedBgRoman = pMatch[1].trim();
+        lineRomanizedText = lineRomanizedText.slice(0, pMatch.index).trim();
+      }
+    }
+
+    let extractedBgTrans = null;
+    let cleanLeadTranslatedText = line.TranslatedText ? line.TranslatedText.trim() : null;
+    if (cleanLeadTranslatedText) {
+      const pMatch = cleanLeadTranslatedText.match(/\s*\(([^)]+)\)\s*$/);
+      if (pMatch) {
+        extractedBgTrans = pMatch[1].trim();
+        cleanLeadTranslatedText = cleanLeadTranslatedText.slice(0, pMatch.index).trim();
+      }
+    }
+
     // Pronunciation (Romanization) sub-line
     if (showRomanized && lineRomanizedText && !matchesNative(lineRomanizedText)) {
       const pronElem = document.createElement("div");
       pronElem.classList.add("line-subtext", "line-pronunciation");
-      pronElem.setAttribute("dir", isRtl(lineRomanizedText) ? "rtl" : "ltr");
+      pronElem.setAttribute("dir", "auto");
 
       const currLineObj = LyricsObject.Types.Syllable.Lines[LyricsObject.Types.Syllable.Lines.length - 1];
       currLineObj.PronunciationWords = [];
 
-      // If syllable romanization exists, group into words with timings
-      if (hasDistinctSyllableRomanization && line.Lead?.Syllables) {
+      const expectedWords = lineRomanizedText.split(/\s+/).filter(Boolean);
+
+      // Check if authoritative timed transliteration spans exist on the line
+      const lineTimedSyllables = line.RomanizedSyllables;
+      if (lineTimedSyllables && lineTimedSyllables.length > 0) {
+        // Group timed spans into words by whitespace and hyphenation boundaries
+        let curWordText = "";
+        let curWordStart = null;
+        let curWordEnd = null;
+        const pronWords = [];
+
+        lineTimedSyllables.forEach((ts, tsIdx) => {
+          const rawText = ts.text ?? "";
+          const sStart = ts.begin !== null && ts.begin !== undefined ? convertTime(ts.begin) : convertTime(line.Lead.StartTime);
+          const sEnd = ts.end !== null && ts.end !== undefined ? convertTime(ts.end) : convertTime(line.Lead.EndTime);
+
+          if (curWordStart === null) curWordStart = sStart;
+          curWordEnd = sEnd;
+          curWordText += rawText;
+
+          // Check if this span completes a word:
+          // If rawText ends with a hyphen '-', the word continues into the next syllable
+          const isHyphenated = rawText.endsWith("-");
+          const isLast = tsIdx === lineTimedSyllables.length - 1;
+
+          if (!isHyphenated || isLast) {
+            pronWords.push({
+              text: curWordText.trim(),
+              startTime: curWordStart,
+              endTime: curWordEnd,
+            });
+            curWordText = "";
+            curWordStart = null;
+            curWordEnd = null;
+          }
+        });
+
+        // Filter background parenthetical words if extracted
+        let filteredPronWords = pronWords;
+        if (extractedBgRoman) {
+          filteredPronWords = filteredPronWords.filter(pw => !pw.text.includes("(") && !pw.text.includes(")"));
+        }
+
+        filteredPronWords.forEach((pw, pwi) => {
+          const wSpan = document.createElement("span");
+          wSpan.classList.add("pron-word");
+          wSpan.textContent = pw.text + (pwi < filteredPronWords.length - 1 ? " " : "");
+          pronElem.appendChild(wSpan);
+
+          currLineObj.PronunciationWords.push({
+            HTMLElement: wSpan,
+            StartTime: pw.startTime,
+            EndTime: pw.endTime,
+          });
+        });
+      } else if (hasDistinctSyllableRomanization && line.Lead?.Syllables) {
         let currentWordText = "";
         let currentWordStart = null;
         let currentWordEnd = null;
@@ -569,38 +647,90 @@ function normalizeLyricText(str) {
           }
         });
 
-        pronWords.forEach((pw, pwi) => {
+        // If background parenthetical was extracted, only remove words with explicit parentheses
+        let filteredPronWords = pronWords;
+        if (extractedBgRoman) {
+          filteredPronWords = filteredPronWords.filter(pw => !pw.text.includes("(") && !pw.text.includes(")"));
+        }
+
+        // Check if filteredPronWords is missing words present in lineRomanizedText (e.g. "masabeeh")
+        // If so, build word spans directly from expectedWords to guarantee full display
+        const renderedWordList = filteredPronWords.map(pw => pw.text.trim());
+        const isComplete = renderedWordList.length >= expectedWords.length &&
+          expectedWords.every((ew, idx) => normalizeLyricText(renderedWordList[idx]) === normalizeLyricText(ew));
+
+        if (isComplete && filteredPronWords.length > 0) {
+          filteredPronWords.forEach((pw, pwi) => {
+            const wSpan = document.createElement("span");
+            wSpan.classList.add("pron-word");
+            wSpan.textContent = pw.text + (pwi < filteredPronWords.length - 1 ? " " : "");
+            pronElem.appendChild(wSpan);
+
+            currLineObj.PronunciationWords.push({
+              HTMLElement: wSpan,
+              StartTime: pw.startTime,
+              EndTime: pw.endTime,
+            });
+          });
+        } else {
+          // Align expectedWords with line timing so every word in lineRomanizedText is rendered
+          const lineStart = convertTime(line.Lead.StartTime);
+          const lineEnd = convertTime(line.Lead.EndTime);
+          const lineDur = Math.max(0.1, lineEnd - lineStart);
+          const wDur = lineDur / expectedWords.length;
+
+          expectedWords.forEach((ew, ewi) => {
+            const wSpan = document.createElement("span");
+            wSpan.classList.add("pron-word");
+            wSpan.textContent = ew + (ewi < expectedWords.length - 1 ? " " : "");
+            pronElem.appendChild(wSpan);
+
+            const wStart = filteredPronWords[ewi]?.startTime ?? (lineStart + ewi * wDur);
+            const wEnd = filteredPronWords[ewi]?.endTime ?? (wStart + wDur);
+
+            currLineObj.PronunciationWords.push({
+              HTMLElement: wSpan,
+              StartTime: wStart,
+              EndTime: wEnd,
+            });
+          });
+        }
+      } else {
+        // Fallback: word spans for all words in lineRomanizedText
+        const lineStart = convertTime(line.Lead.StartTime);
+        const lineEnd = convertTime(line.Lead.EndTime);
+        const lineDur = Math.max(0.1, lineEnd - lineStart);
+        const wDur = lineDur / expectedWords.length;
+
+        expectedWords.forEach((ew, ewi) => {
           const wSpan = document.createElement("span");
           wSpan.classList.add("pron-word");
-          wSpan.textContent = pw.text + (pwi < pronWords.length - 1 ? " " : "");
+          wSpan.textContent = ew + (ewi < expectedWords.length - 1 ? " " : "");
           pronElem.appendChild(wSpan);
 
           currLineObj.PronunciationWords.push({
             HTMLElement: wSpan,
-            StartTime: pw.startTime,
-            EndTime: pw.endTime,
+            StartTime: lineStart + ewi * wDur,
+            EndTime: lineStart + (ewi + 1) * wDur,
           });
         });
-      } else {
-        // Fallback: full text without per-word timings
-        pronElem.textContent = lineRomanizedText;
       }
 
       lineElem.appendChild(pronElem);
     }
 
     // Translation sub-line (only if distinct from native text AND distinct from Romanized text when normalized)
-    const normTrans = normalizeLyricText(line.TranslatedText);
-    const hasDistinctTranslation = line.TranslatedText && 
+    const normTrans = normalizeLyricText(cleanLeadTranslatedText);
+    const hasDistinctTranslation = cleanLeadTranslatedText && 
       normTrans && 
-      !matchesNative(line.TranslatedText) && 
+      !matchesNative(cleanLeadTranslatedText) && 
       (!lineRomanizedText || normTrans !== normalizeLyricText(lineRomanizedText));
 
     if (showTranslation && hasDistinctTranslation) {
       const transElem = document.createElement("div");
       transElem.classList.add("line-subtext", "line-translation");
-      transElem.setAttribute("dir", isRtl(line.TranslatedText) ? "rtl" : "ltr");
-      transElem.textContent = line.TranslatedText.trim();
+      transElem.setAttribute("dir", "auto");
+      transElem.textContent = cleanLeadTranslatedText;
       lineElem.appendChild(transElem);
     }
 
@@ -615,7 +745,7 @@ function normalizeLyricText(str) {
       const isBgFirst = bgFirstStart < leadFirstStart;
       if (isBgFirst) bgWrapper.classList.add("top");
 
-      line.Background.forEach(bg => {
+      line.Background.forEach((bg, bgIdx) => {
         const bgLine = document.createElement("div");
         bgLine.classList.add("line", "bg-line");
         bgLine.setAttribute("dir", "auto");
@@ -855,6 +985,16 @@ function normalizeLyricText(str) {
           }
         }
 
+        // If background line has no Romanization of its own, use extracted background Romanization from lead line
+        if (!bgRomanText && extractedBgRoman) {
+          bgRomanText = extractedBgRoman;
+        }
+
+        // Strip any surrounding parentheses from background Romanization (Apple Music standard: no parentheses on bg line subtext)
+        if (bgRomanText) {
+          bgRomanText = bgRomanText.replace(/^\(+|\)+$/g, '').trim();
+        }
+
         if (showRomanized && bgRomanText && !matchesBgNative(bgRomanText)) {
           const bgPron = document.createElement("div");
           bgPron.classList.add("line-subtext", "line-pronunciation");
@@ -870,7 +1010,8 @@ function normalizeLyricText(str) {
             const bgPronWords = [];
 
             bg.Syllables.forEach((syl, sIdx) => {
-              const sylRoman = syl.RomanizedText !== undefined && syl.RomanizedText.trim() ? syl.RomanizedText : (syl.Text || "");
+              let sylRoman = syl.RomanizedText !== undefined && syl.RomanizedText.trim() ? syl.RomanizedText : (syl.Text || "");
+              sylRoman = sylRoman.replace(/^\(+|\)+$/g, '');
               const isPartOfWord = syl.IsPartOfWord;
               const sStart = convertTime(syl.StartTime);
               const sEnd = convertTime(syl.EndTime);
@@ -910,17 +1051,26 @@ function normalizeLyricText(str) {
           bgLine.appendChild(bgPron);
         }
 
-        const normBgTrans = normalizeLyricText(bg.TranslatedText);
-        const hasBgDistinctTrans = bg.TranslatedText &&
+        // Background line translation (with fallback to extracted background translation from lead line, stripped of parentheses)
+        let bgTransText = bg.TranslatedText ? bg.TranslatedText.trim() : null;
+        if (!bgTransText && extractedBgTrans) {
+          bgTransText = extractedBgTrans;
+        }
+        if (bgTransText) {
+          bgTransText = bgTransText.replace(/^\(+|\)+$/g, '').trim();
+        }
+
+        const normBgTrans = normalizeLyricText(bgTransText);
+        const hasBgDistinctTrans = bgTransText &&
           normBgTrans &&
-          !matchesBgNative(bg.TranslatedText) &&
+          !matchesBgNative(bgTransText) &&
           (!bgRomanText || normBgTrans !== normalizeLyricText(bgRomanText));
 
         if (showTranslation && hasBgDistinctTrans) {
           const bgTrans = document.createElement("div");
           bgTrans.classList.add("line-subtext", "line-translation");
-          bgTrans.setAttribute("dir", isRtl(bg.TranslatedText) ? "rtl" : "ltr");
-          bgTrans.textContent = bg.TranslatedText.trim();
+          bgTrans.setAttribute("dir", isRtl(bgTransText) ? "rtl" : "ltr");
+          bgTrans.textContent = bgTransText;
           bgLine.appendChild(bgTrans);
         }
       });

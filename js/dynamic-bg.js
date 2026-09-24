@@ -83,12 +83,12 @@ export async function applyLegacyBackground(bgContainer, img) {
     return;
   }
 
-  // Configure parameters for active fluid animation
+  // Configure parameters for active fluid animation (optimized for screen share & high refresh rates)
   if (typeof _dybg.setFlowSpeed === 'function') {
-    _dybg.setFlowSpeed(0.8);
+    _dybg.setFlowSpeed(0.5);
   }
   if (typeof _dybg.setRenderScale === 'function') {
-    _dybg.setRenderScale(0.5);
+    _dybg.setRenderScale(0.25);
   }
   if (typeof _dybg.resume === 'function') {
     _dybg.resume();

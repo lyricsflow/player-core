@@ -130,6 +130,7 @@ function readITunesMetadata(root) {
   const translations = new Map();
   const transliterations = new Map();
   const transliterationPieces = new Map();
+  const transliterationSyllables = new Map();
 
   for (const node of findElements(root, "itunesmetadata")) {
     for (const text of findElements(node, "text")) {
@@ -148,10 +149,21 @@ function readITunesMetadata(root) {
           .map(c => c.textContent?.trim() ?? "")
           .filter(Boolean);
         if (pieces.length > 0) transliterationPieces.set(key, pieces);
+
+        const timedSpans = Array.from(text.children)
+          .filter(c => c.tagName === "span")
+          .map(c => {
+            const b = parseTimestamp(getAttr(c, "begin"));
+            const e = parseTimestamp(getAttr(c, "end"));
+            const txt = c.textContent?.trim() ?? "";
+            return txt ? { text: txt, begin: b, end: e } : null;
+          })
+          .filter(Boolean);
+        if (timedSpans.length > 0) transliterationSyllables.set(key, timedSpans);
       }
     }
   }
-  return { translations, transliterations, transliterationPieces };
+  return { translations, transliterations, transliterationPieces, transliterationSyllables };
 }
 
 export function parseSongwriterString(text) {
@@ -265,7 +277,7 @@ function parseBackground(element, lineStart, lineEnd) {
   };
 }
 
-function parseParagraph(paragraph, div, body, oppositeAgents, transliterations, transliterationPieces, translations) {
+function parseParagraph(paragraph, div, body, oppositeAgents, transliterations, transliterationPieces, translations, transliterationSyllables) {
   const paragraphStart = parseTimestamp(getAttr(paragraph, "begin")) ?? 0;
   const paragraphEnd = parseTimestamp(getAttr(paragraph, "end")) ?? paragraphStart;
   const agentId = getAttr(paragraph, "ttm:agent", "agent") ??
@@ -277,6 +289,7 @@ function parseParagraph(paragraph, div, body, oppositeAgents, transliterations, 
 
   let leadRomanizedText = lineKey ? transliterations.get(lineKey) : undefined;
   let leadTranslatedText = lineKey ? translations.get(lineKey) : undefined;
+  let leadRomanizedSyllables = lineKey && transliterationSyllables ? transliterationSyllables.get(lineKey) : undefined;
 
   const childNodes = Array.from(paragraph.childNodes).filter(n => !isSkippableWhitespace(n));
   const leadSyllables = [];
@@ -415,6 +428,7 @@ function parseParagraph(paragraph, div, body, oppositeAgents, transliterations, 
     leadRomanizedText,
     leadTranslatedText,
     leadSyllables,
+    leadRomanizedSyllables,
     background,
     startTime: lineStart,
     endTime: lineEnd,
@@ -470,6 +484,8 @@ function buildSyllableLyrics(lines, songwriters, language) {
         OppositeAligned: line.oppositeAligned,
         ...(line.SongPart ? { SongPart: line.SongPart } : {}),
         ...(line.leadTranslatedText ? { TranslatedText: line.leadTranslatedText } : {}),
+        ...(line.leadRomanizedText ? { RomanizedText: line.leadRomanizedText } : {}),
+        ...(line.leadRomanizedSyllables ? { RomanizedSyllables: line.leadRomanizedSyllables } : {}),
         Lead: {
           StartTime: line.startTime,
           EndTime: line.endTime,
@@ -533,7 +549,7 @@ export default function parseTTMLToLyrics(ttml) {
 
   const songwriters = parseSongwriters(tt);
   const oppositeAgents = parseAgents(tt);
-  const { translations, transliterations, transliterationPieces } = readITunesMetadata(tt);
+  const { translations, transliterations, transliterationPieces, transliterationSyllables } = readITunesMetadata(tt);
   
   // Explicitly check if the provider marked this as static/unsynced
   const isExplicitlyStatic = getAttr(tt, "itunes:timing", "timing") === "None";
@@ -557,7 +573,8 @@ export default function parseTTMLToLyrics(ttml) {
         oppositeAgents,
         transliterations,
         transliterationPieces,
-        translations
+        translations,
+        transliterationSyllables
       );
       if (parsed) parsedLines.push(parsed);
     }

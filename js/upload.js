@@ -4972,13 +4972,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const finalDurationMs = attr.durationInMillis || song.durationMs || 180000;
     const finalReleaseDate = attr.releaseDate || song.releaseDate || null;
     const finalAudioTraits = attr.audioTraits || song.audioTraits || [];
+    const isSongExplicit = Boolean(attr.contentRating === 'explicit' || song.contentRating === 'explicit' || song.is_explicit);
 
     // 1. Seed into IndexedDB immediately so player.html has full rich data ready
     try {
       const { clearQueue, addTrackToQueue, setCurrentIndex } = await import('./router.js');
       await clearQueue();
-      await addTrackToQueue(null, {
-        name: finalTitle,
+      
+      // Determine full track list to seed
+      const queueToSeed = (queue && queue.length > 0) ? queue : [{
+        id: songId,
+        title: finalTitle,
         artist: finalArtist,
         album: finalAlbum,
         albumId: finalAlbumId,
@@ -4990,10 +4994,36 @@ document.addEventListener('DOMContentLoaded', () => {
         releaseDate: finalReleaseDate,
         year: finalReleaseDate ? new Date(finalReleaseDate).getFullYear() : (song.year || null),
         audioTraits: finalAudioTraits,
+        is_explicit: isSongExplicit,
         songwriters: song.songwriters || [],
         credits: song.credits || null
-      });
-      setCurrentIndex(0);
+      }];
+
+      let activeIndexInQueue = 0;
+      for (let qi = 0; qi < queueToSeed.length; qi++) {
+        const item = queueToSeed[qi];
+        const isCurrent = String(item.id || item.trackId || item.amTrackId) === String(songId);
+        if (isCurrent) activeIndexInQueue = qi;
+
+        await addTrackToQueue(null, {
+          name: isCurrent ? finalTitle : (item.title || item.name || 'Track'),
+          artist: isCurrent ? finalArtist : (item.artist || item.artistName || 'Artist'),
+          album: isCurrent ? finalAlbum : (item.album || item.collectionName || ''),
+          albumId: isCurrent ? finalAlbumId : (item.albumId || null),
+          artistId: isCurrent ? finalArtistId : (item.artistId || null),
+          artUrl: isCurrent ? finalArt : cleanArtworkUrl(item.artUrl || item.artworkUrl100 || '', 600, 600),
+          type: 'audio/mp4',
+          ttml: isCurrent ? (song.ttml || '__AUTO_FETCH__') : (item.ttml || '__AUTO_FETCH__'),
+          amTrackId: item.id || item.trackId || item.amTrackId || songId,
+          releaseDate: isCurrent ? finalReleaseDate : (item.releaseDate || null),
+          year: isCurrent ? (finalReleaseDate ? new Date(finalReleaseDate).getFullYear() : (song.year || null)) : (item.year || null),
+          audioTraits: isCurrent ? finalAudioTraits : (item.audioTraits || []),
+          is_explicit: isCurrent ? isSongExplicit : Boolean(item.is_explicit || item.contentRating === 'explicit'),
+          songwriters: isCurrent ? (song.songwriters || []) : (item.songwriters || []),
+          credits: isCurrent ? (song.credits || null) : (item.credits || null)
+        });
+      }
+      setCurrentIndex(activeIndexInQueue);
     } catch (e) {
       console.warn('[upload.js] Failed to pre-seed queue for player:', e);
     }
@@ -5327,10 +5357,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const avatarUrl = profile.pfp || 'icons/account_avatar.png';
     const nickname = profile.nickname || profile.username || 'Creator';
     const username = profile.username || 'user';
-    const makesCount = profile.makes_count || (profile.songs ? profile.songs.length : 0);
-    const uploadsCount = profile.uploads_count || (profile.songs ? profile.songs.length : 0);
-    const totalViews = profile.total_views || (makesCount * 1785 + uploadsCount * 7420);
-    const songs = profile.songs || [];
+    const makesSongs = Array.isArray(profile.makes_songs) ? profile.makes_songs : [];
+    const uploadedSongs = Array.isArray(profile.uploaded_songs) ? profile.uploaded_songs : [];
+    const legacySongs = Array.isArray(profile.songs) ? profile.songs : [];
+
+    const finalMakes = makesSongs.length ? makesSongs : (uploadedSongs.length === 0 ? legacySongs : []);
+    const finalUploads = uploadedSongs.length ? uploadedSongs : [];
+
+    const makesCount = profile.makes_count || finalMakes.length;
+    const uploadsCount = profile.uploads_count || finalUploads.length;
+
+    const totalPlaysMap = (profile.total_plays && typeof profile.total_plays === 'object') ? profile.total_plays : {};
+    let realPlaysTotal = 0;
+    Object.values(totalPlaysMap).forEach(v => {
+      const num = Number(v);
+      if (!isNaN(num)) realPlaysTotal += num;
+    });
+    const totalViews = profile.total_views || realPlaysTotal || 0;
+
     const customLinks = profile.links || {};
     const bioText = profile.bio || '';
     const blurBanner = profile.blur_banner !== false;
@@ -5418,152 +5462,438 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             </div>
 
-            <!-- Right Column: Makes / Uploads Tabs, Search & Song List -->
+            <!-- Right Column: Makes / Uploads Tabs, Search, Sort & Song List -->
             <div>
               <!-- Pill Tabs -->
               <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.045);padding:4px;border-radius:11px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.08);">
-                <button class="profile-tab-btn active" style="padding:6px 18px;border-radius:8px;background:rgba(255,255,255,0.12);color:#ffffff;border:none;font-size:0.85rem;font-weight:600;cursor:pointer;">
+                <button id="profile-tab-makes" class="profile-tab-btn active" style="padding:6px 18px;border-radius:8px;background:rgba(255,255,255,0.12);color:#ffffff;border:none;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.15s ease;">
                   Makes <span style="background:rgba(255,255,255,0.2);padding:1px 7px;border-radius:999px;font-size:0.75rem;margin-left:4px;font-weight:600;">${makesCount}</span>
                 </button>
-                <button class="profile-tab-btn" style="padding:6px 18px;border-radius:8px;background:transparent;color:#8e8e93;border:none;font-size:0.85rem;font-weight:500;cursor:pointer;">
+                <button id="profile-tab-uploads" class="profile-tab-btn" style="padding:6px 18px;border-radius:8px;background:transparent;color:#8e8e93;border:none;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;">
                   Uploads <span style="background:rgba(255,255,255,0.09);padding:1px 7px;border-radius:999px;font-size:0.75rem;margin-left:4px;font-weight:600;">${uploadsCount}</span>
                 </button>
               </div>
 
-              <!-- Search Filter -->
-              <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+              <!-- Search Filter and Sort Controls -->
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;position:relative;">
                 <div style="flex:1;position:relative;">
                   <input type="text" id="profile-track-search" placeholder="Search title, artist, album, or paste a track link"
                     style="width:100%;box-sizing:border-box;padding:10px 14px 10px 38px;border-radius:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:#ffffff;font-size:0.88rem;outline:none;" />
                   <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#8e8e93;" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 </div>
-              </div>
 
-              <!-- Songs List: Single IDs vs Dynamic Multi-ID Stacks -->
-              <div id="profile-songs-list" style="display:flex;flex-direction:column;gap:10px;">
-                ${songs.length === 0 ? `
-                  <div style="padding:48px 24px;text-align:center;color:#8e8e93;background:rgba(255,255,255,0.02);border-radius:14px;border:1px dashed rgba(255,255,255,0.08);">
-                    No public songs uploaded yet.
+                <!-- Sort Dropdown Trigger -->
+                <div style="position:relative;" id="profile-sort-dropdown-wrap">
+                  <button id="profile-sort-btn" style="display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:11px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.11);color:#ffffff;font-size:0.84rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>
+                    <span>Sort: <b id="profile-current-sort-label">Views</b></span>
+                    <span style="font-size:0.72rem;opacity:0.7;">⌵</span>
+                  </button>
+
+                  <!-- Sort Popover Menu -->
+                  <div id="profile-sort-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);width:160px;background:#242428;border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:6px;box-shadow:0 14px 35px rgba(0,0,0,0.6);z-index:100;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);">
+                    <div class="profile-sort-option active" data-sort="views" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;font-size:0.82rem;color:#ffffff;cursor:pointer;font-weight:600;">
+                      <span>Views</span>
+                      <span class="sort-check">✓</span>
+                    </div>
+                    <div class="profile-sort-option" data-sort="title" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;font-size:0.82rem;color:#8e8e93;cursor:pointer;">
+                      <span>Title</span>
+                      <span class="sort-check" style="display:none;">✓</span>
+                    </div>
+                    <div class="profile-sort-option" data-sort="artist" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;font-size:0.82rem;color:#8e8e93;cursor:pointer;">
+                      <span>Artist</span>
+                      <span class="sort-check" style="display:none;">✓</span>
+                    </div>
+                    <div class="profile-sort-option" data-sort="date" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;font-size:0.82rem;color:#8e8e93;cursor:pointer;">
+                      <span>Upload date</span>
+                      <span class="sort-check" style="display:none;">✓</span>
+                    </div>
+                    <div class="profile-sort-option" data-sort="length" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;font-size:0.82rem;color:#8e8e93;cursor:pointer;">
+                      <span>Song length</span>
+                      <span class="sort-check" style="display:none;">✓</span>
+                    </div>
                   </div>
-                ` : songs.map((songItem, idx) => {
-                  const isMulti = typeof songItem === 'object' && songItem.multi && Array.isArray(songItem.ids) && songItem.ids.length > 1;
-                  const sId = isMulti ? songItem.ids[0] : (typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem);
-                  const sTitle = typeof songItem === 'object' ? (songItem.title || songItem.name || `Track ${sId}`) : `Track ${sId}`;
-                  const sArtist = typeof songItem === 'object' ? (songItem.artist || nickname) : nickname;
-                  const sViews = typeof songItem === 'object' ? (songItem.views || (20147 - idx * 3200)) : (20147 - idx * 3200);
-                  const sArt = typeof songItem === 'object' ? (songItem.art || 'favicon.svg') : 'favicon.svg';
+                </div>
 
-                  if (isMulti) {
-                    // DYNAMIC STACK CARD for 2 or more Song IDs
-                    const bundledIds = songItem.ids;
-                    return `
-                      <div class="profile-multi-stack-container" data-song-id="${escapeHTML(sId)}" style="position:relative;margin-bottom:8px;">
-                        <!-- Stack Visual Underlay 1 -->
-                        <div style="position:absolute;left:8px;right:8px;top:-6px;height:14px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.04);border-radius:12px;z-index:0;"></div>
-                        <!-- Stack Visual Underlay 2 -->
-                        <div style="position:absolute;left:4px;right:4px;top:-3px;height:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;z-index:1;"></div>
-
-                        <!-- Main Front Stack Card -->
-                        <div class="profile-song-card profile-stack-main" data-song-id="${escapeHTML(sId)}" style="position:relative;z-index:2;display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);transition:all 0.18s ease;cursor:pointer;">
-                          <img src="${cleanArtworkUrl(sArt, 100, 100)}" alt="" style="width:48px;height:48px;border-radius:8px;object-fit:cover;background:#18181a;flex-shrink:0;" onerror="this.src='favicon.svg';" />
-                          <div style="flex:1;min-width:0;">
-                            <div style="font-size:0.95rem;font-weight:650;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(sTitle)}</div>
-                            <div style="font-size:0.78rem;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHTML(sArtist)} &bull; Primary ID: ${escapeHTML(sId)}</div>
-                          </div>
-                          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-                            <div style="padding:3px 10px;border-radius:999px;background:rgba(252,87,107,0.18);border:1px solid rgba(252,87,107,0.3);font-size:0.73rem;color:#ff7b8b;font-weight:650;">
-                              📚 ${bundledIds.length} IDs Stacked
-                            </div>
-                            <button class="profile-stack-toggle-btn" style="padding:5px 10px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#ffffff;font-size:0.75rem;font-weight:600;cursor:pointer;">
-                              View IDs ⌵
-                            </button>
-                            <button class="profile-listen-btn" data-song-id="${escapeHTML(sId)}" style="display:flex;align-items:center;gap:6px;padding:6px 15px;border-radius:999px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.18);color:#ffffff;font-size:0.82rem;font-weight:600;cursor:pointer;">
-                              <span style="font-size:0.74rem;">▶</span> Listen
-                            </button>
-                          </div>
-                        </div>
-
-                        <!-- Expandable Track Sub-list -->
-                        <div class="profile-stack-drawer hidden" style="display:none;padding:8px 12px;margin:4px 8px 0;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.06);border-radius:10px;">
-                          <div style="font-size:0.72rem;color:#8e8e93;text-transform:uppercase;margin-bottom:6px;font-weight:600;letter-spacing:0.04em;">Bundled Song IDs (Synced with one TTML):</div>
-                          <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                            ${bundledIds.map(bid => `
-                              <div class="profile-stack-item-pill" data-song-id="${escapeHTML(bid)}" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;color:#ffffff;cursor:pointer;" title="Click to play ${escapeHTML(bid)}">
-                                <span>🎵 ${escapeHTML(bid)}</span>
-                                <span style="opacity:0.6;font-size:0.68rem;">▶</span>
-                              </div>
-                            `).join('')}
-                          </div>
-                        </div>
-                      </div>
-                    `;
-                  } else {
-                    // Standard Single ID Card (NO STACK)
-                    return `
-                      <div class="profile-song-card" data-song-id="${escapeHTML(sId)}" style="display:flex;align-items:center;gap:14px;padding:11px 16px;border-radius:12px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.07);transition:all 0.18s ease;cursor:pointer;">
-                        <img src="${cleanArtworkUrl(sArt, 100, 100)}" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;background:#18181a;flex-shrink:0;" onerror="this.src='favicon.svg';" />
-                        <div style="flex:1;min-width:0;">
-                          <div style="font-size:0.94rem;font-weight:650;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(sTitle)}</div>
-                          <div style="font-size:0.78rem;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHTML(sArtist)} &bull; ID: ${escapeHTML(sId)}</div>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-                          <div style="display:flex;align-items:center;gap:4px;font-size:0.76rem;color:#8e8e93;font-weight:500;">
-                            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                            <span>${Number(sViews).toLocaleString()}</span>
-                          </div>
-                          <button class="profile-listen-btn" data-song-id="${escapeHTML(sId)}" style="display:flex;align-items:center;gap:6px;padding:6px 15px;border-radius:999px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.14);color:#ffffff;font-size:0.82rem;font-weight:600;cursor:pointer;">
-                            <span style="font-size:0.74rem;">▶</span> Listen
-                          </button>
-                        </div>
-                      </div>
-                    `;
-                  }
-                }).join('')}
+                <!-- Sort Order Toggle Arrow (Ascending / Descending) -->
+                <button id="profile-sort-dir-btn" title="Toggle Ascending / Descending" style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.11);color:#ffffff;font-size:0.95rem;cursor:pointer;flex-shrink:0;">
+                  <span id="profile-sort-dir-arrow">↓</span>
+                </button>
               </div>
+
+              <!-- Songs List: Single IDs vs Dynamic Apple Music-Style Stacks -->
+              <div id="profile-songs-list" style="display:flex;flex-direction:column;gap:12px;"></div>
             </div>
           </div>
         </div>
       </div>
     `;
 
-    // Hook multi-stack toggle expanders
-    playlistViewContent.querySelectorAll('.profile-stack-toggle-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const container = btn.closest('.profile-multi-stack-container');
-        if (container) {
-          const drawer = container.querySelector('.profile-stack-drawer');
-          if (drawer) {
-            const isHidden = drawer.style.display === 'none' || drawer.classList.contains('hidden');
-            drawer.style.display = isHidden ? 'block' : 'none';
-            drawer.classList.toggle('hidden', !isHidden);
-            btn.textContent = isHidden ? 'Hide IDs ▴' : 'View IDs ⌵';
+    // Active state trackers
+    let activeTab = 'makes'; // 'makes' | 'uploads'
+    let currentSort = 'views';
+    let currentOrder = 'desc'; // 'asc' | 'desc'
+    let searchQuery = '';
+
+    function getActiveSongList() {
+      return activeTab === 'makes' ? finalMakes : finalUploads;
+    }
+
+    function renderSongList() {
+      const container = playlistViewContent.querySelector('#profile-songs-list');
+      if (!container) return;
+
+      let list = [...getActiveSongList()];
+
+      // Filter by search query
+      if (searchQuery) {
+        list = list.filter(item => {
+          const sId = (item && typeof item === 'object') ? (item.id || (item.ids && item.ids[0]) || '') : String(item);
+          const sTitle = (item && typeof item === 'object') ? (item.title || item.name || `Track ${sId}`) : `Track ${sId}`;
+          const sArtist = (item && typeof item === 'object') ? (item.artist || nickname) : nickname;
+          const fullText = `${sTitle} ${sArtist} ${sId}`.toLowerCase();
+          return fullText.includes(searchQuery);
+        });
+      }
+
+      // Sort items
+      list.sort((a, b) => {
+        const idA = (a && typeof a === 'object') ? (a.id || (a.ids && a.ids[0]) || '') : String(a);
+        const idB = (b && typeof b === 'object') ? (b.id || (b.ids && b.ids[0]) || '') : String(b);
+        const viewsA = totalPlaysMap[idA] || (typeof a === 'object' && a.views) || 0;
+        const viewsB = totalPlaysMap[idB] || (typeof b === 'object' && b.views) || 0;
+        const titleA = (a && typeof a === 'object') ? (a.title || a.name || idA) : idA;
+        const titleB = (b && typeof b === 'object') ? (b.title || b.name || idB) : idB;
+        const artistA = (a && typeof a === 'object') ? (a.artist || nickname) : nickname;
+        const artistB = (b && typeof b === 'object') ? (b.artist || nickname) : nickname;
+        const dateA = (a && typeof a === 'object' && a.uploaded_at) ? a.uploaded_at : 0;
+        const dateB = (b && typeof b === 'object' && b.uploaded_at) ? b.uploaded_at : 0;
+        const durA = (a && typeof a === 'object' && a.duration) ? a.duration : 0;
+        const durB = (b && typeof b === 'object' && b.duration) ? b.duration : 0;
+
+        let comp = 0;
+        if (currentSort === 'views') comp = Number(viewsA) - Number(viewsB);
+        else if (currentSort === 'title') comp = titleA.localeCompare(titleB);
+        else if (currentSort === 'artist') comp = artistA.localeCompare(artistB);
+        else if (currentSort === 'date') comp = Number(dateA) - Number(dateB);
+        else if (currentSort === 'length') comp = Number(durA) - Number(durB);
+
+        return currentOrder === 'desc' ? -comp : comp;
+      });
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div style="padding:48px 24px;text-align:center;color:#8e8e93;background:rgba(255,255,255,0.02);border-radius:14px;border:1px dashed rgba(255,255,255,0.08);">
+            No songs found in ${activeTab === 'makes' ? 'Makes' : 'Uploads'}.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = list.map((songItem, idx) => {
+        const isMulti = typeof songItem === 'object' && (songItem.single_upload === false || (Array.isArray(songItem.ids) && songItem.ids.length > 1));
+        const bundledIds = isMulti ? (songItem.ids || [songItem.id]) : [];
+        const variantCount = bundledIds.length || 1;
+        const sId = isMulti ? bundledIds[0] : (typeof songItem === 'object' ? (songItem.id || songItem.song_id) : songItem);
+        const sTitle = typeof songItem === 'object' ? (songItem.title || songItem.name || `Track ${sId}`) : `Track ${sId}`;
+        const sArtist = typeof songItem === 'object' ? (songItem.artist || nickname) : nickname;
+        const realPlays = totalPlaysMap[sId] || (typeof songItem === 'object' && songItem.views) || (totalViews ? Math.max(0, Math.floor(totalViews / (list.length || 1))) : 0);
+        const sArt = typeof songItem === 'object' ? (songItem.art || 'favicon.svg') : 'favicon.svg';
+
+        if (isMulti) {
+          // Exactly 2 variants: 2-card offset stack (matching screenshot 2)
+          // 3 or more variants: 3-card offset stack (matching screenshot 1)
+          const isTwoCardStack = variantCount === 2;
+
+          return `
+            <div class="profile-multi-stack-container" data-song-id="${escapeHTML(sId)}" style="position:relative;margin-bottom:12px;">
+              ${!isTwoCardStack ? `
+                <!-- Underlay 3 (lowest layer for 3+ stacks) -->
+                <div style="position:absolute;left:18px;right:18px;bottom:-10px;height:18px;background:#18181a;border:1px solid rgba(255,255,255,0.06);border-radius:14px;z-index:0;box-shadow:0 6px 16px rgba(0,0,0,0.45);"></div>
+              ` : ''}
+              
+              <!-- Underlay 2 (middle layer for 3+ stacks, or bottom layer for 2 stacks) -->
+              <div style="position:absolute;left:10px;right:10px;bottom:-5px;height:18px;background:#202024;border:1px solid rgba(255,255,255,0.09);border-radius:14px;z-index:1;box-shadow:0 4px 12px rgba(0,0,0,0.38);"></div>
+
+              <!-- Main Foreground Card -->
+              <div class="profile-song-card profile-stack-main" data-song-id="${escapeHTML(sId)}"
+                style="position:relative;z-index:2;display:flex;align-items:center;gap:14px;padding:12px 18px;border-radius:14px;background:#2b2930;border:1px solid rgba(255,255,255,0.14);transition:all 0.18s ease;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.3);">
+                <img src="${cleanArtworkUrl(sArt, 100, 100)}" alt="" style="width:48px;height:48px;border-radius:8px;object-fit:cover;background:#18181a;flex-shrink:0;" onerror="this.src='favicon.svg';" />
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:0.96rem;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.015em;">${escapeHTML(sTitle)}</div>
+                  <div style="font-size:0.80rem;color:#a0a0a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHTML(sArtist)}</div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+                  <!-- Variant Counter Pill -->
+                  <div style="padding:4px 10px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);font-size:0.78rem;color:#f0f0f2;font-weight:650;">
+                    ${variantCount} variants
+                  </div>
+
+                  <!-- Views Count Pill -->
+                  <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);font-size:0.78rem;color:#d0d0d4;font-weight:550;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span>${Number(realPlays).toLocaleString()}</span>
+                  </div>
+
+                  <!-- Listen Button -->
+                  <button class="profile-listen-btn" data-song-id="${escapeHTML(sId)}" style="display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;background:transparent;border:none;color:#ffffff;font-size:0.85rem;font-weight:600;cursor:pointer;">
+                    <span>▷</span> Listen
+                  </button>
+
+                  <!-- Expand Arrow -->
+                  <span class="profile-stack-arrow" style="font-size:0.85rem;color:#8e8e93;transition:transform 0.2s ease;">⌵</span>
+                </div>
+              </div>
+
+              <!-- Click-to-Spread Drawer -->
+              <div class="profile-stack-drawer hidden" style="display:none;padding:12px 14px;margin:8px 6px 0;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.08);border-radius:12px;">
+                <div style="font-size:0.75rem;color:#8e8e93;text-transform:uppercase;margin-bottom:8px;font-weight:650;letter-spacing:0.04em;">All ${variantCount} Song IDs in this Stack:</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  ${bundledIds.map(bid => `
+                    <div class="profile-stack-item-row" data-song-id="${escapeHTML(bid)}" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);cursor:pointer;transition:all 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.09)';" onmouseout="this.style.background='rgba(255,255,255,0.04)';">
+                      <div style="font-size:0.82rem;font-weight:600;color:#ffffff;">Track ID: ${escapeHTML(bid)}</div>
+                      <button class="profile-listen-btn" data-song-id="${escapeHTML(bid)}" style="padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.16);color:#ffffff;font-size:0.76rem;font-weight:600;cursor:pointer;">
+                        ▶ Play ID
+                      </button>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          // Standard Single ID Card (NO STACK)
+          return `
+            <div class="profile-song-card" data-song-id="${escapeHTML(sId)}" style="display:flex;align-items:center;gap:14px;padding:12px 18px;border-radius:14px;background:#2b2930;border:1px solid rgba(255,255,255,0.14);transition:all 0.18s ease;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.22);">
+              <img src="${cleanArtworkUrl(sArt, 100, 100)}" alt="" style="width:48px;height:48px;border-radius:8px;object-fit:cover;background:#18181a;flex-shrink:0;" onerror="this.src='favicon.svg';" />
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:0.96rem;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.015em;">${escapeHTML(sTitle)}</div>
+                <div style="font-size:0.80rem;color:#a0a0a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHTML(sArtist)} &bull; ID: ${escapeHTML(sId)}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);font-size:0.78rem;color:#d0d0d4;font-weight:550;">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>${Number(realPlays).toLocaleString()}</span>
+                </div>
+                <button class="profile-listen-btn" data-song-id="${escapeHTML(sId)}" style="display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;background:transparent;border:none;color:#ffffff;font-size:0.85rem;font-weight:600;cursor:pointer;">
+                  <span>▷</span> Listen
+                </button>
+              </div>
+            </div>
+          `;
+        }
+      }).join('');
+
+      // Click to spread / expand stacked variants
+      container.querySelectorAll('.profile-stack-main').forEach(card => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.profile-listen-btn')) return;
+          const containerWrap = card.closest('.profile-multi-stack-container');
+          if (containerWrap) {
+            const drawer = containerWrap.querySelector('.profile-stack-drawer');
+            const arrow = containerWrap.querySelector('.profile-stack-arrow');
+            if (drawer) {
+              const isHidden = drawer.style.display === 'none' || drawer.classList.contains('hidden');
+              drawer.style.display = isHidden ? 'block' : 'none';
+              drawer.classList.toggle('hidden', !isHidden);
+              if (arrow) arrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
           }
-        }
+        });
       });
-    });
 
-    // Hook listen buttons & pills
-    playlistViewContent.querySelectorAll('.profile-listen-btn, .profile-song-card, .profile-stack-item-pill').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      // Hook listen buttons
+      container.querySelectorAll('.profile-listen-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const sid = btn.dataset.songId;
+          if (sid) {
+            loadTrackById(sid);
+          }
+        });
+      });
+
+      // Hydrate song cards with real metadata (Title, Artist, Artwork, Duration) from Apple Music / iTunes
+      hydrateProfileSongMetadata(container, list);
+    }
+
+    // Cache for track metadata in session to avoid duplicate lookups
+    window._profileTrackMetaCache = window._profileTrackMetaCache || {};
+
+    async function hydrateProfileSongMetadata(container, songList) {
+      if (!container || !Array.isArray(songList) || songList.length === 0) return;
+
+      const idsToFetch = [];
+      songList.forEach(item => {
+        const isMulti = typeof item === 'object' && (item.single_upload === false || (Array.isArray(item.ids) && item.ids.length > 1));
+        const allIds = isMulti ? (item.ids || [item.id]) : [(typeof item === 'object' ? (item.id || item.song_id) : item)];
+        allIds.forEach(id => {
+          const sid = String(id).trim();
+          if (sid && !window._profileTrackMetaCache[sid] && !idsToFetch.includes(sid)) {
+            idsToFetch.push(sid);
+          }
+        });
+      });
+
+      // Apply any already cached metadata immediately
+      applyCachedMetadataToDom(container);
+
+      if (idsToFetch.length === 0) return;
+
+      // Batch fetch up to 50 IDs at a time from iTunes lookup
+      for (let i = 0; i < idsToFetch.length; i += 50) {
+        const chunk = idsToFetch.slice(i, i + 50);
+        try {
+          const res = await fetch(`https://itunes.apple.com/lookup?id=${chunk.join(',')}`);
+          if (res.ok) {
+            const data = await res.json();
+            (data.results || []).forEach(track => {
+              if (track && track.trackId) {
+                const art100 = track.artworkUrl100 || '';
+                const art600 = art100 ? art100.replace('100x100', '600x600') : '';
+                window._profileTrackMetaCache[String(track.trackId)] = {
+                  title: track.trackName || '',
+                  artist: track.artistName || '',
+                  album: track.collectionName || '',
+                  art: art600 || art100,
+                  duration: track.trackTimeMillis || 0
+                };
+              }
+            });
+            applyCachedMetadataToDom(container);
+          }
+        } catch (err) {
+          console.warn('[Profile] Metadata hydration fetch failed:', err);
+        }
+      }
+    }
+
+    function applyCachedMetadataToDom(container) {
+      if (!container) return;
+      Object.keys(window._profileTrackMetaCache).forEach(sid => {
+        const meta = window._profileTrackMetaCache[sid];
+        if (!meta) return;
+
+        // Update single song cards matching this ID
+        container.querySelectorAll(`.profile-song-card[data-song-id="${sid}"]`).forEach(card => {
+          const titleEl = card.querySelector('div[style*="font-weight:700"]');
+          if (titleEl && meta.title && titleEl.textContent.startsWith('Track ')) {
+            titleEl.textContent = meta.title;
+          }
+          const artistEl = card.querySelector('div[style*="color:#a0a0a6"]');
+          if (artistEl && meta.artist) {
+            artistEl.innerHTML = `${escapeHTML(meta.artist)} &bull; ID: ${escapeHTML(sid)}`;
+          }
+          const imgEl = card.querySelector('img');
+          if (imgEl && meta.art && (imgEl.src.includes('favicon.svg') || imgEl.src.includes('account_avatar.png'))) {
+            imgEl.src = meta.art;
+          }
+        });
+
+        // Update variant sub-items in stacked drawers
+        container.querySelectorAll(`.profile-variant-item[data-song-id="${sid}"]`).forEach(item => {
+          const titleEl = item.querySelector('div[style*="font-weight:600"]');
+          if (titleEl && meta.title && titleEl.textContent.startsWith('Track ID:')) {
+            titleEl.textContent = meta.title;
+          }
+          const subEl = item.querySelector('div[style*="font-size:0.75rem"]');
+          if (subEl && meta.artist) {
+            subEl.innerHTML = `${escapeHTML(meta.artist)} &bull; ID: ${escapeHTML(sid)}`;
+          }
+        });
+      });
+    }
+
+    // Initialize list render
+    renderSongList();
+
+    // Tab switching (Makes vs Uploads)
+    const tabMakes = playlistViewContent.querySelector('#profile-tab-makes');
+    const tabUploads = playlistViewContent.querySelector('#profile-tab-uploads');
+
+    if (tabMakes && tabUploads) {
+      tabMakes.addEventListener('click', () => {
+        if (activeTab === 'makes') return;
+        activeTab = 'makes';
+        tabMakes.classList.add('active');
+        tabMakes.style.background = 'rgba(255,255,255,0.12)';
+        tabMakes.style.color = '#ffffff';
+        tabUploads.classList.remove('active');
+        tabUploads.style.background = 'transparent';
+        tabUploads.style.color = '#8e8e93';
+        renderSongList();
+      });
+
+      tabUploads.addEventListener('click', () => {
+        if (activeTab === 'uploads') return;
+        activeTab = 'uploads';
+        tabUploads.classList.add('active');
+        tabUploads.style.background = 'rgba(255,255,255,0.12)';
+        tabUploads.style.color = '#ffffff';
+        tabMakes.classList.remove('active');
+        tabMakes.style.background = 'transparent';
+        tabMakes.style.color = '#8e8e93';
+        renderSongList();
+      });
+    }
+
+    // Sort Dropdown Popover
+    const sortBtn = playlistViewContent.querySelector('#profile-sort-btn');
+    const sortMenu = playlistViewContent.querySelector('#profile-sort-menu');
+    const sortLabel = playlistViewContent.querySelector('#profile-current-sort-label');
+    const sortDirBtn = playlistViewContent.querySelector('#profile-sort-dir-btn');
+    const sortDirArrow = playlistViewContent.querySelector('#profile-sort-dir-arrow');
+
+    if (sortBtn && sortMenu) {
+      sortBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const sid = btn.dataset.songId;
-        if (sid) {
-          loadTrackById(sid);
-        }
+        sortMenu.style.display = sortMenu.style.display === 'block' ? 'none' : 'block';
       });
-    });
 
-    // Hook search filter input
+      document.addEventListener('click', () => {
+        if (sortMenu) sortMenu.style.display = 'none';
+      });
+
+      sortMenu.querySelectorAll('.profile-sort-option').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          currentSort = opt.dataset.sort;
+          sortMenu.querySelectorAll('.profile-sort-option').forEach(o => {
+            o.classList.remove('active');
+            o.style.color = '#8e8e93';
+            const chk = o.querySelector('.sort-check');
+            if (chk) chk.style.display = 'none';
+          });
+          opt.classList.add('active');
+          opt.style.color = '#ffffff';
+          const myChk = opt.querySelector('.sort-check');
+          if (myChk) myChk.style.display = 'inline';
+
+          if (sortLabel) {
+            sortLabel.textContent = opt.querySelector('span').textContent;
+          }
+          sortMenu.style.display = 'none';
+          renderSongList();
+        });
+      });
+    }
+
+    // Sort Order Direction Arrow (Ascending / Descending)
+    if (sortDirBtn && sortDirArrow) {
+      sortDirBtn.addEventListener('click', () => {
+        currentOrder = currentOrder === 'desc' ? 'asc' : 'desc';
+        sortDirArrow.textContent = currentOrder === 'desc' ? '↓' : '↑';
+        renderSongList();
+      });
+    }
+
+    // Search filter input
     const searchInput = playlistViewContent.querySelector('#profile-track-search');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        const cards = playlistViewContent.querySelectorAll('.profile-song-card');
-        cards.forEach(card => {
-          const text = card.textContent.toLowerCase();
-          card.style.display = text.includes(query) ? 'flex' : 'none';
-        });
+        searchQuery = e.target.value.toLowerCase().trim();
+        renderSongList();
       });
     }
   }
@@ -5950,8 +6280,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const playlists = await getPlaylists();
     let favPlaylist = playlists.find(p => p.name === 'Favorites');
     if (!favPlaylist) {
-      const favId = await createPlaylist('Favorites');
-      favPlaylist = { id: favId, name: 'Favorites' };
+      const favId = await createPlaylist('Favorites', 'icons/favorites-playlist.png');
+      favPlaylist = { id: favId, name: 'Favorites', coverUrl: 'icons/favorites-playlist.png' };
     }
     await addTrackToPlaylist(favPlaylist.id, {
       name: contextMenuTrack.trackName || contextMenuTrack.name,
@@ -6100,7 +6430,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const cardsHTML = await Promise.all(displayList.map(async p => {
       const tracks = await getPlaylistTracks(p.id);
-      const firstArt = tracks[0]?.artUrl || 'favicon.svg';
+      const firstArt = p.coverUrl || tracks[0]?.artUrl || 'favicon.svg';
       return `
         <div class="am-playlist-card animate-fade" data-id="${p.id}">
           <div class="am-playlist-card-art-wrap">
@@ -6168,7 +6498,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const plName = playlist?.name || 'Playlist';
 
     const tracks = await getPlaylistTracks(playlistId);
-    const firstArt = tracks[0]?.artUrl || 'favicon.svg';
+    const firstArt = playlist?.coverUrl || tracks[0]?.artUrl || 'favicon.svg';
 
     playlistDetail.innerHTML = `
       <div class="am-playlist-detail-header">

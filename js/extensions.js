@@ -134,16 +134,14 @@ class ExtensionManager {
    */
   _executeExtension(extension) {
     try {
-      // Create a context object to expose to the extension
+      // Create a restricted context object to expose to the extension
       const context = {
         player: window.lyricsflowPlayer,
         settingsManager: window.lyricsflowSettingsManager,
         getCurrentLyrics: () => {
-          // Helper to get current lyrics
           return window._lyricsflowCurrentLyrics || null;
         },
         downloadFile: (content, filename, mimeType) => {
-          // Helper to download files
           const blob = new Blob([content], { type: mimeType || 'text/plain' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -153,12 +151,21 @@ class ExtensionManager {
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-        }
+        },
+        // Prevent extension from stealing tokens or cookies
+        window: undefined,
+        document: undefined,
+        localStorage: undefined,
+        sessionStorage: undefined,
+        indexedDB: undefined,
+        cookie: undefined
       };
 
-      // Execute the script with the context
-      const scriptFunction = new Function(...Object.keys(context), extension.script);
-      scriptFunction(...Object.values(context));
+      // Execute inside a scope with blocked globals
+      const keys = Object.keys(context);
+      const values = Object.values(context);
+      const scriptFunction = new Function(...keys, `"use strict";\n${extension.script}`);
+      scriptFunction(...values);
 
       console.log(`[Extensions] Loaded: ${extension.name} v${extension.version}`);
     } catch (e) {

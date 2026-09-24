@@ -249,11 +249,11 @@ export async function getPlaylists() {
   });
 }
 
-export async function createPlaylist(name) {
+export async function createPlaylist(name, coverUrl = null) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction('playlists', 'readwrite');
-    const request = tx.objectStore('playlists').add({ name, createdAt: Date.now() });
+    const request = tx.objectStore('playlists').add({ name, coverUrl: coverUrl || null, createdAt: Date.now() });
     request.onsuccess = (e) => resolve(e.target.result);
     request.onerror = () => reject(request.error);
   });

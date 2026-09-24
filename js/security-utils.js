@@ -19,31 +19,55 @@ export function escapeHTML(str) {
 }
 
 /**
- * Sanitizes and formats an artwork URL safely to prevent XSS / CSS injection.
+ * Sanitizes and formats an artwork URL safely to prevent XSS / CSS injection,
+ * and forces maximum quality 1200x1200bb.jpg across the entire player.
  * @param {string} url - Artwork URL
- * @param {number} [w=300] - Desired width
- * @param {number} [h=300] - Desired height
- * @returns {string} Sanitized URL
+ * @param {number} [w=1200] - Desired width (forced min 1200)
+ * @param {number} [h=1200] - Desired height (forced min 1200)
+ * @returns {string} Sanitized high-res URL
  */
-export function cleanArtworkUrl(url, w = 300, h = 300) {
+export function cleanArtworkUrl(url, w = 1200, h = 1200) {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
   // Disallow javascript:, vbscript:, and non-image data URIs
   if (/^(javascript|vbscript|data:(?!image\/))/i.test(trimmed)) {
     return '';
   }
+  const targetW = Math.max(1200, Number(w) || 1200);
+  const targetH = Math.max(1200, Number(h) || 1200);
   let cleaned = trimmed
-    .replace('{w}', String(w))
-    .replace('{h}', String(h))
+    .replace('{w}', String(targetW))
+    .replace('{h}', String(targetH))
     .replace('{c}', '')
     .replace('{f}', 'jpg');
-  if (w > 100 && /\/\d+x\d+bb\./.test(cleaned)) {
-    cleaned = cleaned.replace(/\/\d+x\d+bb\./, `/${w}x${h}bb.`);
+  if (/\/\d+x\d+bb\./.test(cleaned)) {
+    cleaned = cleaned.replace(/\/\d+x\d+bb\./, `/${targetW}x${targetH}bb.`);
   }
   if (!/^(https?:|data:image\/|blob:)/i.test(cleaned) && !cleaned.startsWith('/') && !cleaned.startsWith('favicon.') && !cleaned.startsWith('icons/')) {
     return '';
   }
   return cleaned.replace(/["'<>\s\\]/g, c => encodeURIComponent(c));
+}
+
+/**
+ * Sanitizes plain text content for safe DOM element insertion.
+ * Neutralizes any script tags, HTML tags, or event handler attributes.
+ * @param {*} val - Value to sanitize
+ * @returns {string} Safe plain text
+ */
+export function sanitizeText(val) {
+  if (val == null) return '';
+  const str = String(val);
+  return str.replace(/[&<>"']/g, c => {
+    switch (c) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#039;';
+      default: return c;
+    }
+  });
 }
 
 /**

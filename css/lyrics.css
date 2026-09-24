@@ -402,14 +402,16 @@
 /* Word spacing for OppositeAligned is inherited from the base ::after rule (margin-inline-end: 0.3ch) */
 
 /* Padding for opposite-aligned layouts (Duets) */
-#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line.OppositeAligned {
+#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line.OppositeAligned,
+#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer.has-opposite .line.OppositeAligned {
   padding-left: 20cqw !important;
   padding-right: 2cqw !important;
   text-align: right !important;
   transform-origin: right center !important;
 }
 
-#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line:not(.OppositeAligned) {
+#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line:not(.OppositeAligned),
+#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer.has-opposite .line:not(.OppositeAligned) {
   padding-right: 20cqw !important;
   padding-left: 2cqw !important;
   text-align: left !important;
@@ -417,25 +419,32 @@
 }
 
 /* RTL Duet Alignment: In RTL (Arabic), primary singer is right-aligned, opposite singer is indented to left */
-#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line.rtl:not(.OppositeAligned) {
+#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line.rtl:not(.OppositeAligned),
+#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer.has-opposite .line.rtl:not(.OppositeAligned) {
   padding-right: 2cqw !important;
   padding-left: 20cqw !important;
   text-align: right !important;
   transform-origin: right center !important;
 }
 
-#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line.rtl.OppositeAligned {
+#LyricsflowPage .LyricsContainer .LyricsContent:has(.OppositeAligned) .line.rtl.OppositeAligned,
+#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer.has-opposite .line.rtl.OppositeAligned {
   padding-left: 2cqw !important;
   padding-right: 20cqw !important;
   text-align: left !important;
   transform-origin: left center !important;
 }
 
-#LyricsflowPage .LyricsContainer .LyricsContent:not(:has(.OppositeAligned)) .line {
+/* Ensure pronunciation and translation subtext inherits line alignment */
+#LyricsflowPage .LyricsContainer .LyricsContent .line .line-subtext {
+  text-align: inherit;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent:not(:has(.OppositeAligned)):not(:has(.has-opposite)) .line {
   padding-right: 5cqw;
 }
 
-#LyricsflowPage .LyricsContainer .LyricsContent:not(:has(.OppositeAligned)) .line.rtl {
+#LyricsflowPage .LyricsContainer .LyricsContent:not(:has(.OppositeAligned)):not(:has(.has-opposite)) .line.rtl {
   padding-left: 5cqw;
 }
 
@@ -760,6 +769,11 @@
   /* RTL keeps its natural start alignment on mobile */
   #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl {
     transform-origin: right center !important;
+  }
+
+  /* Performance: reduce heavy blurs and GPU filter composition on mobile devices */
+  #LyricsflowPage .LyricsContainer .LyricsContent .line {
+    filter: none !important;
   }
 }
 

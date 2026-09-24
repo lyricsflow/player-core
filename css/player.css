@@ -400,8 +400,7 @@
 #LyricsflowPage .ContentBox .NowBar .Header .Metadata .SongName span {
   display: inline-block;
   white-space: nowrap;
-  animation: Marquee_SongName 5s linear infinite alternate;
-  will-change: transform;
+  animation: Marquee_SongName 8s ease-in-out infinite alternate;
 }
 
 #LyricsflowPage .ContentBox .NowBar .Header .Metadata .SongName.rtl {
@@ -456,8 +455,6 @@
   width: 18px;
   height: 18px;
 }
-
-.queue-button svg {}
 
 /* ── Queue Panel (Apple Music Style) ── */
 .QueuePanel {
@@ -956,18 +953,48 @@
   animation: aero-spinner-fade 1s ease-in-out infinite;
 }
 
-.aero-spinner rect:nth-child(1) { animation-delay: 0s; }
-.aero-spinner rect:nth-child(2) { animation-delay: -0.875s; }
-.aero-spinner rect:nth-child(3) { animation-delay: -0.75s; }
-.aero-spinner rect:nth-child(4) { animation-delay: -0.625s; }
-.aero-spinner rect:nth-child(5) { animation-delay: -0.5s; }
-.aero-spinner rect:nth-child(6) { animation-delay: -0.375s; }
-.aero-spinner rect:nth-child(7) { animation-delay: -0.25s; }
-.aero-spinner rect:nth-child(8) { animation-delay: -0.125s; }
+.aero-spinner rect:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.aero-spinner rect:nth-child(2) {
+  animation-delay: -0.875s;
+}
+
+.aero-spinner rect:nth-child(3) {
+  animation-delay: -0.75s;
+}
+
+.aero-spinner rect:nth-child(4) {
+  animation-delay: -0.625s;
+}
+
+.aero-spinner rect:nth-child(5) {
+  animation-delay: -0.5s;
+}
+
+.aero-spinner rect:nth-child(6) {
+  animation-delay: -0.375s;
+}
+
+.aero-spinner rect:nth-child(7) {
+  animation-delay: -0.25s;
+}
+
+.aero-spinner rect:nth-child(8) {
+  animation-delay: -0.125s;
+}
 
 @keyframes aero-spinner-fade {
-  0%, 100% { opacity: 0.15; }
-  12.5% { opacity: 0.95; }
+
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+
+  12.5% {
+    opacity: 0.95;
+  }
 }
 
 #btn-play-pause .aero-spinner {
@@ -2160,7 +2187,7 @@ body.is-rendering .NowBar {
   .quality-badge-container {
     display: flex !important;
     position: absolute !important;
-    bottom: 24dvh !important;
+    bottom: 27dvh !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     z-index: 100 !important;
@@ -2262,8 +2289,8 @@ body.is-rendering .NowBar {
   }
 
   .volume-side-icon {
-    width: 14px !important;
-    height: 14px !important;
+    width: 28px !important;
+    height: 28px !important;
     opacity: 0.55 !important;
   }
 
@@ -2381,8 +2408,8 @@ body.is-rendering .NowBar {
 
   .BottomBar button img,
   .BottomBar button svg {
-    width: 26px !important;
-    height: 26px !important;
+    width: 36px !important;
+    height: 36px !important;
     opacity: 0.65 !important;
   }
 
@@ -2539,7 +2566,7 @@ body.is-rendering .NowBar {
     position: relative !important;
     width: auto !important;
     left: auto !important;
-    top: -36px !important;
+    top: -62px !important;
     bottom: auto !important;
     transform: none !important;
     pointer-events: auto !important;
@@ -2553,7 +2580,7 @@ body.is-rendering .NowBar {
     position: relative !important;
     width: 100% !important;
     left: auto !important;
-    top: -36px !important;
+    top: -62px !important;
     bottom: auto !important;
     transform: none !important;
     pointer-events: auto !important;
@@ -2569,7 +2596,7 @@ body.is-rendering .NowBar {
     position: relative !important;
     width: 100% !important;
     left: auto !important;
-    top: -36px !important;
+    top: -62px !important;
     bottom: auto !important;
     transform: none !important;
     pointer-events: auto !important;

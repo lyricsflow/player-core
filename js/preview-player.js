@@ -131,6 +131,11 @@ export class PreviewPlayer {
 
           <!-- Right: Actions & Utilities -->
           <div class="am-preview-actions-col">
+            <span class="am-preview-dolby-badge" id="am-preview-dolby-badge" title="Dolby Atmos" style="display: none; align-items: center; justify-content: center; opacity: 0.85; margin-right: 4px;">
+              <svg width="24" height="15" viewBox="0 0 100 62" fill="currentColor">
+                <path d="M0 0h34.6c17.1 0 31 13.9 31 31s-13.9 31-31 31H0V0zm65.4 0H100v62H65.4c17.1 0 31-13.9 31-31s-13.9-31-31-31z"/>
+              </svg>
+            </span>
             <button class="am-preview-btn am-preview-more-action-btn" id="am-preview-more-btn" title="More Options" aria-label="More Options">•••</button>
             <button class="am-preview-btn am-preview-lyrics-btn" id="am-preview-lyrics-btn" title="Lyrics" aria-label="Lyrics">
               <img src="icons/lyrics.png" alt="Lyrics">
@@ -158,6 +163,7 @@ export class PreviewPlayer {
     this.titleEl = el.querySelector('#am-preview-title');
     this.subEl = el.querySelector('#am-preview-sub');
     this.moreBtn = el.querySelector('#am-preview-more-btn');
+    this.dolbyBadge = el.querySelector('#am-preview-dolby-badge');
     this.progressBar = el.querySelector('#am-preview-progress-bar');
     this.progressTrack = el.querySelector('#am-preview-progress-track');
     this.shuffleBtn = el.querySelector('#am-preview-shuffle-btn');
@@ -180,38 +186,44 @@ export class PreviewPlayer {
     this.scrubPositionMs = 0;
 
     // Smooth Sliding Drawer Transition to player.html
-    const triggerZoomToPlayer = async (e) => {
+    const triggerZoomToPlayer = async (e, targetView = null) => {
       if (
         !e ||
         e.target?.closest('#am-preview-progress-track') ||
         e.target?.closest('.am-preview-progress-track') ||
         e.target?.closest('.am-preview-link') ||
-        e.target?.closest('.am-preview-btn') ||
+        (e.target?.closest('.am-preview-btn') && !e.target?.closest('#am-preview-lyrics-btn') && !e.target?.closest('#am-preview-queue-btn') && !e.target?.closest('#am-preview-expand-btn')) ||
         this.isScrubbing
       ) {
         return;
       }
       e.stopPropagation();
-      const currentTrack = this.queue[this.currentIndex];
 
-      // Seed queue metadata so player.html loads the track and lyrics immediately
-      if (currentTrack) {
+      // Seed full queue metadata so player.html loads the track, queue list, and lyrics immediately
+      if (this.queue && this.queue.length > 0) {
         try {
           const { clearQueue, addTrackToQueue, setCurrentIndex } = await import('./router.js');
           await clearQueue();
-          await addTrackToQueue(null, {
-            name: currentTrack.title,
-            artist: currentTrack.artist,
-            album: currentTrack.album,
-            artUrl: currentTrack.artUrl,
-            type: 'audio/mp4',
-            ttml: '__AUTO_FETCH__',
-            amTrackId: currentTrack.id,
-            audioTraits: currentTrack.audioTraits || []
-          });
-          setCurrentIndex(0);
+          for (let qi = 0; qi < this.queue.length; qi++) {
+            const item = this.queue[qi];
+            await addTrackToQueue(null, {
+              name: item.title || item.name || 'Track',
+              artist: item.artist || item.artistName || 'Artist',
+              album: item.album || item.collectionName || '',
+              albumId: item.albumId || null,
+              artistId: item.artistId || null,
+              artUrl: item.artUrl || item.artworkUrlLarge || item.artworkUrl100 || '',
+              type: 'audio/mp4',
+              ttml: item.ttml || '__AUTO_FETCH__',
+              amTrackId: item.id || item.trackId,
+              releaseDate: item.releaseDate || null,
+              year: item.year || null,
+              audioTraits: item.audioTraits || []
+            });
+          }
+          setCurrentIndex(this.currentIndex);
         } catch (err) {
-          console.warn('[PreviewPlayer] Failed to pre-seed queue for player.html:', err);
+          console.warn('[PreviewPlayer] Failed to pre-seed full queue for player.html:', err);
         }
       }
 
@@ -221,17 +233,25 @@ export class PreviewPlayer {
       const drawerClose = document.getElementById('player-drawer-close');
 
       if (drawer && drawerIframe) {
-        // Load player.html into iframe if not already loaded or if different track
+        // Load player.html into iframe if not already loaded
         if (drawerIframe.src === 'about:blank' || !drawerIframe.src.includes('player.html')) {
           drawerIframe.src = 'player.html';
-        } else {
         }
-        
-        // Slide drawer up smoothly without reloading the iframe if it's already loaded
+
+        // Slide drawer up smoothly
         drawer.classList.add('open');
         if (this.container) {
           this.container.classList.add('drawer-hidden');
         }
+
+        // Post target view message once drawer is open/ready
+        const sendTargetView = () => {
+          if (targetView && drawerIframe.contentWindow) {
+            drawerIframe.contentWindow.postMessage({ action: 'switchView', view: targetView }, '*');
+          }
+        };
+        sendTargetView();
+        setTimeout(sendTargetView, 350);
 
         const closeDrawer = () => {
           drawer.classList.remove('open');
@@ -353,32 +373,20 @@ export class PreviewPlayer {
 
     if (this.infoCol) {
       this.infoCol.style.cursor = 'pointer';
-      this.infoCol.onclick = triggerZoomToPlayer;
+      this.infoCol.onclick = (e) => triggerZoomToPlayer(e);
     }
     if (this.artEl) {
       this.artEl.style.cursor = 'pointer';
-      this.artEl.onclick = triggerZoomToPlayer;
-    }
-    if (this.lyricsBtn) {
-      this.lyricsBtn.onclick = triggerZoomToPlayer;
-    }
-
-    if (this.infoCol) {
-      this.infoCol.style.cursor = 'pointer';
-      this.infoCol.onclick = triggerZoomToPlayer;
-    }
-    if (this.artEl) {
-      this.artEl.style.cursor = 'pointer';
-      this.artEl.onclick = triggerZoomToPlayer;
+      this.artEl.onclick = (e) => triggerZoomToPlayer(e);
     }
     if (this.expandBtn) {
-      this.expandBtn.onclick = triggerZoomToPlayer;
+      this.expandBtn.onclick = (e) => triggerZoomToPlayer(e);
     }
     if (this.lyricsBtn) {
-      this.lyricsBtn.onclick = triggerZoomToPlayer;
+      this.lyricsBtn.onclick = (e) => triggerZoomToPlayer(e, 'lyrics');
     }
     if (this.queueBtn) {
-      this.queueBtn.onclick = triggerZoomToPlayer;
+      this.queueBtn.onclick = (e) => triggerZoomToPlayer(e, 'queue');
     }
 
     if (this.moreBtn) {
@@ -906,6 +914,12 @@ export class PreviewPlayer {
     // Highlight row in active album grid
     this._highlightTrackRow(track.id);
 
+    // Update Dolby Atmos badge in preview player if track has spatial / dolby audio traits
+    if (this.dolbyBadge) {
+      const isDolby = track.audioTraits?.includes('spatial') || track.audioTraits?.includes('dolby-atmos') || track.audioTraits?.includes('atmos');
+      this.dolbyBadge.style.display = isDolby ? 'inline-flex' : 'none';
+    }
+
     // Update MediaSession with song metadata
     this._updateMediaSessionMetadata(track);
 
@@ -947,25 +961,32 @@ export class PreviewPlayer {
     this.scrubPositionMs = 0;
     this._setProgressUI(0, track.durationMs || 30000);
 
-    // Pass track to player.html in iframe so audio plays via the full audio graph
+    // Pass full queue to player.html in iframe so audio plays via the full audio graph
     (async () => {
       try {
         const { clearQueue, addTrackToQueue, setCurrentIndex } = await import('./router.js');
         await clearQueue();
-        await addTrackToQueue(null, {
-          name: track.title,
-          artist: track.artist,
-          album: track.album,
-          artUrl: track.artUrl,
-          type: 'audio/mp4',
-          ttml: '__AUTO_FETCH__',
-          amTrackId: track.id
-        });
-        setCurrentIndex(0);
+        const fullQueue = (this.queue && this.queue.length > 0) ? this.queue : [track];
+        for (let qi = 0; qi < fullQueue.length; qi++) {
+          const item = fullQueue[qi];
+          await addTrackToQueue(null, {
+            name: item.title || item.name || 'Track',
+            artist: item.artist || item.artistName || 'Artist',
+            album: item.album || item.collectionName || '',
+            albumId: item.albumId || null,
+            artistId: item.artistId || null,
+            artUrl: item.artUrl || item.artworkUrlLarge || item.artworkUrl100 || '',
+            type: 'audio/mp4',
+            ttml: item.ttml || '__AUTO_FETCH__',
+            amTrackId: item.id || item.trackId,
+            audioTraits: item.audioTraits || []
+          });
+        }
+        setCurrentIndex(this.currentIndex);
 
         const drawerIframe = document.getElementById('player-drawer-iframe');
         if (drawerIframe?.contentWindow) {
-          drawerIframe.contentWindow.postMessage({ action: 'loadTrack', index: 0, autoPlay: autoPlay }, '*');
+          drawerIframe.contentWindow.postMessage({ action: 'loadTrack', index: this.currentIndex, autoPlay: autoPlay }, '*');
         }
       } catch (err) {
         console.warn('[PreviewPlayer] Failed to load track into player queue:', err);

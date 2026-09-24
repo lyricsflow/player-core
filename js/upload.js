@@ -698,6 +698,10 @@ document.addEventListener('DOMContentLoaded', () => {
         syncUrl('/new', '', options.replaceUrl);
       } else if (pageId === 'upload') {
         syncUrl('/upload', '', options.replaceUrl);
+      } else if (pageId === 'download-song') {
+        syncUrl('/download', '', options.replaceUrl);
+      } else if (pageId === 'download-ttml') {
+        syncUrl('/download/ttml', '', options.replaceUrl);
       } else if (pageId === 'playlists') {
         syncUrl('/playlists', '', options.replaceUrl);
       } else if (pageId === 'recently-added') {
@@ -6015,6 +6019,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (cleanPath === '/upload') {
       switchPage('upload', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/download') {
+      switchPage('download-song', { skipUrlSync: true });
+      return true;
+    }
+    if (cleanPath === '/download/ttml') {
+      switchPage('download-ttml', { skipUrlSync: true });
       return true;
     }
     if (cleanPath === '/playlists') {

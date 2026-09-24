@@ -235,11 +235,11 @@
             </svg>
             <span data-i18n="nav_ttml">TTML Downloader</span>
           </li>
-          <li class="am-nav-item" data-page="download-song">
+          <li class="am-nav-item" data-page="download-song" id="nav-item-download-song">
             <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
             </svg>
-            <span data-i18n="nav_song_dl">Song Downloader</span>
+            <span>Download</span>
           </li>
           <li class="am-nav-item" data-page="upload">
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -800,41 +800,87 @@
           </div>
         </div>
 
-        <!-- ── Download Song Page ── -->
+        <!-- ── Download Page (Songs & Full Albums) ── -->
         <div id="page-download-song" class="am-page">
           <div class="download-bg-glow"></div>
-          <div class="premium-downloader-container">
-            <div class="glass-card premium-card">
-              <div class="downloader-header">
-                <div class="header-icon-wrapper" style="background: linear-gradient(135deg, #48484a 0%, #2c2c2e 100%);">
+          <div class="premium-downloader-container" style="max-width: 860px; margin: 0 auto; padding: 20px 15px;">
+            <div class="glass-card premium-card" style="padding: 28px 24px; border-radius: 20px;">
+              <div class="downloader-header" style="margin-bottom: 22px;">
+                <div class="header-icon-wrapper" style="background: linear-gradient(135deg, #fc576b 0%, #ff6b8b 100%);">
                   <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10 10-4.49 10-10S17.51 2 12 2zm-1 14.5v-5h-2.5L12 7.5l3.5 4H13v5h-2z"/>
+                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
                   </svg>
                 </div>
-                <h1 class="premium-title" data-i18n="song_downloader_title">Audio Downloader</h1>
-                <p class="premium-subtitle" data-i18n="song_downloader_sub">Enter a Song ID or search term to download the track.</p>
+                <h1 class="premium-title">Download</h1>
+                <p class="premium-subtitle">Paste any track or album link (spicyamll.online, Apple Music) or search below.</p>
               </div>
 
-              <div class="premium-input-group">
-                <div class="premium-search-box">
-                  <input type="text" id="dl-song-input" placeholder="Paste Song ID or Search Term" data-i18n-placeholder="song_downloader_placeholder" autocomplete="off">
-                  <div class="aero-dropdown aero-dropdown--right" id="dl-song-format">
-                    <button class="premium-btn format-select" data-aero-dropdown="" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); color: white; border: 1px solid rgba(255, 255, 255, 0.2); padding: 0 15px; border-radius: 8px; margin-right: 10px; cursor: pointer; outline: none;" data-selected="m4a">M4A (Original)</button>
-                    <div class="aero-menu">
-                      <button class="aero-menu-item" data-value="m4a">M4A (Original)</button>
-                      <button class="aero-menu-item" data-value="mp3">MP3</button>
-                      <button class="aero-menu-item" data-value="flac">FLAC</button>
+              <!-- Main Input Area -->
+              <div class="premium-input-group" style="position: relative;">
+                <div class="premium-search-box" style="display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.06); padding: 8px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12);">
+                  <input type="text" id="dl-song-input" placeholder="Paste link (e.g. spicyamll.online/song/1813160359, album link, or search)" style="flex: 1; background: transparent; border: none; color: #fff; font-size: 0.95rem; outline: none; padding: 6px 4px;" autocomplete="off">
+                  
+                  <!-- AeroUI Format Dropdown -->
+                  <div class="aero-dropdown" id="dl-format-dropdown">
+                    <button class="am-macos-select" data-aero-dropdown="" data-selected="atmos-m4a" id="dl-format-trigger-btn">
+                      Dolby Atmos (M4A)
+                    </button>
+                    <div class="aero-menu" id="dl-format-menu">
+                      <button type="button" class="aero-menu-item" data-value="atmos-m4a" aria-current="true">Dolby Atmos (M4A)</button>
+                      <button type="button" class="aero-menu-item" data-value="atmos-mp4">Dolby Atmos (MP4)</button>
+                      <button type="button" class="aero-menu-item" data-value="alac-flac">ALAC (FLAC 24-bit)</button>
+                      <button type="button" class="aero-menu-item" data-value="alac-m4a">ALAC (Original M4A)</button>
+                      <button type="button" class="aero-menu-item" data-value="aac-m4a">AAC (256k M4A)</button>
+                      <button type="button" class="aero-menu-item" data-value="mp3-320">MP3 (320kbps)</button>
                     </div>
                   </div>
-                  <button id="fetch-song-btn" class="premium-btn primary">
-                    <span class="btn-text" data-i18n="song_downloader_btn_download">Download</span>
+
+                  <button id="fetch-song-btn" class="premium-btn primary" style="padding: 9px 20px; border-radius: 10px; background: #fc576b; color: #fff; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                    <span class="btn-text">Download</span>
                     <div class="aero-spinner btn-loader hidden"></div>
                   </button>
                 </div>
-                <div id="dl-search-results" class="dl-search-results hidden"></div>
+                
+                <!-- Live Search Suggestions / Results -->
+                <div id="dl-search-results" class="dl-search-results hidden" style="margin-top: 10px; max-height: 380px; overflow-y: auto; border-radius: 12px; background: #1c1c1e; border: 1px solid rgba(255,255,255,0.1);"></div>
               </div>
 
-              <div id="dl-song-status" class="status-indicator"></div>
+              <!-- Power User Download Settings Accordion -->
+              <div style="margin-top: 16px; border-radius: 14px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); overflow: hidden;">
+                <div id="dl-settings-toggle" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; cursor: pointer; user-select: none;">
+                  <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; color: #d0d0d4;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span>Download Options & Embedding</span>
+                  </div>
+                  <span id="dl-settings-arrow" style="font-size: 0.8rem; opacity: 0.7; transition: transform 0.2s;">⌵</span>
+                </div>
+                <div id="dl-settings-body" style="display: none; padding: 14px 18px 18px; border-top: 1px solid rgba(255,255,255,0.06); gap: 14px; flex-direction: column;">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+                    <label style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
+                      <input type="checkbox" id="dl-opt-embed-ttml" checked style="accent-color: #fc576b; width: 16px; height: 16px;">
+                      <span>Embed TTML / ELRC into audio file (Spotiflac style)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
+                      <input type="checkbox" id="dl-opt-save-ttml" checked style="accent-color: #fc576b; width: 16px; height: 16px;">
+                      <span>Save separate .ttml lyrics file</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
+                      <input type="checkbox" id="dl-opt-animated-art" style="accent-color: #fc576b; width: 16px; height: 16px;">
+                      <span>Include Animated Cover Art (MP4 video)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
+                      <input type="checkbox" id="dl-opt-zip-album" checked style="accent-color: #fc576b; width: 16px; height: 16px;">
+                      <span>Bundle full albums as a single .ZIP file</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Status Banner -->
+              <div id="dl-song-status" class="status-indicator" style="margin-top: 14px;"></div>
+
+              <!-- Album / Single Inspection & Download View Container -->
+              <div id="dl-target-view" class="hidden" style="margin-top: 22px;"></div>
             </div>
           </div>
         </div>

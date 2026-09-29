@@ -820,7 +820,7 @@ function normalizeLyricText(str) {
         bgSyllablesToRender.forEach((bw, bI, bA) => {
           const rawBgText = bw.Text ?? "";
           const displayBgText = settingsManager.get("trimSyllableSpaces") ? rawBgText.trim() : rawBgText;
-          const isEmphasized = data.IsConvertedLine ? false : bgWordEmphasisMask[bI];
+          const isEmphasized = false;
           const info = bgSyllableWordInfo[bI];
           const totalDuration = convertTime(bw.EndTime) - convertTime(bw.StartTime);
 

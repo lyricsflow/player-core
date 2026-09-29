@@ -203,7 +203,7 @@ function tickPerLineY(now) {
   }
 }
 
-function setLineAnimTargets(arr, activeIndex, activeIndices = [activeIndex]) {
+function setLineAnimTargets(arr, activeIndex) {
   if (activeIndex < 0) return;
   _activeLineIndex = activeIndex;
 
@@ -242,6 +242,10 @@ function setLineAnimTargets(arr, activeIndex, activeIndices = [activeIndex]) {
   // Calculate AMLL spring policy
   const springPolicy = getPosYSpringPolicy(isSeeking, isInterludeActive, intervalMs);
 
+  // Visible window for blur computation
+  const lineTotal = (activeEl.offsetHeight || 60) + 25;
+  const visibleRange = Math.ceil(containerHeight / lineTotal) + 3;
+
   // Stagger calculation matching AMLL base/index.ts lines 811-840
   let delay = 0; // seconds
   let baseDelay = 0.05; // Always keep stagger active during playback!
@@ -265,10 +269,9 @@ function setLineAnimTargets(arr, activeIndex, activeIndices = [activeIndex]) {
     line._posYSpring.updateParams(springPolicy);
     line._posYSpring.setTargetPosition(targetTy, delay);
 
-    // AMLL-style spring-driven scale: all active lines full size, others 0.98
-    const isLineActive = activeIndices.includes(i);
+    // AMLL-style spring-driven scale: current line full size, others 0.98
     const activeScale = arr === LyricsObject.Types.Line.Lines ? 1.05 : 1;
-    const scaleGoal = isLineActive ? activeScale : DEFAULT_LINE_SCALE;
+    const scaleGoal = i === activeIndex ? activeScale : DEFAULT_LINE_SCALE;
     if (!line._scaleSpring) {
       line._scaleSpring = new Spring(scaleGoal, 140, 22, 1);
       line._scaleSpring.SetGoal(scaleGoal, true);
@@ -277,10 +280,8 @@ function setLineAnimTargets(arr, activeIndex, activeIndices = [activeIndex]) {
     }
 
     // AMLL stagger delay step: ONLY accumulate delay for lines visible on-screen (AMLL line 835)
-    // Avoid reading el.offsetHeight in a hot loop (causes forced synchronous reflow)
-    const lineH = line._cachedH || (line._cachedH = el.offsetHeight || 60);
-    const lineTop = line._cachedTop !== undefined ? line._cachedTop : (line._cachedTop = el.offsetTop);
-    const curPos = targetFocalTop + (lineTop - activeOffsetTop);
+    const lineH = el.offsetHeight || 60;
+    const curPos = targetFocalTop + (el.offsetTop - activeOffsetTop);
 
     if (curPos + lineH >= 0) {
       delay += baseDelay;
@@ -289,28 +290,34 @@ function setLineAnimTargets(arr, activeIndex, activeIndices = [activeIndex]) {
       }
     }
 
-    // Blur calculation: all simultaneously active lines are 0px (unblurred).
-    // Non-active lines measure distance from nearest active line with a gentle, softened gradient.
+    // AMLL Blur calculation matching base/index.ts resolveBlurLevel
     const lineBlurEnabled = window.lyricsflowSettingsManager?.get('lineBlur');
     let blurPx = 0;
     if (lineBlurEnabled !== false) {
-      if (isLineActive || line.BGLine || line.DotLine) {
+      const isFocused = (i === activeIndex);
+      if (isFocused) {
+        blurPx = 0;
+      } else if (line.BGLine || line.DotLine) {
+        // AMLL: interlude dots / bg vocal lines are never blurred
         blurPx = 0;
       } else {
         let effectiveIdx = i;
-        const minDistance = Math.min(...activeIndices.map(a => Math.abs(effectiveIdx - a)));
+        if (line.BGLine || line.DotLine) {
+          for (let p = i - 1; p >= 0; p--) {
+            if (!arr[p].BGLine && !arr[p].DotLine) { effectiveIdx = p; break; }
+          }
+        }
+        const distance = effectiveIdx < activeIndex
+          ? Math.abs(activeIndex - effectiveIdx) + 1
+          : Math.abs(effectiveIdx - activeIndex);
+
         const isNarrow = checkIsMobile();
-        const level = minDistance * 1.125;
-        const rawBlur = isNarrow ? level * 0.7 : level;
-        blurPx = Math.min(4.8, Math.max(1.2, rawBlur));
+        const level = 1 + distance;
+        const rawBlur = isNarrow ? level * 0.8 : level;
+        blurPx = Math.min(5, Math.max(1.2, rawBlur));
       }
     }
-    const blurStr = `${blurPx.toFixed(1)}px`;
-    if (line._lastBlurStr !== blurStr) {
-      el.style.setProperty('--blur-amount', blurStr);
-      el.style.setProperty('--BlurAmount', blurStr);
-      line._lastBlurStr = blurStr;
-    }
+    el.style.setProperty('--blur-amount', `${blurPx.toFixed(1)}px`);
 
     line._baseY = targetTy;
   }

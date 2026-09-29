@@ -103,8 +103,7 @@
   margin-bottom: clamp(14px, 0.45em, 32px) !important;
   padding: 0.25em 0 !important;
   transition:
-    opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1),
-    filter 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1);
   font-size: var(--font-size) !important;
 }
 
@@ -143,7 +142,7 @@
   --gradient-position: -20%;
   --gradient-color: 255;
   --gradient-alpha: 0.85;
-  --gradient-alpha-end: 0.5;
+  --gradient-alpha-end: 0.4;
   --gradient-degrees: 90deg;
   --gradient-offset: 0%;
 }
@@ -227,6 +226,12 @@
   /*margin-top: 2.5cqw !important;
   margin-bottom: 2.5cqw !important;*/
   /* disgusting */
+}
+
+/* Word-to-word (Syllable) lyrics: keep every line at full opacity,
+   active or not. Inactive lines are still differentiated by the blur. */
+#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer[data-lyrics-type="Syllable"] .line {
+  opacity: 1 !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.Active .word,
@@ -390,13 +395,15 @@
   transform-origin: right center !important;
 }
 
-/* Duet Singer Distinction: subtle singer-2 styling */
+/* Duet Singer Distinction: subtle singer-2 styling.
+   Composes the progressive line blur (--blur-amount) with the singer glow so
+   the singer drop-shadow no longer overrides the blur filter. */
 #LyricsflowPage .LyricsContainer .LyricsContent .line.singer-2 {
-  filter: drop-shadow(0 0 16px rgba(130, 180, 255, 0.15));
+  filter: blur(var(--blur-amount, 0px)) drop-shadow(0 0 16px rgba(130, 180, 255, 0.15));
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.singer-1 {
-  filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.1));
+  filter: blur(var(--blur-amount, 0px)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.1));
 }
 
 /* Word spacing for OppositeAligned is inherited from the base ::after rule (margin-inline-end: 0.3ch) */
@@ -738,6 +745,7 @@
 /* ── Mobile Responsive Fix ── */
 @media (max-width: 768px) {
   #LyricsflowPage .LyricsContainer .LyricsContent {
+    --DefaultLyricsSize: clamp(2rem, calc(1cqw * 10), 3.5rem) !important;
     padding-left: 10px !important;
     padding-right: 10px !important;
     text-align: center;
@@ -769,11 +777,6 @@
   /* RTL keeps its natural start alignment on mobile */
   #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl {
     transform-origin: right center !important;
-  }
-
-  /* Performance: reduce heavy blurs and GPU filter composition on mobile devices */
-  #LyricsflowPage .LyricsContainer .LyricsContent .line {
-    filter: none !important;
   }
 }
 

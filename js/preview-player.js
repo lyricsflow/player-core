@@ -138,10 +138,10 @@ export class PreviewPlayer {
             </span>
             <button class="am-preview-btn am-preview-more-action-btn" id="am-preview-more-btn" title="More Options" aria-label="More Options">•••</button>
             <button class="am-preview-btn am-preview-lyrics-btn" id="am-preview-lyrics-btn" title="Lyrics" aria-label="Lyrics">
-              <img src="icons/lyrics.png" alt="Lyrics">
+              <img src="icons/lyrics.svg" alt="Lyrics">
             </button>
             <button class="am-preview-btn am-preview-queue-btn" id="am-preview-queue-btn" title="Playing Next" aria-label="Queue">
-              <img src="icons/queue.png" alt="Queue">
+              <img src="icons/queue.svg" alt="Queue">
             </button>
             <button class="am-preview-btn am-preview-airplay-btn" id="am-preview-airplay-btn" title="AirPlay" aria-label="AirPlay">
               <img src="icons/airplay.png" alt="AirPlay">

@@ -408,7 +408,7 @@
 }
 
 #LyricsflowPage .ContentBox .NowBar .Header .Metadata .Artists {
-  font-weight: 500;
+  font-weight: 480;
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.5);
   white-space: nowrap;
@@ -730,7 +730,6 @@
   display: flex;
   justify-content: space-between;
   width: 100%;
-  margin-top: 8px;
 }
 
 .NowBarProgress .aero-elastic-label.progress-time {
@@ -754,7 +753,7 @@
 }
 
 .NowBarControls #btn-play-pause {
-  --player-icon: 42px;
+  --player-icon: 58px;
 }
 
 /* AeroUI skip-label glyphs inside the prev/next buttons */
@@ -768,7 +767,7 @@
 
   .NowBarControls #btn-backward .aero-skip,
   .NowBarControls #skip-forward .aero-skip {
-    --skip-size: 34px;
+    --skip-size: 44px;
   }
 }
 
@@ -791,6 +790,28 @@
   letter-spacing: 0.05em;
   font-family: 'Inter', sans-serif;
   font-weight: 300;
+}
+
+/* Quality badge embedded inside the scrubber time-labels row */
+#LyricsflowPage .ContentBox .NowBar .Header .NowBarBottomWrapper .NowBarProgress .aero-elastic-labels .quality-badge-container {
+  position: static !important;
+  top: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+  width: auto !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  justify-content: flex-start !important;
+  z-index: auto !important;
+}
+
+.aero-elastic-labels .quality-badge {
+  background: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  gap: 4px !important;
 }
 
 /* ── Controls Area ── */
@@ -2183,10 +2204,6 @@ body.is-rendering .NowBar {
     --elastic-fill-active: rgba(255, 255, 255, 0.75);
   }
 
-  .NowBarProgress .aero-elastic-labels {
-    margin-top: 6px !important;
-  }
-
   /* Dolby Atmos / Lossless Badge Centered Under Playback Bar */
   .quality-badge-container {
     display: flex !important;
@@ -2211,7 +2228,7 @@ body.is-rendering .NowBar {
     bottom: 15dvh !important;
     left: 0 !important;
     width: 100% !important;
-    padding: 0 48px !important;
+    padding: 0 34px !important;
     z-index: 100 !important;
     margin: 0 !important;
     display: flex !important;
@@ -2317,13 +2334,23 @@ body.is-rendering .NowBar {
     bottom: calc(-10px + env(safe-area-inset-bottom, 14px)) !important;
     left: 0 !important;
     width: 100% !important;
-    padding: 1px 24px !important;
+    padding: 0 24px !important;
     z-index: 100 !important;
     background: transparent !important;
-    display: grid !important;
-    grid-template-columns: 1fr 1fr 1fr !important;
-    justify-items: center !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: start !important;
+  }
+
+  /* Auto-sized icon row pinned to the top; icons vertically centered inside it */
+  .bottom-bar-icons {
+    display: flex !important;
+    width: auto !important;
+    height: auto !important;
     align-items: center !important;
+    justify-content: center !important;
+    gap: clamp(76px, 10vw, 72px) !important;
+    box-sizing: border-box !important;
   }
 
   /* Invisible touch shield — eats all touch events in the bottom area */
@@ -2355,7 +2382,6 @@ body.is-rendering .NowBar {
     left: 0 !important;
     width: 100% !important;
     height: calc(107px + env(safe-area-inset-bottom, 40px)) !important;
-    background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.4) 40%, rgba(0, 0, 0, 0.75) 100%) !important;
     pointer-events: auto !important;
     z-index: -1 !important;
     border-radius: 0 !important;
@@ -2412,14 +2438,26 @@ body.is-rendering .NowBar {
 
   .BottomBar button img,
   .BottomBar button svg {
-    width: 36px !important;
-    height: 36px !important;
+    width: 35px !important;
+    height: 35px !important;
     opacity: 0.65 !important;
   }
 
   .BottomBar button:hover img,
   .BottomBar button:hover svg {
     opacity: 1 !important;
+  }
+
+  .BottomBar button,
+  .BottomBar button:hover,
+  .BottomBar button:active {
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .BottomBar button#btn-airplay img {
+    width: 22px !important;
+    height: 22px !important;
   }
 
   /* 7. Symmetrical Transition and Full-Screen Layout when Lyrics are Hidden */
@@ -2543,7 +2581,8 @@ body.is-rendering .NowBar {
     right: auto !important;
     top: auto !important;
     bottom: auto !important;
-    transform: none !important;
+    transform: translateY(35px) !important;
+    transition: none !important;
     pointer-events: auto !important;
     display: flex !important;
     flex-direction: row !important;
@@ -2584,7 +2623,7 @@ body.is-rendering .NowBar {
     position: relative !important;
     width: 100% !important;
     left: auto !important;
-    top: -62px !important;
+    top: -20px !important;
     bottom: auto !important;
     transform: none !important;
     pointer-events: auto !important;
@@ -2592,7 +2631,7 @@ body.is-rendering .NowBar {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 0 18px !important;
+    padding: 0 40px !important;
     margin: -8px 0 0 0 !important;
   }
 
@@ -2600,7 +2639,7 @@ body.is-rendering .NowBar {
     position: relative !important;
     width: 100% !important;
     left: auto !important;
-    top: -62px !important;
+    top: -40px !important;
     bottom: auto !important;
     transform: none !important;
     pointer-events: auto !important;
@@ -2613,14 +2652,15 @@ body.is-rendering .NowBar {
   }
 
   #LyricsflowPage .ContentBox .NowBar.centered .Header .Metadata .SongName {
-    font-size: 1.55rem !important;
-    font-weight: 800 !important;
+    font-size: 1.44rem !important;
+    font-weight: 580 !important;
     line-height: 1.25 !important;
+    opacity: 0.95 !important;
   }
 
   #LyricsflowPage .ContentBox .NowBar.centered .Header .Metadata .Artists {
-    font-size: 1.15rem !important;
-    font-weight: 500 !important;
+    font-size: 1.35rem !important;
+    font-weight: 400 !important;
     color: rgba(255, 255, 255, 0.6) !important;
     line-height: 1.25 !important;
     max-width: 250px !important;
@@ -2700,8 +2740,13 @@ body.is-rendering .NowBar {
 
   #LyricsflowPage .ContentBox .NowBar.centered~.BottomBar button img,
   #LyricsflowPage .ContentBox .NowBar.centered~.BottomBar button svg {
-    width: 30px !important;
-    height: 30px !important;
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  #LyricsflowPage .ContentBox .NowBar.centered~.BottomBar button#btn-airplay img {
+    width: 22px !important;
+    height: 22px !important;
   }
 
 
@@ -2783,6 +2828,11 @@ body.is-rendering .NowBar {
   backdrop-filter: none;
   border-top: none;
   z-index: 100;
+}
+
+/* Neutral wrapper — keeps desktop layout untouched; acts as the mobile icon row */
+.bottom-bar-icons {
+  display: contents;
 }
 
 .bottom-bar-left,
@@ -2956,7 +3006,7 @@ body.is-rendering .NowBar {
 }
 
 #LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox:not(:has(.animated-art-video.loaded)) .MediaImageContainer.paused {
-  transform: scale(0.85) !important;
+  transform: scale(0.72) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
@@ -2969,7 +3019,7 @@ body.is-rendering .NowBar {
   }
 
   #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .MediaBox .MediaImageContainer.paused {
-    transform: scale(0.85) !important;
+    transform: scale(0.72) !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
   }
 }

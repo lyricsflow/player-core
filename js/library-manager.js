@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Library Manager
+ * LyricsFlow — Library Manager
  * Handles user Library (Songs, Albums, Artists),
  * recently added collection, and playlist helpers.
  */

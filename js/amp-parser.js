@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Apple Music AMP API Parser
+ * LyricsFlow — Apple Music AMP API Parser
  * @license AGPL-3.0
  * High-performance, zero-dependency parser utility for Apple Music's internal AMP API
  * and JSON:API responses with `format[resources]=map`.

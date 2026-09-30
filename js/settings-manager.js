@@ -1,11 +1,11 @@
 /**
- * Lyricsflow — Settings Manager
+ * LyricsFlow — Settings Manager
  * Manages the application settings state and persistence.
  */
 
 export const LYRICS_SOURCE_PROVIDER_DEFINITIONS = {
   lfcommunity: {
-    label: "Lyricsflow Community",
+    label: "LyricsFlow Community",
     description: "Lyrics contributed and synced by our Discord community.",
     id: "lfcommunity"
   },
@@ -56,7 +56,7 @@ class SettingsManager {
       viewControlsPosition: "Top",
       lockedMediaBox: false,
       settingsOnTop: true,
-      lyricsRenderer: "Lyricsflow",
+      lyricsRenderer: "LyricsFlow",
       simpleLyricsMode: false,
       amlAnimation: true,
       minimalLyricsMode: false,
@@ -68,6 +68,7 @@ class SettingsManager {
       rightAlignLyrics: false,
       lineBlur: true,
       amlLyricsAnimations: true,
+      spicyLyricsAnimation: false,
       customFontEnabled: false,
       customFont: "",
       lyricsSourceOrder: [...DEFAULT_LYRICS_SOURCE_ORDER],
@@ -93,6 +94,7 @@ class SettingsManager {
       eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       crossfadeDuration: 0,
       hardwareAccelerationHack: true,
+      discordRpc: true,
       developerMode: false,
       ttmlMakerMode: false,
       playbackOffset: 0
@@ -163,6 +165,12 @@ class SettingsManager {
 
   set(key, value) {
     this.settings[key] = value;
+    if (key === 'spicyLyricsAnimation' && value === true) {
+      this.settings.amlLyricsAnimations = false;
+      this.settings.amlAnimation = false;
+    } else if (key === 'amlLyricsAnimations' && value === true) {
+      this.settings.spicyLyricsAnimation = false;
+    }
     this.save();
   }
 
@@ -225,6 +233,15 @@ class SettingsManager {
       root.classList.add("lf-hw-accel");
     } else {
       root.classList.remove("lf-hw-accel");
+    }
+
+    // Spicy Lyrics Animation Mode
+    if (this.settings.spicyLyricsAnimation) {
+      body.classList.add("is-spicy-lyrics");
+      root.classList.add("is-spicy-lyrics");
+    } else {
+      body.classList.remove("is-spicy-lyrics");
+      root.classList.remove("is-spicy-lyrics");
     }
 
     // Theme Preset

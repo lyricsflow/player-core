@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Album Preview Audio Player
+ * LyricsFlow — Album Preview Audio Player
  * Plays 30s audio previews from Apple Music album data JSON with a sleek mini player
  * at the bottom, MediaSession OS controls, and native AMLL icons.
  */
@@ -7,6 +7,7 @@
 import { showToast } from './toast.js';
 import { escapeHTML } from './security-utils.js';
 import { t } from './i18n.js';
+import { settingsManager } from './settings-manager.js';
 import { parseAudioMetadata } from './metadata-parser.js';
 import {
   initPlayerButton,
@@ -63,10 +64,14 @@ export class PreviewPlayer {
     this.currentIndex = 0;
     this.isPlaying = false;
     this.isMuted = false;
+    this.isShuffled = false;
+    this.isRepeat = false;
     this.albumTitle = '';
     this.albumArt = '';
     this.container = null;
     this.wakeLock = null;
+    this._drawerMsgWired = false;
+    this._lastDiscordSyncTime = 0;
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => this._initDOM());
@@ -79,7 +84,6 @@ export class PreviewPlayer {
 
   _initDOM() {
     let el = document.getElementById('am-preview-mini-player');
-    // Migrate stale cached DOM — force rebuild so the Apple Music pill structure exists
     if (el && (!el.querySelector('.player-lcd') || !el.querySelector('#am-preview-expand-btn') || !el.querySelector('.player-lcd__progress-track'))) {
       el.remove();
       el = null;
@@ -90,7 +94,6 @@ export class PreviewPlayer {
       el.className = 'am-preview-mini-player hidden';
       el.innerHTML = `
         <div class="am-preview-inner">
-          <!-- Left: Playback Transport Controls -->
           <div class="am-preview-controls-left">
             <button class="am-preview-btn am-preview-shuffle-btn" id="am-preview-shuffle-btn" title="Shuffle" aria-label="Shuffle">
               <img src="icons/button_icon_shuffle.png" alt="Shuffle">
@@ -98,7 +101,7 @@ export class PreviewPlayer {
             <button class="am-preview-btn aero-player skip-back am-preview-prev-btn" id="am-preview-prev-btn" title="Previous" aria-label="Previous">
               <span class="aero-skip" data-direction="backward"></span>
             </button>
-            <button class="am-preview-btn aero-player play-pause am-preview-play-btn" id="am-preview-play-btn" title="Play / Pause" aria-label="Play">
+            <button class="am-preview-btn aero-player play-pause am-preview-play-btn" id="am-preview-play-btn" title="Play" aria-label="Play">
               <div class="aero-spinner" id="am-preview-spinner" style="display: none; width: 16px; height: 16px; border-width: 2.2px;"></div>
             </button>
             <button class="am-preview-btn aero-player skip-forward am-preview-next-btn" id="am-preview-next-btn" title="Next" aria-label="Next">
@@ -109,7 +112,6 @@ export class PreviewPlayer {
             </button>
           </div>
 
-          <!-- Center: Artwork + Metadata inline with scrub bar strictly from cover to options -->
           <div class="am-preview-track-center" id="am-preview-info-col">
             <div class="am-preview-artwork-wrap">
               <img src="" class="am-preview-art" id="am-preview-art" alt="Cover">
@@ -123,13 +125,11 @@ export class PreviewPlayer {
               <div class="am-preview-title" id="am-preview-title">Track Title</div>
               <div class="am-preview-sub" id="am-preview-sub">Artist — Album</div>
             </div>
-            <!-- Progress scrub bar placed right under cover to options button -->
             <div class="am-preview-progress-track" id="am-preview-progress-track">
               <div class="am-preview-progress-fill" id="am-preview-progress-bar"></div>
             </div>
           </div>
 
-          <!-- Right: Actions & Utilities -->
           <div class="am-preview-actions-col">
             <span class="am-preview-dolby-badge" id="am-preview-dolby-badge" title="Dolby Atmos" style="display: none; align-items: center; justify-content: center; opacity: 0.85; margin-right: 4px;">
               <svg width="24" height="15" viewBox="0 0 100 62" fill="currentColor">
@@ -156,7 +156,6 @@ export class PreviewPlayer {
     }
     this.container = el;
 
-    // Cache elements
     this.infoCol = el.querySelector('#am-preview-info-col');
     this.artEl = el.querySelector('#am-preview-art');
     this.expandBtn = el.querySelector('#am-preview-expand-btn');
@@ -181,11 +180,11 @@ export class PreviewPlayer {
     this.spinnerEl = el.querySelector('#am-preview-spinner');
     this.closeBtn = el.querySelector('#am-preview-close-btn');
 
-    // Scrub state
     this.isScrubbing = false;
     this.scrubPositionMs = 0;
 
-    // Smooth Sliding Drawer Transition to player.html
+    this._bindIframeMessages();
+
     const triggerZoomToPlayer = async (e, targetView = null) => {
       if (
         !e ||
@@ -199,7 +198,6 @@ export class PreviewPlayer {
       }
       e.stopPropagation();
 
-      // Seed full queue metadata so player.html loads the track, queue list, and lyrics immediately
       if (this.queue && this.queue.length > 0) {
         try {
           const { clearQueue, addTrackToQueue, setCurrentIndex } = await import('./router.js');
@@ -227,24 +225,21 @@ export class PreviewPlayer {
         }
       }
 
-      // Check if player-drawer exists in the parent page (index.html)
       const drawer = document.getElementById('player-drawer');
       const drawerIframe = document.getElementById('player-drawer-iframe');
       const drawerClose = document.getElementById('player-drawer-close');
 
       if (drawer && drawerIframe) {
-        // Load player.html into iframe if not already loaded
         if (drawerIframe.src === 'about:blank' || !drawerIframe.src.includes('player.html')) {
           drawerIframe.src = 'player.html';
         }
 
-        // Slide drawer up smoothly
         drawer.classList.add('open');
+        document.body.classList.add('player-drawer-open');
         if (this.container) {
           this.container.classList.add('drawer-hidden');
         }
 
-        // Post target view message once drawer is open/ready
         const sendTargetView = () => {
           if (targetView && drawerIframe.contentWindow) {
             drawerIframe.contentWindow.postMessage({ action: 'switchView', view: targetView }, '*');
@@ -253,121 +248,15 @@ export class PreviewPlayer {
         sendTargetView();
         setTimeout(sendTargetView, 350);
 
-        const closeDrawer = () => {
-          drawer.classList.remove('open');
-          if (this.container) {
-            this.container.classList.remove('drawer-hidden');
-          }
-        };
-
-        // Wire slide down button
         if (drawerClose) {
           drawerClose.onclick = (ev) => {
             ev.stopPropagation();
-            closeDrawer();
+            this._closeDrawer();
           };
         }
-
-        // Listen for messages from inside iframe (wired once — this function
-        // runs on every drawer open, and duplicate listeners would double-fire
-        // every player-state broadcast and pile up dialogs).
-        if (!this._drawerMsgWired) {
-          this._drawerMsgWired = true;
-        window.addEventListener('message', (ev) => {
-          // Validate origin to prevent cross-origin message spoofing
-          if (ev.origin !== window.location.origin && ev.origin !== 'null' && window.location.origin !== 'null') {
-            if (drawerIframe.contentWindow && ev.source !== drawerIframe.contentWindow) return;
-          }
-          if (ev.data === 'closePlayerDrawer' || ev.data?.action === 'closePlayerDrawer') {
-            closeDrawer();
-          } else if (ev.data?.type === 'player-state') {
-            const { isPlaying, isBuffering, position, duration, songMetadata } = ev.data;
-            if (typeof isBuffering === 'boolean') {
-              this._setBuffering(isBuffering);
-            }
-            if (isPlaying !== this.isPlaying) {
-              this.isPlaying = isPlaying;
-              this._updatePlayButton(isPlaying);
-            }
-            if (duration && duration > 0) {
-              this._setProgressUI(position, duration);
-              if (this.container) {
-                this.container.setAttribute('data-position', String(position));
-                this.container.setAttribute('data-duration', String(duration));
-              }
-            }
-            if (songMetadata) {
-              // Same 4x/sec broadcast — only repaint metadata (especially the
-              // artwork src, which reflashes on every reassign) when the track changed.
-              const newTitle = songMetadata.title || '';
-              const curTitle = this.titleEl ? this.titleEl.textContent : null;
-              if (newTitle && newTitle !== curTitle) {
-                if (this.titleEl) this.titleEl.textContent = newTitle;
-                this._updateSubtitleLinks(songMetadata.artist, songMetadata.album, songMetadata.amTrackId || songMetadata.id);
-                if (this.artEl && songMetadata.artUrl && this.artEl.getAttribute('src') !== songMetadata.artUrl) this.artEl.src = songMetadata.artUrl;
-              }
-            }
-          } else if (ev.data?.action === 'showArtistOrAlbumDialog') {
-            closeDrawer();
-            const { artist, album, amTrackId } = ev.data;
-            let modal = document.getElementById('am-artist-album-dialog');
-            if (!modal) {
-              modal = document.createElement('div');
-              modal.id = 'am-artist-album-dialog';
-              modal.className = 'am-mobile-modal-overlay';
-              modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background:rgba(0,0,0,0.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;';
-              document.body.appendChild(modal);
-            }
-            modal.innerHTML = `
-              <div class="am-mobile-modal-sheet" style="text-align: center; padding: 28px 24px; background: rgba(30,30,32,0.92); border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; max-width: 360px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
-                <h3 style="margin: 0 0 8px 0; font-size: 1.25rem; font-weight: 700; color: #fff;">View Details</h3>
-                <p style="margin: 0 0 22px 0; font-size: 0.88rem; color: rgba(255,255,255,0.65);">Choose what you would like to explore</p>
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                  ${album ? `<button class="premium-btn primary" id="dialog-view-album" style="height: 46px; border-radius: 14px; font-weight: 600; font-size: 0.95rem; cursor: pointer;">View Album (${escapeHTML(album)})</button>` : ''}
-                  ${artist ? `<button class="premium-btn secondary" id="dialog-view-artist" style="height: 46px; border-radius: 14px; font-weight: 600; font-size: 0.95rem; cursor: pointer; background: rgba(255,255,255,0.12); color: #fff; border: none;">View Artist (${escapeHTML(artist)})</button>` : ''}
-                  <button class="premium-btn secondary" id="dialog-view-cancel" style="height: 40px; border-radius: 12px; background: transparent; color: rgba(255,255,255,0.5); border: none; cursor: pointer;">Cancel</button>
-                </div>
-              </div>
-            `;
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-
-            const albBtn = modal.querySelector('#dialog-view-album');
-            if (albBtn) {
-              albBtn.onclick = () => {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-                if (window.lyricsflowShowAlbumByName) {
-                  window.lyricsflowShowAlbumByName(album, amTrackId);
-                }
-              };
-            }
-
-            const artBtn = modal.querySelector('#dialog-view-artist');
-            if (artBtn) {
-              artBtn.onclick = () => {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-                if (window.lyricsflowShowArtistByName) {
-                  window.lyricsflowShowArtistByName(artist);
-                }
-              };
-            }
-
-            const cancelBtn = modal.querySelector('#dialog-view-cancel');
-            if (cancelBtn) {
-              cancelBtn.onclick = () => {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-              };
-            }
-          }
-        });
-        } // end once-guarded drawer message listener
         return;
       }
 
-      // Fallback if not inside index.html with drawer
       window.location.href = 'player.html';
     };
 
@@ -401,12 +290,11 @@ export class PreviewPlayer {
       };
     }
 
-    // Initialize AeroUI player-buttons and skip-labels for authentic animations
     if (this.playBtn) {
       try {
         initPlayerButton(this.playBtn);
         setPlayerIcon(this.playBtn, 'play');
-      } catch (_) {}
+      } catch (_) { }
       this.playBtn.addEventListener('pressend', (e) => {
         e.stopPropagation();
         this.togglePlay();
@@ -418,7 +306,7 @@ export class PreviewPlayer {
         initPlayerButton(this.prevBtn);
         const skipBack = this.prevBtn.querySelector('.aero-skip');
         if (skipBack) initSkipLabel(skipBack);
-      } catch (_) {}
+      } catch (_) { }
       this.prevBtn.addEventListener('pressend', (e) => {
         e.stopPropagation();
         const skipBack = this.prevBtn.querySelector('.aero-skip');
@@ -432,7 +320,7 @@ export class PreviewPlayer {
         initPlayerButton(this.nextBtn);
         const skipFwd = this.nextBtn.querySelector('.aero-skip');
         if (skipFwd) initSkipLabel(skipFwd);
-      } catch (_) {}
+      } catch (_) { }
       this.nextBtn.addEventListener('pressend', (e) => {
         e.stopPropagation();
         const skipFwd = this.nextBtn.querySelector('.aero-skip');
@@ -440,6 +328,7 @@ export class PreviewPlayer {
         this.next();
       });
     }
+
     if (this.shuffleBtn) {
       this.shuffleBtn.onclick = (e) => {
         e.stopPropagation();
@@ -450,13 +339,14 @@ export class PreviewPlayer {
           const remaining = this.queue.filter((_, i) => i !== this.currentIndex);
           for (let i = remaining.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+            [remaining[j], remaining[i]] = [remaining[i], remaining[j]];
           }
           this.queue = [cur, ...remaining];
           this.currentIndex = 0;
         }
       };
     }
+
     if (this.repeatBtn) {
       this.repeatBtn.onclick = (e) => {
         e.stopPropagation();
@@ -467,6 +357,7 @@ export class PreviewPlayer {
         }
       };
     }
+
     if (this.airplayBtn) {
       this.airplayBtn.onclick = (e) => {
         e.stopPropagation();
@@ -477,12 +368,14 @@ export class PreviewPlayer {
         }
       };
     }
+
     if (this.volBtn) {
       this.volBtn.onclick = (e) => {
         e.stopPropagation();
         this.toggleMute();
       };
     }
+
     if (this.closeBtn) {
       this.closeBtn.onclick = (e) => {
         e.preventDefault();
@@ -491,7 +384,6 @@ export class PreviewPlayer {
       };
     }
 
-    // Direct event listener on container to handle close delegation safely
     el.addEventListener('click', (e) => {
       const closeTarget = e.target.closest('#am-preview-close-btn') || e.target.closest('.am-preview-close-btn');
       if (closeTarget) {
@@ -501,7 +393,6 @@ export class PreviewPlayer {
       }
     });
 
-    // Inset bottom progress scrub bar (draggable like player.html)
     if (this.progressTrack && !this._progressTrackWired) {
       this._progressTrackWired = true;
 
@@ -538,7 +429,7 @@ export class PreviewPlayer {
         this.progressTrack.classList.remove('scrubbing');
         try {
           this.progressTrack.releasePointerCapture(e.pointerId);
-        } catch (_) {}
+        } catch (_) { }
         updateScrub(e.clientX);
         this._seekTo(this.scrubPositionMs);
       };
@@ -551,8 +442,108 @@ export class PreviewPlayer {
       });
     }
 
-    // Always show preview bar on startup, restoring last played track in paused state
     this._restoreLastPlayedTrack();
+  }
+
+  _closeDrawer() {
+    const drawer = document.getElementById('player-drawer');
+    if (drawer) drawer.classList.remove('open');
+    document.body.classList.remove('player-drawer-open');
+    if (this.container) {
+      this.container.classList.remove('drawer-hidden');
+    }
+  }
+
+  _bindIframeMessages() {
+    if (this._drawerMsgWired) return;
+    this._drawerMsgWired = true;
+
+    window.addEventListener('message', (ev) => {
+      const drawerIframe = document.getElementById('player-drawer-iframe');
+      if (ev.origin !== window.location.origin && ev.origin !== 'null' && window.location.origin !== 'null') {
+        if (drawerIframe?.contentWindow && ev.source !== drawerIframe.contentWindow) return;
+      }
+
+      if (ev.data === 'closePlayerDrawer' || ev.data?.action === 'closePlayerDrawer') {
+        this._closeDrawer();
+      } else if (ev.data?.type === 'player-state') {
+        const { isPlaying, isBuffering, position, duration, songMetadata } = ev.data;
+
+        if (typeof isBuffering === 'boolean') {
+          this._setBuffering(isBuffering);
+        }
+        if (typeof isPlaying === 'boolean' && isPlaying !== this.isPlaying) {
+          this.isPlaying = isPlaying;
+          this._updatePlayButton(isPlaying);
+          this._updateMediaSessionState(isPlaying ? 'playing' : 'paused');
+        }
+
+        if (ev.data?.audioQuality) {
+          this._currentAudioQuality = ev.data.audioQuality;
+        }
+
+        // Exact real-time position/duration from the player
+        if (typeof position === 'number') {
+          const durMs = duration > 0 ? duration : parseFloat(this.container?.getAttribute('data-duration') || '0');
+          if (this.container) {
+            this.container.setAttribute('data-position', String(position));
+            if (durMs > 0) this.container.setAttribute('data-duration', String(durMs));
+          }
+          if (!this.isScrubbing && durMs > 0) {
+            this._setProgressUI(position, durMs);
+          }
+
+          // Throttle real-time position dispatch to Discord RPC every 1.5s
+          const now = Date.now();
+          if (now - this._lastDiscordSyncTime > 1500) {
+            this._lastDiscordSyncTime = now;
+            this._syncPresenceWithRealPosition(position / 1000, durMs / 1000);
+          }
+        }
+
+        if (songMetadata) {
+          if (songMetadata.audioTraits && this.queue && this.queue[this.currentIndex]) {
+            this.queue[this.currentIndex].audioTraits = songMetadata.audioTraits;
+          }
+          const newTitle = songMetadata.title || '';
+          const curTitle = this.titleEl ? this.titleEl.textContent : null;
+          if (newTitle && newTitle !== curTitle) {
+            if (this.titleEl) this.titleEl.textContent = newTitle;
+            this._updateSubtitleLinks(songMetadata.artist, songMetadata.album, songMetadata.amTrackId || songMetadata.id);
+            if (this.artEl && songMetadata.artUrl && this.artEl.getAttribute('src') !== songMetadata.artUrl) {
+              this.artEl.src = songMetadata.artUrl;
+            }
+          }
+        }
+      }
+    });
+  }
+
+  _syncPresenceWithRealPosition(posSec, durSec) {
+    if (settingsManager && settingsManager.get("discordRpc") === false) {
+      const api = window.wave || window.lyricsflow;
+      if (api?.clearDiscordPresence) {
+        api.clearDiscordPresence();
+      }
+      return;
+    }
+    const track = this.queue && this.queue[this.currentIndex];
+    if (!track && !this.albumTitle) return;
+    const audioQuality = this._currentAudioQuality || this._resolveAudioQuality(track);
+    const api = window.wave || window.lyricsflow;
+    if (api?.updateDiscordPresence) {
+      api.updateDiscordPresence({
+        title: track?.title || this.titleEl?.textContent || 'Track',
+        artist: track?.artist || 'Artist',
+        album: track?.album || this.albumTitle || '',
+        artUrl: track?.artUrl || this.artEl?.src || '',
+        songId: track?.amTrackId || track?.id || null,
+        audioQuality,
+        position: posSec,
+        duration: durSec,
+        isPlaying: this.isPlaying
+      });
+    }
   }
 
   _restoreLastPlayedTrack() {
@@ -567,9 +558,8 @@ export class PreviewPlayer {
           return;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
-    // If nothing has been played yet, render the preview player visible in idle state
     if (this.container) {
       this.container.style.display = 'block';
       this.container.classList.remove('hidden');
@@ -617,11 +607,6 @@ export class PreviewPlayer {
       if (dur && !Number.isNaN(dur) && Number.isFinite(dur) && dur > 0) {
         const durMs = Math.round(dur * 1000);
         if (this.container) this.container.setAttribute('data-duration', durMs.toString());
-        if (this.durTimeEl) this.durTimeEl.textContent = this._formatTime(dur);
-        if (this.progressElastic) {
-          this.progressElastic.dataset.max = String(Math.max(1, durMs));
-          this.progressElastic.dataset.step = '100';
-        }
       }
     };
     this.audio.addEventListener('loadedmetadata', onDurationAvailable);
@@ -637,7 +622,6 @@ export class PreviewPlayer {
     });
 
     this.audio.addEventListener('timeupdate', () => {
-      // Don't fight the user while scrubbing (same as player.html)
       if (this.isScrubbing) return;
       const cur = this.audio.currentTime || 0;
       const dur = (this.audio.duration && !Number.isNaN(this.audio.duration) && Number.isFinite(this.audio.duration) && this.audio.duration > 0)
@@ -706,7 +690,27 @@ export class PreviewPlayer {
     navigator.mediaSession.setActionHandler('stop', () => this.close());
   }
 
+  _resolveAudioQuality(track) {
+    if (!track) return null;
+    const traits = track.audioTraits || [];
+    const hasDolby = Array.isArray(traits) && traits.some(t => typeof t === 'string' && (t.includes('spatial') || t.includes('atmos') || t.includes('dolby')));
+    const hasHiRes = Array.isArray(traits) && traits.some(t => typeof t === 'string' && t.includes('hi-res'));
+    const hasLossless = Array.isArray(traits) && traits.some(t => typeof t === 'string' && t.includes('lossless'));
+    const activeCodec = window._activePlaybackCodec;
+
+    if (activeCodec === 'atmos' || hasDolby) {
+      return 'Dolby Atmos';
+    } else if (activeCodec === 'alac' || hasLossless) {
+      return hasHiRes ? 'ALAC • 24-bit • 192.0kHz' : 'ALAC • 24-bit • 48.0kHz';
+    }
+    return 'AAC • 16-bit • 44.1kHz';
+  }
+
   _updateMediaSessionMetadata(track) {
+    const durSec = parseFloat(this.container?.getAttribute('data-duration') || '0') / 1000 || (this.audio?.duration || 0);
+    const posSec = parseFloat(this.container?.getAttribute('data-position') || '0') / 1000 || (this.audio?.currentTime || 0);
+    this._syncPresenceWithRealPosition(posSec, durSec);
+
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title || 'Track',
@@ -722,6 +726,10 @@ export class PreviewPlayer {
   }
 
   _updateMediaSessionState(state) {
+    const durSec = parseFloat(this.container?.getAttribute('data-duration') || '0') / 1000 || (this.audio?.duration || 0);
+    const posSec = parseFloat(this.container?.getAttribute('data-position') || '0') / 1000 || (this.audio?.currentTime || 0);
+    this._syncPresenceWithRealPosition(posSec, durSec);
+
     if (!('mediaSession' in navigator)) return;
     if (['none', 'paused', 'playing'].includes(state)) {
       navigator.mediaSession.playbackState = state;
@@ -732,12 +740,12 @@ export class PreviewPlayer {
     if (!('wakeLock' in navigator)) return;
     try {
       this.wakeLock = await navigator.wakeLock.request('screen');
-    } catch (e) {}
+    } catch (e) { }
   }
 
   _releaseWakeLock() {
     if (this.wakeLock) {
-      this.wakeLock.release().catch(() => {});
+      this.wakeLock.release().catch(() => { });
       this.wakeLock = null;
     }
   }
@@ -747,13 +755,13 @@ export class PreviewPlayer {
     if (btn) {
       try {
         setPlayerIcon(btn, isPlaying ? 'pause' : 'play');
-      } catch (_) {}
+      } catch (_) { }
       btn.title = isPlaying ? 'Pause' : 'Play';
       btn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
     }
     const icon = this.playIcon || document.getElementById('am-preview-play-icon');
     if (icon) {
-      icon.src = isPlaying ? 'icons/play.png' : 'icons/paused.png';
+      icon.src = isPlaying ? 'icons/paused.png' : 'icons/play.png';
       icon.alt = isPlaying ? 'Pause' : 'Play';
     }
     if (this.container) {
@@ -762,14 +770,6 @@ export class PreviewPlayer {
     }
   }
 
-  _formatTime(sec) {
-    const s = Math.floor(sec || 0);
-    const m = Math.floor(s / 60);
-    const rem = s % 60;
-    return `${m}:${rem < 10 ? '0' : ''}${rem}`;
-  }
-
-  /** Seek the full player (iframe) or local preview audio to positionMs. */
   _seekTo(positionMs) {
     const drawerIframe = document.getElementById('player-drawer-iframe');
     const durMs = parseFloat(this.container?.getAttribute('data-duration') || '0');
@@ -778,12 +778,11 @@ export class PreviewPlayer {
     } else if (this.audio.duration && Number.isFinite(this.audio.duration)) {
       this.audio.currentTime = Math.max(0, Math.min(positionMs / 1000, this.audio.duration));
     }
-    // Optimistically reflect the seek target so the UI feels instant
     const targetDur = durMs > 0 ? durMs : (this.audio.duration * 1000 || positionMs);
     if (targetDur > 0) this._setProgressUI(positionMs, targetDur);
+    this._syncPresenceWithRealPosition(positionMs / 1000, targetDur / 1000);
   }
 
-  /** Single place that paints position/duration to the inset progress bar. */
   _setProgressUI(positionMs, durationMs) {
     const pos = Math.max(0, positionMs || 0);
     const dur = Math.max(0, durationMs || 0);
@@ -795,11 +794,6 @@ export class PreviewPlayer {
     }
   }
 
-  /**
-   * Start preview playback of an entire album
-   * @param {Object} albumData - Album response containing raw_data / parsed_tracks
-   * @param {number} startIndex - Starting track index
-   */
   playAlbum(albumData, startIndex = 0) {
     const albumObj = albumData?.raw_data?.data?.[0] || albumData?.data?.[0] || albumData?.results?.albums?.data?.[0] || albumData || {};
     const attr = albumObj.attributes || albumObj;
@@ -848,9 +842,6 @@ export class PreviewPlayer {
     this.loadCurrentTrack(true);
   }
 
-  /**
-   * Play a specific track or custom track list
-   */
   playTrack(track, queue = []) {
     if (queue && queue.length > 0) {
       this.queue = queue;
@@ -906,24 +897,17 @@ export class PreviewPlayer {
 
     if (!this.container) this._initDOM();
 
-    // Update UI elements
     if (this.artEl) this.artEl.src = track.artUrl || '';
     if (this.titleEl) this.titleEl.textContent = track.title || 'Track';
     this._updateSubtitleLinks(track.artist, track.album, track.id || track.amTrackId);
 
-    // Highlight row in active album grid
     this._highlightTrackRow(track.id);
 
-    // Update Dolby Atmos badge in preview player if track has spatial / dolby audio traits
     if (this.dolbyBadge) {
       const isDolby = track.audioTraits?.includes('spatial') || track.audioTraits?.includes('dolby-atmos') || track.audioTraits?.includes('atmos');
       this.dolbyBadge.style.display = isDolby ? 'inline-flex' : 'none';
     }
 
-    // Update MediaSession with song metadata
-    this._updateMediaSessionMetadata(track);
-
-    // Show mini player and update data attributes for presence detection
     if (this.container) {
       this.container.style.display = 'block';
       this.container.classList.remove('hidden');
@@ -936,12 +920,9 @@ export class PreviewPlayer {
       this.container.setAttribute('data-position', '0');
       if (track.durationMs && track.durationMs > 0) {
         this.container.setAttribute('data-duration', String(track.durationMs));
-        if (this.durTimeEl) this.durTimeEl.textContent = this._formatTime(track.durationMs / 1000);
-        if (this.currTimeEl) this.currTimeEl.textContent = '0:00';
       }
     }
 
-    // Save to localStorage as last played track
     try {
       localStorage.setItem('lyricsflow_last_played_track', JSON.stringify({
         id: track.id,
@@ -952,36 +933,32 @@ export class PreviewPlayer {
         previewUrl: track.previewUrl,
         durationMs: track.durationMs
       }));
-    } catch (_) {}
+    } catch (_) { }
 
     this.isPlaying = !!autoPlay;
     this._updatePlayButton(!!autoPlay);
-    // Reset AeroUI progress to 0 with the new track duration
+    this._updateMediaSessionMetadata(track);
     this.isScrubbing = false;
     this.scrubPositionMs = 0;
     this._setProgressUI(0, track.durationMs || 30000);
 
-    // Pass full queue to player.html in iframe so audio plays via the full audio graph
     (async () => {
       try {
-        const { clearQueue, addTrackToQueue, setCurrentIndex } = await import('./router.js');
-        await clearQueue();
+        const { bulkReplaceQueue, setCurrentIndex } = await import('./router.js');
         const fullQueue = (this.queue && this.queue.length > 0) ? this.queue : [track];
-        for (let qi = 0; qi < fullQueue.length; qi++) {
-          const item = fullQueue[qi];
-          await addTrackToQueue(null, {
-            name: item.title || item.name || 'Track',
-            artist: item.artist || item.artistName || 'Artist',
-            album: item.album || item.collectionName || '',
-            albumId: item.albumId || null,
-            artistId: item.artistId || null,
-            artUrl: item.artUrl || item.artworkUrlLarge || item.artworkUrl100 || '',
-            type: 'audio/mp4',
-            ttml: item.ttml || '__AUTO_FETCH__',
-            amTrackId: item.id || item.trackId,
-            audioTraits: item.audioTraits || []
-          });
-        }
+        const queuePayload = fullQueue.map(item => ({
+          name: item.title || item.name || 'Track',
+          artist: item.artist || item.artistName || 'Artist',
+          album: item.album || item.collectionName || '',
+          albumId: item.albumId || null,
+          artistId: item.artistId || null,
+          artUrl: item.artUrl || item.artworkUrlLarge || item.artworkUrl100 || '',
+          type: 'audio/mp4',
+          ttml: item.ttml || '__AUTO_FETCH__',
+          amTrackId: item.id || item.trackId,
+          audioTraits: item.audioTraits || []
+        }));
+        await bulkReplaceQueue(queuePayload);
         setCurrentIndex(this.currentIndex);
 
         const drawerIframe = document.getElementById('player-drawer-iframe');
@@ -1001,6 +978,7 @@ export class PreviewPlayer {
     }
     this.isPlaying = true;
     this._updatePlayButton(true);
+    this._updateMediaSessionState('playing');
   }
 
   pause() {
@@ -1010,6 +988,7 @@ export class PreviewPlayer {
     }
     this.isPlaying = false;
     this._updatePlayButton(false);
+    this._updateMediaSessionState('paused');
   }
 
   togglePlay() {
@@ -1022,7 +1001,7 @@ export class PreviewPlayer {
     if (this.currentIndex < this.queue.length - 1) {
       this.currentIndex++;
     } else {
-      this.currentIndex = 0; // loop around
+      this.currentIndex = 0;
     }
     this.loadCurrentTrack(true);
   }
@@ -1055,9 +1034,6 @@ export class PreviewPlayer {
     }
   }
 
-  /**
-   * Play an audio ArrayBuffer directly (using metadata-parser)
-   */
   async playBuffer(buffer, filename = 'Audio Track') {
     const meta = await parseAudioMetadata(buffer, filename);
     const blob = new Blob([buffer], { type: 'audio/mpeg' });
@@ -1093,6 +1069,5 @@ export class PreviewPlayer {
   }
 }
 
-// Global Singleton Instance
 export const previewPlayer = new PreviewPlayer();
 window.lyricsflowPreviewPlayer = previewPlayer;

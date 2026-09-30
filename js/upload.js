@@ -1,5 +1,6 @@
 import { showToast } from './toast.js';
-import { addTrackToQueue, clearQueue, setCurrentIndex, getPlaylists, createPlaylist, addTrackToPlaylist, getPlaylistTracks, deletePlaylist, updatePlaylistTrack, findTrackInPlaylist } from './router.js';
+import { aeroPrompt, aeroConfirm } from './aero-dialog.js';
+import { addTrackToQueue, clearQueue, bulkReplaceQueue, setCurrentIndex, getPlaylists, createPlaylist, addTrackToPlaylist, getPlaylistTracks, deletePlaylist, updatePlaylistTrack, findTrackInPlaylist } from './router.js';
 import { parseAudioMetadata } from './metadata-parser.js';
 import { robustFetch } from './network-utils.js';
 import { parseAmpResponse, resolveArtworkUrl } from './amp-parser.js';
@@ -76,7 +77,7 @@ function cleanArtworkUrl(url, w = 300, h = 300, format = null) {
   if (w > 100 && /\/\d+x\d+bb\./.test(cleaned)) {
     cleaned = cleaned.replace(/\/\d+x\d+bb\./, `/${w}x${h}bb.`);
   }
-  if (!/^https?:\/\//i.test(cleaned)) return '';
+  if (!/^https?:\/\//i.test(cleaned) && !/^(icons\/|\/|data:image\/|blob:)/i.test(cleaned) && !cleaned.endsWith('.png') && !cleaned.endsWith('.svg') && !cleaned.endsWith('.jpg') && !cleaned.endsWith('.jpeg')) return '';
   return cleaned.replace(/["'<>\s]/g, c => encodeURIComponent(c));
 }
 
@@ -129,7 +130,7 @@ async function playHlsStream(videoEl, streamUrl, { autoplay = true, isMuted = fa
   if (videoEl._hlsInstance) {
     try {
       videoEl._hlsInstance.destroy();
-    } catch (_) {}
+    } catch (_) { }
     videoEl._hlsInstance = null;
   }
 
@@ -164,7 +165,7 @@ async function playHlsStream(videoEl, streamUrl, { autoplay = true, isMuted = fa
             hls.destroy();
             videoEl._hlsInstance = null;
             videoEl.src = streamUrl;
-            if (autoplay) videoEl.play().catch(() => {});
+            if (autoplay) videoEl.play().catch(() => { });
           }
         });
         return;
@@ -545,8 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: title || 'Lyricsflow',
-          text: text || title || 'Check this out on Lyricsflow',
+          title: title || 'LyricsFlow',
+          text: text || title || 'Check this out on LyricsFlow',
           url: fullUrl
         });
         return;
@@ -654,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
           mainEl.style.setProperty('--am-page-theme-bg', `radial-gradient(ellipse 110% 70% at 50% -10%, rgba(${dr}, ${dg}, db, 0.45) 0%, rgba(${Math.round(dr * 0.4)}, ${Math.round(dg * 0.4)}, ${Math.round(db * 0.4)}, 0.2) 60%, #0a0a0a 100%)`);
           mainEl.style.setProperty('--am-page-theme-accent', `rgb(${dr}, ${dg}, ${db})`);
         }
-      } catch (_) {}
+      } catch (_) { }
     };
     img.src = artUrl;
   }
@@ -901,7 +902,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const doc = new DOMParser().parseFromString(ttml, 'application/xml');
           const pEls = Array.from(doc.querySelectorAll('p')).slice(0, 4);
           lyricsPreviewText = pEls.map(p => p.textContent.trim()).filter(Boolean).join('\n');
-        } catch (_) {}
+        } catch (_) { }
       }
 
       const creditArtists = resources['credit-artists'] || {};
@@ -1106,7 +1107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isNaN(d.getTime())) {
           formattedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Build metadata subtitle: Album • Artist • Date
@@ -1248,7 +1249,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             otherAlbums = data.data || [];
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       if (otherAlbums.length === 0 && artistName) {
@@ -1258,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const sData = await sRes.json();
             otherAlbums = sData.results?.albums?.data || [];
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       const filtered = otherAlbums.filter(a => String(a.id) !== String(currentAlbumId));
@@ -1566,19 +1567,19 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="am-cards-horizontal-scroll" id="new-shelf-${sIdx}">
               ${resolved.map((item, i) => {
-                const attr = item.attributes || item || {};
-                const rawArt = attr.artwork?.url || attr.editorialArtwork?.bannerUber?.url || attr.editorialArtwork?.storeArtworkUber?.url;
-                const art = cleanArtworkUrl(rawArt, 400, 400);
-                const name = attr.name || attr.title || 'Release';
-                const sub = attr.artistName || attr.curatorName || (attr.genreNames && attr.genreNames[0]) || '';
-                return `
+          const attr = item.attributes || item || {};
+          const rawArt = attr.artwork?.url || attr.editorialArtwork?.bannerUber?.url || attr.editorialArtwork?.storeArtworkUber?.url;
+          const art = cleanArtworkUrl(rawArt, 400, 400);
+          const name = attr.name || attr.title || 'Release';
+          const sub = attr.artistName || attr.curatorName || (attr.genreNames && attr.genreNames[0]) || '';
+          return `
                   <div class="am-standard-media-card animate-fade" data-type="${item.type}" data-id="${item.id}" data-idx="${i}">
                     <img src="${art}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art" onerror="this.src='favicon.svg'">
                     <div class="am-media-card-title">${escapeHTML(name)}</div>
                     <div class="am-media-card-sub">${escapeHTML(sub)}</div>
                   </div>
                 `;
-              }).join('')}
+        }).join('')}
             </div>
           </div>
         `;
@@ -1818,7 +1819,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         const cardsHTML = await Promise.all(playlists.map(async (p, i) => {
           const pTracks = await getPlaylistTracks(p.id);
-          const firstArt = pTracks[0]?.artUrl || 'favicon.svg';
+          const firstArt = (p.name === 'Favorites' ? 'icons/favorites-playlist.png' : null) || p.coverUrl || pTracks[0]?.artUrl || (p.name === 'Favorites' ? 'icons/favorites-playlist.png' : 'favicon.svg');
           return `
             <div class="am-standard-media-card animate-fade" data-id="${p.id}" data-idx="${i}">
               <img src="${cleanArtworkUrl(firstArt, 300, 300)}" loading="lazy" referrerpolicy="no-referrer" class="am-media-card-art">
@@ -1865,8 +1866,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const hubCreateBtn = document.getElementById('hub-create-playlist-btn');
     if (hubCreateBtn) {
-      hubCreateBtn.onclick = () => {
-        const name = prompt(t('prompt_enter_playlist_name'));
+      hubCreateBtn.onclick = async () => {
+        const name = await aeroPrompt({
+          title: t('prompt_enter_playlist_name'),
+          placeholder: 'Playlist Name'
+        });
         if (name && name.trim()) {
           createPlaylist(name.trim()).then(() => renderLibraryHubPage());
         }
@@ -1945,7 +1949,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const itemsHTML = await Promise.all(userPlaylists.map(async p => {
         const tracks = await getPlaylistTracks(p.id);
-        const firstArt = tracks[0]?.artUrl || 'favicon.svg';
+        const firstArt = (p.name === 'Favorites' ? 'icons/favorites-playlist.png' : null) || p.coverUrl || tracks[0]?.artUrl || (p.name === 'Favorites' ? 'icons/favorites-playlist.png' : 'favicon.svg');
         return `
           <div class="am-sidebar-playlist-item" data-id="${p.id}">
             <img src="${cleanArtworkUrl(firstArt, 60, 60)}" loading="lazy" referrerpolicy="no-referrer" class="am-sidebar-playlist-cover" alt="">
@@ -2392,7 +2396,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 previewPlayer.queue.push(...addQueue);
               }
             }
-          } catch (_) {}
+          } catch (_) { }
         })();
       };
     });
@@ -2575,103 +2579,99 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       let data = {};
       const customUrl = options.customUrl;
+      const targetSlug = toSlug(videoTitle || 'video');
+
+      // Determine Apple Music URL for streaming via gamdl mode
+      let appleStreamUrl = '';
       if (customUrl && typeof customUrl === 'string' && customUrl.startsWith('http')) {
-        // Direct stream or resolve via /stream or /musicvideo?url=
-        try {
-          const res = await fetch(`${API_BASE}/musicvideo?url=${encodeURIComponent(customUrl)}&l=${getCurrentLang()}`);
-          if (res.ok) data = await res.json();
-        } catch (_) {}
-        if (!data.video_url && !data.preview_url && !data.hls_url) {
-          data.video_url = `${API_BASE}/stream?url=${encodeURIComponent(customUrl)}&quality=1080p`;
+        // If it's a post URL: https://music.apple.com/.../post/<id>
+        if (customUrl.includes('/post/')) {
+          const match = customUrl.match(/\/post\/([^\/\?#]+)/);
+          const postId = match ? match[1] : (vidId || '');
+          appleStreamUrl = `https://music.apple.com/kz/post/${postId}`;
+        } else if (customUrl.includes('/music-video/')) {
+          const match = customUrl.match(/\/music-video\/([^\/]+)\/([^\/\?#]+)/);
+          if (match) {
+            appleStreamUrl = `https://music.apple.com/kz/music-video/${match[1]}/${match[2]}`;
+          } else {
+            const idMatch = customUrl.match(/\/music-video\/([^\/\?#]+)/);
+            appleStreamUrl = `https://music.apple.com/kz/music-video/${targetSlug}/${idMatch ? idMatch[1] : vidId}`;
+          }
+        } else {
+          appleStreamUrl = customUrl;
         }
-      } else {
+      } else if (String(vidId).startsWith('http')) {
+        if (String(vidId).includes('/post/')) {
+          const match = String(vidId).match(/\/post\/([^\/\?#]+)/);
+          appleStreamUrl = `https://music.apple.com/kz/post/${match ? match[1] : ''}`;
+        } else {
+          const match = String(vidId).match(/\/music-video\/([^\/]+)\/([^\/\?#]+)/);
+          if (match) {
+            appleStreamUrl = `https://music.apple.com/kz/music-video/${match[1]}/${match[2]}`;
+          } else {
+            const idMatch = String(vidId).match(/\/music-video\/([^\/\?#]+)/);
+            appleStreamUrl = `https://music.apple.com/kz/music-video/${targetSlug}/${idMatch ? idMatch[1] : vidId}`;
+          }
+        }
+      } else if (vidId) {
+        // Raw video or post ID
+        if (options.isPost || (customUrl && customUrl.includes('/post/'))) {
+          appleStreamUrl = `https://music.apple.com/kz/post/${vidId}`;
+        } else {
+          appleStreamUrl = `https://music.apple.com/kz/music-video/${targetSlug}/${vidId}`;
+        }
+      }
+
+      // First fetch metadata (title, artist, download link) if needed
+      try {
         const queryParam = (vidId && String(vidId).startsWith('http')) ? `url=${encodeURIComponent(vidId)}` : `song=${vidId}`;
         const res = await fetch(`${API_BASE}/musicvideo?${queryParam}&l=${getCurrentLang()}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        data = await res.json();
-      }
+        if (res.ok) data = await res.json();
+      } catch (_) { }
 
       prepOverlay.classList.remove('active');
 
-      const videoUrl = data.video_url || data.preview_url || data.hls_url;
       const title = data.title || data.name || videoTitle || 'Video';
       const artist = data.artist || data.artist_name || videoArtist || '';
-      const downloadParam = (vidId && String(vidId).startsWith('http')) ? `url=${encodeURIComponent(vidId)}` : `song=${vidId}`;
-      const downloadUrl = `${API_BASE}/musicvideo/download?${downloadParam}&quality=1080&l=${getCurrentLang()}`;
+      const artUrl = data.artwork_url || data.artwork || (data.attributes && data.attributes.artwork ? resolveArtworkUrl(data.attributes.artwork, 600) : null) || '';
+
+      // Target stream URL with gamdl mode:
+      // Music video: https://api.spicyamll.online/stream?url=https://music.apple.com/kz/music-video/<slug>/<id>&mode=gamdl&fallback=false&websupport=false
+      // Post video: https://api.spicyamll.online/stream?url=https://music.apple.com/kz/post/<id>&mode=gamdl&fallback=false&websupport=false
+      let videoUrl = data.video_url || data.preview_url || data.hls_url;
+      if (appleStreamUrl) {
+        videoUrl = `${API_BASE}/stream?url=${encodeURIComponent(appleStreamUrl)}&mode=gamdl&fallback=false&websupport=false`;
+      }
 
       if (!options.skipUrlSync) {
         syncUrl(`/video/${toSlug(title)}/${vidId}`, '', options.replaceUrl);
       }
 
-      let videoModal = document.getElementById('music-video-modal');
-      if (!videoModal) {
-        videoModal = document.createElement('div');
-        videoModal.id = 'music-video-modal';
-        videoModal.className = 'modal-backdrop animate-fade';
-        videoModal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);backdrop-filter:blur(20px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
-        videoModal.innerHTML = `
-          <div class="video-modal-content" style="max-width:840px;width:100%;background:#18181b;border:1px solid rgba(255,255,255,0.12);border-radius:18px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.8);position:relative;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
-              <div>
-                <h3 id="mv-modal-title" style="margin:0;font-size:1.1rem;color:#fff;font-weight:600;">${escapeHTML(title)}</h3>
-                <p id="mv-modal-artist" style="margin:2px 0 0 0;font-size:0.85rem;color:#a1a1aa;">${escapeHTML(artist)}</p>
-              </div>
-              <div style="display:flex;align-items:center;gap:10px;">
-                <a id="mv-modal-download" href="${downloadUrl}" download="${escapeHTML(title)}.mp4" style="background:rgba(255,255,255,0.12);color:#fff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:0.85rem;display:flex;align-items:center;gap:6px;cursor:pointer;transition:background 0.2s;">
-                  <img src="icons/download.png" style="width:14px;height:14px;filter:invert(1);" alt="Download">
-                  <span>${t('loading_download')}</span>
-                </a>
-                <button id="mv-modal-close" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
-              </div>
-            </div>
-            <div style="position:relative;padding-top:56.25%;background:#000;">
-              <video id="mv-modal-video" controls autoplay playsinline style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;"></video>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(videoModal);
+      // Play directly in player.html (Apple Music full-screen player experience)
+      const videoTrack = {
+        name: title,
+        artist: artist,
+        album: data.album || 'Music Video',
+        artUrl: artUrl,
+        type: 'video/mp4',
+        isVideo: true,
+        videoUrl: videoUrl,
+        amTrackId: String(vidId || ''),
+        duration: data.duration || 0
+      };
 
-        videoModal.querySelector('#mv-modal-close').onclick = () => {
-          const v = videoModal.querySelector('#mv-modal-video');
-          if (v) {
-            v.pause();
-            if (v._hlsInstance) {
-              try { v._hlsInstance.destroy(); } catch (_) {}
-              v._hlsInstance = null;
-            }
-            v.src = '';
-          }
-          videoModal.classList.add('hidden');
-        };
+      await bulkReplaceQueue([videoTrack]);
+      setCurrentIndex(0);
 
-        videoModal.onclick = (e) => {
-          if (e.target === videoModal) {
-            const v = videoModal.querySelector('#mv-modal-video');
-            if (v) {
-              v.pause();
-              if (v._hlsInstance) {
-                try { v._hlsInstance.destroy(); } catch (_) {}
-                v._hlsInstance = null;
-              }
-              v.src = '';
-            }
-            videoModal.classList.add('hidden');
-          }
-        };
+      const drawer = document.getElementById('player-drawer');
+      const drawerIframe = document.getElementById('player-drawer-iframe');
+      if (drawer && drawerIframe) {
+        drawerIframe.src = 'player.html';
+        drawer.classList.add('open');
+        document.body.classList.add('player-drawer-open');
+      } else {
+        window.location.href = 'player.html';
       }
-
-      videoModal.querySelector('#mv-modal-title').textContent = title;
-      videoModal.querySelector('#mv-modal-artist').textContent = artist;
-      const downloadLink = videoModal.querySelector('#mv-modal-download');
-      if (downloadLink) {
-        downloadLink.href = downloadUrl;
-        downloadLink.setAttribute('download', `${title}.mp4`);
-      }
-      const videoEl = videoModal.querySelector('#mv-modal-video');
-      if (videoUrl) {
-        playHlsStream(videoEl, videoUrl, { autoplay: true, isMuted: false });
-      }
-      videoModal.classList.remove('hidden');
 
     } catch (err) {
       console.error("Music video load failed:", err);
@@ -3749,7 +3749,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const d = new Date(dateStr);
             monthStr = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
             dayStr = d.getDate();
-          } catch (_) {}
+          } catch (_) { }
         }
         const concertUrl = cAttr.url || cAttr.ticketUrl || cAttr.eventUrl || (cAttr.externalUrls?.ticketmaster) || (cAttr.externalUrls?.bandsintown) || '';
         return `
@@ -4791,7 +4791,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mobShare.onclick = () => {
           shareEntity({
             title: name,
-            text: `Listen to ${name} on Lyricsflow`,
+            text: `Listen to ${name} on LyricsFlow`,
             url: `/playlist/${toSlug(name)}/${playlistId}`
           });
         };
@@ -4940,7 +4940,7 @@ document.addEventListener('DOMContentLoaded', () => {
             previewPlayer.queue.push(...additional);
           }
         }
-      } catch (_) {}
+      } catch (_) { }
     })();
   }
   window.queueContextualWithSimilar = queueContextualWithSimilar;
@@ -4982,7 +4982,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const { clearQueue, addTrackToQueue, setCurrentIndex } = await import('./router.js');
       await clearQueue();
-      
+
       // Determine full track list to seed
       const queueToSeed = (queue && queue.length > 0) ? queue : [{
         id: songId,
@@ -5112,7 +5112,7 @@ document.addEventListener('DOMContentLoaded', () => {
               artistId = songData.relationships?.artists?.data?.[0]?.id || null;
             }
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       // Seamless fallback to Apple iTunes lookup API if spicyamll API returned 404
@@ -5232,7 +5232,7 @@ document.addEventListener('DOMContentLoaded', () => {
               const data = await res.json();
               similarSongs = data.resources?.songs ? Object.values(data.resources.songs) : (data.views?.['similar-songs']?.data || []);
             }
-          } catch (_) {}
+          } catch (_) { }
         }
 
         // 2. Fallback search by artist if similar-songs view returned empty
@@ -6141,14 +6141,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let clientX = e.clientX || e.pageX || 100;
       let clientY = e.clientY || e.pageY || 100;
-      
+
       // Calculate top so that if clicked near bottom (e.g. from the mini-player), it pops upwards
       const menuHeight = 240;
       let top = clientY;
       if (clientY + menuHeight > window.innerHeight - 20) {
         top = Math.max(12, clientY - menuHeight);
       }
-      
+
       songContextMenu.style.left = `${Math.min(clientX, window.innerWidth - 220)}px`;
       songContextMenu.style.top = `${top}px`;
       songContextMenu.classList.remove('hidden');
@@ -6331,7 +6331,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     shareEntity({
       title: `${title} - ${artist}`,
-      text: `Listen to "${title}" by ${artist} on Lyricsflow`,
+      text: `Listen to "${title}" by ${artist} on LyricsFlow`,
       url: url
     });
   };
@@ -6404,7 +6404,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (modalCreatePlaylistBtn) {
     modalCreatePlaylistBtn.onclick = async () => {
-      const name = prompt(t('prompt_enter_playlist_name'));
+      const name = await aeroPrompt({
+        title: t('prompt_enter_playlist_name'),
+        placeholder: 'Playlist Name'
+      });
       if (name && name.trim()) {
         const id = await createPlaylist(name.trim());
         updateSidebarPlaylists();
@@ -6428,12 +6431,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Playlists View (User Playlists - All Playlists Grid Screenshot 2) ──
   async function renderPlaylistsPage() {
     if (!playlistsGrid) return;
+    const hero = document.querySelector('#page-playlists .am-hero');
+    if (hero) hero.classList.remove('is-detail');
     playlistDetail.classList.add('hidden');
     playlistsGrid.classList.remove('hidden');
     playlistsGrid.innerHTML = `<div class="am-loading-msg">${t('loading_playlists')}</div>`;
 
     const playlists = await getPlaylists();
-    const displayList = playlists.filter(p => p.name !== 'Favorites');
+    const displayList = playlists;
 
     if (displayList.length === 0) {
       playlistsGrid.innerHTML = `<div class="am-error-msg">${t('playlists_empty')}</div>`;
@@ -6442,7 +6447,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const cardsHTML = await Promise.all(displayList.map(async p => {
       const tracks = await getPlaylistTracks(p.id);
-      const firstArt = p.coverUrl || tracks[0]?.artUrl || 'favicon.svg';
+      const firstArt = (p.name === 'Favorites' ? 'icons/favorites-playlist.png' : null) || p.coverUrl || tracks[0]?.artUrl || (p.name === 'Favorites' ? 'icons/favorites-playlist.png' : 'favicon.svg');
       return `
         <div class="am-playlist-card animate-fade" data-id="${p.id}">
           <div class="am-playlist-card-art-wrap">
@@ -6453,7 +6458,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="am-playlist-card-title">${escapeHTML(p.name)}</div>
           <div class="am-playlist-card-curator">Apple Music</div>
-          <button class="playlist-delete-btn" data-id="${p.id}" title="Delete Playlist">✕</button>
+          ${p.name !== 'Favorites' ? `<button class="playlist-delete-btn" data-id="${p.id}" title="Delete Playlist">✕</button>` : ''}
         </div>
       `;
     }));
@@ -6466,12 +6471,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const pId = parseInt(card.dataset.id, 10);
         if (e.target.closest('.playlist-delete-btn')) {
           e.stopPropagation();
-          if (confirm(t('prompt_confirm_delete_playlist'))) {
-            deletePlaylist(pId).then(() => {
-              renderPlaylistsPage();
-              updateSidebarPlaylists();
-            });
-          }
+          aeroConfirm({
+            title: 'Delete Playlist',
+            message: t('prompt_confirm_delete_playlist'),
+            confirmText: 'Delete',
+            isDestructive: true
+          }).then(confirmed => {
+            if (confirmed) {
+              deletePlaylist(pId).then(() => {
+                renderPlaylistsPage();
+                updateSidebarPlaylists();
+              });
+            }
+          });
           return;
         }
         if (e.target.closest('.am-playlist-card-play-hover')) {
@@ -6502,6 +6514,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function openLocalPlaylistDetail(playlistId) {
+    const hero = document.querySelector('#page-playlists .am-hero');
+    if (hero) hero.classList.add('is-detail');
     playlistsGrid.classList.add('hidden');
     playlistDetail.classList.remove('hidden');
 
@@ -6510,7 +6524,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const plName = playlist?.name || 'Playlist';
 
     const tracks = await getPlaylistTracks(playlistId);
-    const firstArt = playlist?.coverUrl || tracks[0]?.artUrl || 'favicon.svg';
+    const isFav = plName === 'Favorites' || playlist?.name === 'Favorites';
+    const firstArt = (isFav ? 'icons/favorites-playlist.png' : null) || playlist?.coverUrl || tracks[0]?.artUrl || (isFav ? 'icons/favorites-playlist.png' : 'favicon.svg');
+    applyPageThemeColor(firstArt);
 
     playlistDetail.innerHTML = `
       <div class="am-playlist-detail-header">
@@ -6549,16 +6565,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <div class="am-tracklist" id="local-pl-tracks-list">
         ${tracks.length === 0 ? `<p class="am-empty-msg">${t('playlists_empty_tracks')}</p>` : tracks.map((t, idx) => `
-          <div class="am-track-row" data-id="${t.id}" data-idx="${idx}">
+          <div class="am-track-row am-playlist-table-row" data-id="${t.id}" data-idx="${idx}">
             <div class="am-track-num">${idx + 1}</div>
-            <img src="${cleanArtworkUrl(t.artUrl || t.artworkUrl100, 60, 60)}" class="am-song-row-art" loading="lazy" alt="">
-            <div class="am-track-info">
-              <div class="am-track-title">${escapeHTML(t.name || t.title || 'Track')}</div>
-              <div class="am-track-sub">${escapeHTML(t.artist || '')}</div>
+            <div class="am-track-song-cell" style="flex: 2; display: flex; align-items: center; gap: 12px; min-width: 0;">
+              <img src="${cleanArtworkUrl(t.artUrl || t.artworkUrl100, 60, 60)}" class="am-song-row-art" loading="lazy" alt="">
+              <div class="am-track-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(t.name || t.title || 'Track')}</div>
             </div>
-            <div style="flex: 1.5; color: rgba(255,255,255,0.7); font-size: 0.9rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(t.album || '')}</div>
-            <div class="am-track-duration">3:30</div>
-            <button class="am-song-more-btn" data-id="${t.id}">•••</button>
+            <div class="am-track-artist-cell" style="flex: 1.5; color: rgba(255,255,255,0.7); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px;">${escapeHTML(t.artist || '')}</div>
+            <div class="am-track-album-cell" style="flex: 1.5; color: rgba(255,255,255,0.55); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px;">${escapeHTML(t.album || '')}</div>
+            <div class="am-track-duration" style="width: 70px; text-align: right; color: rgba(255,255,255,0.45); font-size: 0.82rem; font-variant-numeric: tabular-nums;">${t.duration_ms ? formatDuration(t.duration_ms) : '3:30'}</div>
+            <div style="width: 40px; text-align: center;">
+              <button class="am-song-more-btn" data-id="${t.id}">•••</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -6582,7 +6600,10 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     const backBtn = playlistDetail.querySelector('#local-playlist-back-btn');
-    if (backBtn) backBtn.onclick = () => renderPlaylistsPage();
+    if (backBtn) backBtn.onclick = () => {
+      clearPageThemeColor();
+      renderPlaylistsPage();
+    };
 
     const playBtn = playlistDetail.querySelector('#local-pl-play-btn');
     if (playBtn && tracks.length > 0) {
@@ -6631,6 +6652,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const idx = parseInt(row.dataset.idx, 10);
         const tr = tracks[idx];
         if (!tr) return;
+
+        if (e.target.closest('.am-song-more-btn')) {
+          e.stopPropagation();
+          showContextMenu(e, {
+            trackId: tr.amTrackId || tr.id,
+            trackName: tr.name || tr.title,
+            artistName: tr.artist,
+            collectionName: tr.album || plName,
+            albumId: tr.albumId || null,
+            artistId: tr.artistId || null,
+            artworkUrl100: cleanArtworkUrl(tr.artUrl, 100, 100)
+          });
+          return;
+        }
+
         queueContextualWithSimilar({
           trackId: tr.amTrackId || tr.id,
           trackName: tr.name || tr.title,
@@ -6721,7 +6757,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (createPlaylistBtn) {
     createPlaylistBtn.onclick = async () => {
-      const name = prompt(t('prompt_enter_playlist_name'));
+      const name = await aeroPrompt({
+        title: t('prompt_enter_playlist_name'),
+        placeholder: 'Playlist Name'
+      });
       if (name && name.trim()) {
         await createPlaylist(name.trim());
         renderPlaylistsPage();
@@ -7034,7 +7073,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pShareBtn.onclick = () => {
           shareEntity({
             title: name,
-            text: `Listen to "${name}" playlist on Lyricsflow`,
+            text: `Listen to "${name}" playlist on LyricsFlow`,
             url: `/playlist/${toSlug(name)}/${playlistId}`
           });
         };
@@ -7293,7 +7332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let recent = JSON.parse(localStorage.getItem('lyricsflow_recent_tracks') || '[]');
     recent = recent.filter(t => String(t.trackId || t.id || t.amTrackId) !== String(trackId));
-    
+
     // Normalize properties so Recently Played, Algorithm, and History render completely with artwork and names
     const normalized = {
       id: trackId,

@@ -1,0 +1,132 @@
+/**
+ * LyricsFlow - Electron Desktop Styling
+ * macOS style traffic lights for Windows, drag bars, and frameless padding
+ */
+
+/* Drag Bar at the top of the sidebar */
+.is-electron .am-sidebar {
+  padding-top: 0 !important;
+}
+
+.electron-drag-bar {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  width: 100%;
+  padding-left: 19px;
+  padding-right: 12px;
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+  user-select: none;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* Disable drag bar when player drawer is open so controls in player.html are clickable */
+body:has(#player-drawer.open) .electron-drag-bar,
+body.player-drawer-open .electron-drag-bar,
+.player-drawer.open~* .electron-drag-bar {
+  -webkit-app-region: no-drag !important;
+  pointer-events: none !important;
+}
+
+/* On macOS, system traffic lights are native at x:19, y:19 */
+.platform-darwin .electron-drag-bar {
+  height: 52px;
+}
+
+/* Top bar spacer also draggable */
+.am-desktop-top-bar {
+  -webkit-app-region: drag !important;
+}
+
+/* Ensure interactive elements in top bar aren't dragged */
+.am-desktop-top-bar * {
+  -webkit-app-region: no-drag;
+}
+
+/* Windows Traffic Light Container (matching Wave style) */
+.electron-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.electron-window-control {
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  background: #ff5f57;
+  color: rgba(0, 0, 0, 0.55);
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  -webkit-user-select: none;
+  user-select: none;
+  outline: none;
+  transition: filter 0.15s ease;
+}
+
+.electron-window-control--minimize {
+  background: #febc2e;
+}
+
+.electron-window-control--maximize {
+  background: #28c840;
+}
+
+.electron-window-control:hover {
+  filter: brightness(0.92);
+}
+
+.electron-window-control-icon {
+  width: 8px;
+  height: 8px;
+  stroke: rgba(0, 0, 0, 0.7);
+  stroke-width: 2.2;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.electron-window-controls:hover .electron-window-control-icon {
+  opacity: 1;
+}
+
+/* Prevent dragging when clicking sidebar items or footer */
+.am-sidebar-nav,
+.am-sidebar-section,
+.am-sidebar-footer,
+.am-sidebar-brand {
+  -webkit-app-region: no-drag;
+}
+
+/* ── Mica & Frosted Translucent Background for index.html (macOS & Win11 Acrylic/Mica) ── */
+body.is-electron,
+.is-electron body {
+  background: rgba(16, 16, 18, 0.65) !important;
+  backdrop-filter: blur(80px) saturate(220%) !important;
+  -webkit-backdrop-filter: blur(80px) saturate(220%) !important;
+}
+
+.is-electron .am-layout {
+  background: transparent !important;
+}
+
+.is-electron .am-sidebar {
+  background: rgba(22, 22, 26, 0.45) !important;
+  backdrop-filter: blur(60px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(60px) saturate(200%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.09) !important;
+}
+
+.is-electron .am-content {
+  background: transparent !important;
+}

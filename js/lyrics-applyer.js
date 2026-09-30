@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Lyrics Applyer
+ * LyricsFlow — Lyrics Applyer
  * Builds DOM elements from parsed TTML data.
  * Port of Applyer/Synced/Syllable.ts + Line.ts
  */
@@ -71,7 +71,7 @@ function canConnectRight(str) {
 function preprocessArabicSyllables(syllables) {
   if (!syllables || syllables.length <= 1) return syllables;
   const diacriticsRegex = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E8\u06EA-\u06EC\u06ED]/;
-  
+
   const result = [];
   for (let i = 0; i < syllables.length; i++) {
     result.push({ ...syllables[i] });
@@ -80,15 +80,15 @@ function preprocessArabicSyllables(syllables) {
   for (let i = 0; i < result.length - 1; i++) {
     const cur = result[i];
     const next = result[i + 1];
-    
+
     if (!cur.IsPartOfWord) continue;
-    
+
     const curText = cur.Text ?? "";
     const nextText = next.Text ?? "";
-    
+
     const lastChar = getLastBaseArabicChar(curText);
     const firstChar = getFirstBaseArabicChar(nextText);
-    
+
     if (lastChar === 'ل' && firstChar === 'ا') {
       let alefIndex = -1;
       for (let j = 0; j < nextText.length; j++) {
@@ -97,20 +97,20 @@ function preprocessArabicSyllables(syllables) {
           break;
         }
       }
-      
+
       if (alefIndex !== -1) {
         let len = 1;
         while (alefIndex + len < nextText.length && diacriticsRegex.test(nextText[alefIndex + len])) {
           len++;
         }
-        
+
         const extracted = nextText.substring(alefIndex, alefIndex + len);
         cur.Text = curText + extracted;
         next.Text = nextText.substring(0, alefIndex) + nextText.substring(alefIndex + len);
       }
     }
   }
-  
+
   return result;
 }
 
@@ -419,7 +419,7 @@ export function applySyllableLyrics(data, lyricsContentEl) {
           const ZWJ = '\u200D';
           const prevText = iL > 0 ? ((!showTranslation && showRomanized && aL[iL - 1].RomanizedText !== undefined) ? aL[iL - 1].RomanizedText : aL[iL - 1].Text) ?? "" : "";
           const nextText = iL < aL.length - 1 ? ((!showTranslation && showRomanized && aL[iL + 1].RomanizedText !== undefined) ? aL[iL + 1].RomanizedText : aL[iL + 1].Text) ?? "" : "";
-          
+
           if (iL > 0 && aL[iL - 1]?.IsPartOfWord && canConnectLeft(prevText) && canConnectRight(displayText)) {
             visualText = ZWJ + visualText;
           }
@@ -494,16 +494,16 @@ export function applySyllableLyrics(data, lyricsContentEl) {
       }
     });
 
-function normalizeLyricText(str) {
-  if (!str) return "";
-  return str
-    .toLowerCase()
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .replace(/[\u2018\u2019']/g, '') // remove straight and curly apostrophes
-    .replace(/[.,!?;:"()[\]{}\-—–…@#$%^&*~`]/g, '')
-    .replace(/\s+/g, '') // collapse all whitespace completely so word spacing differences don't prevent match
-    .trim();
-}
+    function normalizeLyricText(str) {
+      if (!str) return "";
+      return str
+        .toLowerCase()
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/[\u2018\u2019']/g, '') // remove straight and curly apostrophes
+        .replace(/[.,!?;:"()[\]{}\-—–…@#$%^&*~`]/g, '')
+        .replace(/\s+/g, '') // collapse all whitespace completely so word spacing differences don't prevent match
+        .trim();
+    }
 
     // Determine if genuine Romanization (distinct from native text) exists
     const nativeLeadRaw = line.Lead?.Syllables ? line.Lead.Syllables.map(s => s.Text || '').join('').trim() : '';
@@ -721,9 +721,9 @@ function normalizeLyricText(str) {
 
     // Translation sub-line (only if distinct from native text AND distinct from Romanized text when normalized)
     const normTrans = normalizeLyricText(cleanLeadTranslatedText);
-    const hasDistinctTranslation = cleanLeadTranslatedText && 
-      normTrans && 
-      !matchesNative(cleanLeadTranslatedText) && 
+    const hasDistinctTranslation = cleanLeadTranslatedText &&
+      normTrans &&
+      !matchesNative(cleanLeadTranslatedText) &&
       (!lineRomanizedText || normTrans !== normalizeLyricText(lineRomanizedText));
 
     if (showTranslation && hasDistinctTranslation) {
@@ -786,7 +786,8 @@ function normalizeLyricText(str) {
           const bgWordDuration = bgWordEndTime - bgWordStartTime;
           const bgWordLetterCount = bgCombinedText.replace(/\s/g, "").length;
           const bgWordSyllableCount = bwi - bwStart;
-          const bgWordEmphasized = isLetterCapable(bgCombinedText, bgWordDuration, bgWordSyllableCount);
+          // Background vocal words should never have letter expansion/emphasis animations
+          const bgWordEmphasized = false;
 
           // Find the longest syllable in the background word
           let bgMaxDuration = -1;
@@ -911,7 +912,7 @@ function normalizeLyricText(str) {
           }
 
           bwE.classList.add("bg-word", "word");
-          
+
           if (bI === bA.length - 1) {
             bwE.classList.add("LastWordInLine");
           }
@@ -974,7 +975,7 @@ function normalizeLyricText(str) {
             const sTxtNorm = normalizeLyricText(s.Text || '');
             return sRomNorm && sRomNorm !== sTxtNorm;
           }));
-        
+
         let bgRomanText = null;
         if (bg.RomanizedText && !matchesBgNative(bg.RomanizedText)) {
           bgRomanText = bg.RomanizedText.trim();
@@ -1284,9 +1285,9 @@ export function applyStaticLyrics(data, lyricsContentEl) {
     }
 
     const normStaticTrans = normalizeLyricText(line.TranslatedText);
-    const hasStaticTrans = line.TranslatedText && 
-      normStaticTrans && 
-      normStaticTrans !== normOriginal && 
+    const hasStaticTrans = line.TranslatedText &&
+      normStaticTrans &&
+      normStaticTrans !== normOriginal &&
       (!hasStaticRom || normStaticTrans !== normStaticRom);
 
     if (showTranslation && hasStaticTrans) {

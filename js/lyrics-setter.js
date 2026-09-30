@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Lyrics Setter
+ * LyricsFlow — Lyrics Setter
  * Sets NotSung/Active/Sung status on each line/word based on audio time.
  * Port of LyricsSetter.ts
  */

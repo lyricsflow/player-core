@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Spring Physics Solver
+ * LyricsFlow — Spring Physics Solver
  * Direct port of AMLL (amll-dev/applemusic-like-lyrics) utils/spring.ts
  * Uses pushkine/spring analytical harmonic oscillator solver with delay queue & derivative velocity tracking.
  */
@@ -41,7 +41,7 @@ function solveSpring(from, velocity, to, delay = 0, params) {
     return (
       to -
       (Math.cos(t * dfm) * delta + Math.sin(t * dfm) * leftover) *
-        Math.exp(t * dm)
+      Math.exp(t * dm)
     );
   };
 }

@@ -2,11 +2,13 @@
 <html lang="en">
 
 <head>
-  <base href="/">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Lyricsflow</title>
-  <meta name="description" content="Lyricsflow — Stream, upload, and experience high-fidelity synchronized lyrics and music.">
+  <base href="/">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>LyricsFlow</title>
+  <meta name="description"
+    content="LyricsFlow — Stream, upload, and experience high-fidelity synchronized lyrics and music.">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,19 +19,32 @@
 
   <!-- AeroUI (no SRI pins: CDN tracks a mutable branch, pins break on upstream updates) -->
   <link rel="stylesheet" href="https://nurislamaibekuly.github.io/aeroui/src/aeroui.css" crossorigin="anonymous">
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/spinner/spinner.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/button/button.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/slider/slider.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/toggle/toggle.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/tooltip/tooltip.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/segmented/segmented.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/modal/modal.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/accordion/accordion.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/progress/progress.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/player-button/player-button.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/skip-label/skip-label.js" crossorigin="anonymous"></script>
-  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/elastic-slider/elastic-slider.js" crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/spinner/spinner.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/button/button.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/slider/slider.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/toggle/toggle.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/tooltip/tooltip.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/segmented/segmented.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/modal/modal.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/accordion/accordion.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/progress/progress.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/player-button/player-button.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/skip-label/skip-label.js"
+    crossorigin="anonymous"></script>
+  <script type="module" src="https://nurislamaibekuly.github.io/aeroui/src/components/elastic-slider/elastic-slider.js"
+    crossorigin="anonymous"></script>
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/upload.css">
@@ -37,19 +52,21 @@
   <link rel="stylesheet" href="css/apple-music-search.css">
   <!-- Settings Modal styling -->
   <link rel="stylesheet" href="css/settings-ui.css">
+  <link rel="stylesheet" href="css/electron-desktop.css">
 
   <!-- Favicon & Icons -->
-  <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96" />
-  <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
-  <link rel="shortcut icon" href="/favicon/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg" />
+  <link rel="shortcut icon" href="favicon/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-title" content="LyricsFlow" />
-  <link rel="manifest" href="/favicon/site.webmanifest" />
+  <link rel="manifest" href="favicon/site.webmanifest" />
 </head>
+
 <body>
   <!-- Early Theme Restoration -->
   <script>
-    (function() {
+    (function () {
       try {
         const raw = localStorage.getItem('lyricsflow_user_profile');
         if (raw) {
@@ -59,24 +76,24 @@
             if (p.audioQuality) document.documentElement.setAttribute('data-audio-quality', p.audioQuality);
           }
         }
-      } catch (_) {}
+      } catch (_) { }
     })();
   </script>
 
   <!-- Update Cache Detector -->
   <script>
-    (function() {
-      import('/js/router.js')
-        .then(function(m) {
+    (function () {
+      import('./js/router.js')
+        .then(function (m) {
           if (!m.findTrackInPlaylist) {
             showCacheModal();
           }
         })
-        .catch(function() {
+        .catch(function () {
           // Do not falsely show modal on normal page loads
         });
 
-      window.clearCacheAndReload = async function() {
+      window.clearCacheAndReload = async function () {
         const btn = document.querySelector('.lyricsflow-update-btn');
         if (btn) {
           btn.disabled = true;
@@ -201,7 +218,7 @@
     <!-- ═══ Compact Apple Music-style Sidebar ═══ -->
     <aside class="am-sidebar" id="app-sidebar">
       <div class="am-sidebar-brand">
-        <img src="images/logo.png" class="am-sidebar-logo" alt="Lyricsflow">
+        <img src="images/logo.png" class="am-sidebar-logo" alt="LyricsFlow">
       </div>
 
       <!-- Main Section -->
@@ -209,41 +226,51 @@
         <div class="am-section-label" data-i18n="nav_main">Menu</div>
         <ul class="am-sidebar-nav">
           <li class="am-nav-item" id="nav-item-home" data-page="home">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M5.93 20.16a1.94 1.94 0 0 1-1.43-.502c-.334-.335-.502-.794-.502-1.393v-7.142c0-.362.062-.688.177-.953.123-.264.326-.529.6-.75l6.145-5.157c.176-.141.344-.247.52-.318q.263-.105.564-.105c.194 0 .388.035.565.105s.352.177.52.318l6.146 5.158c.273.23.467.476.59.75.124.264.177.59.177.96v7.134c0 .59-.159 1.058-.503 1.393q-.503.503-1.428.503zm12.14-1.172q.334 0 .547-.212a.69.69 0 0 0 .22-.511v-7.142c0-.177-.026-.344-.087-.459a1 1 0 0 0-.265-.353l-6.154-5.149a.8.8 0 0 0-.177-.115.4.4 0 0 0-.15-.035.4.4 0 0 0-.158.035l-.177.115-6.145 5.15a1 1 0 0 0-.274.352 1.1 1.1 0 0 0-.088.468v7.133c0 .203.08.379.23.511a.74.74 0 0 0 .546.212zm-8.323-4.7c0-.176.062-.326.177-.432a.6.6 0 0 1 .423-.159h3.315c.176 0 .326.053.432.16s.159.255.159.431v4.973H9.756v-4.973Z">
+              </path>
             </svg>
             <span data-i18n="nav_home">Home</span>
           </li>
           <li class="am-nav-item am-nav-active" data-page="listen">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+            <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill-opacity=".95"
+                d="M17.979 18.553c.476 0 .813-.366.813-.835a.8.8 0 0 0-.235-.586l-3.45-3.457a5.6 5.6 0 0 0 1.158-3.413c0-3.098-2.535-5.633-5.633-5.633C7.542 4.63 5 7.156 5 10.262c0 3.098 2.534 5.632 5.632 5.632a5.6 5.6 0 0 0 3.274-1.055l3.472 3.472a.84.84 0 0 0 .6.242m-7.347-3.875c-2.417 0-4.416-2-4.416-4.416s2-4.417 4.416-4.417 4.417 2 4.417 4.417-2 4.416-4.417 4.416">
+              </path>
             </svg>
             <span data-i18n="nav_listen">Search</span>
           </li>
           <li class="am-nav-item" id="nav-item-new" data-page="new">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="am-nav-icon-new">
-              <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
-              <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
-              <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
-              <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+            <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill-opacity=".95"
+                d="M9.92 11.354c.966 0 1.453-.487 1.453-1.49v-3.4c0-1.004-.487-1.483-1.453-1.483H6.452C5.487 4.981 5 5.46 5 6.464v3.4c0 1.003.487 1.49 1.452 1.49zm7.628 0c.965 0 1.452-.487 1.452-1.49v-3.4c0-1.004-.487-1.483-1.452-1.483h-3.46c-.974 0-1.46.479-1.46 1.483v3.4c0 1.003.486 1.49 1.46 1.49zm-7.65-1.073h-3.43q-.397.002-.396-.418v-3.4q-.002-.41.396-.41h3.43c.265 0 .402.137.402.41v3.4c0 .281-.137.418-.403.418m7.634 0h-3.43c-.273 0-.402-.137-.402-.418v-3.4c0-.273.129-.41.403-.41h3.43q.396 0 .395.41v3.4q.002.42-.396.418m-7.612 8.7c.966 0 1.453-.48 1.453-1.483v-3.407c0-.996-.487-1.483-1.453-1.483H6.452c-.965 0-1.452.487-1.452 1.483v3.407c0 1.004.487 1.483 1.452 1.483zm7.628 0c.965 0 1.452-.48 1.452-1.483v-3.407c0-.996-.487-1.483-1.452-1.483h-3.46c-.974 0-1.46.487-1.46 1.483v3.407c0 1.004.486 1.483 1.46 1.483zm-7.65-1.072h-3.43q-.397 0-.396-.41v-3.4c0-.282.13-.418.396-.418h3.43c.265 0 .402.136.402.418v3.4c0 .273-.137.41-.403.41m7.634 0h-3.43c-.273 0-.402-.137-.402-.41v-3.4c0-.282.129-.418.403-.418h3.43c.265 0 .395.136.395.418v3.4q.002.41-.396.41">
+              </path>
             </svg>
             <span>New</span>
           </li>
-          <li class="am-nav-item" data-page="download-ttml">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-            </svg>
-            <span data-i18n="nav_ttml">TTML Downloader</span>
-          </li>
           <li class="am-nav-item" data-page="download-song" id="nav-item-download-song">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"
+              fill="currentColor">
+              <!-- Hollow Ring (EvenOdd rule punches out the center) -->
+              <path fill-rule="evenodd" clip-rule="evenodd"
+                d="M50 2C23.49 2 2 23.49 2 50s21.49 48 48 48 48-21.49 48-48S76.51 2 50 2zm0 10c20.987 0 38 17.013 38 38S70.987 88 50 88 12 70.987 12 50 29.013 12 50 12z" />
+              <!-- Downward Arrow (Stem & Wings as filled polygon) -->
+              <path
+                d="M46 28a4 4 0 0 1 8 0v37.343l13.172-13.171a4 4 0 1 1 5.656 5.656l-20 20a4 4 0 0 1-5.656 0l-20-20a4 4 0 1 1 5.656-5.656L46 65.343V28z" />
             </svg>
             <span>Download</span>
           </li>
+
           <li class="am-nav-item" data-page="upload">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"
+              fill="currentColor">
+              <!-- Hollow Ring (EvenOdd rule punches out the center) -->
+              <path fill-rule="evenodd" clip-rule="evenodd"
+                d="M50 2C23.49 2 2 23.49 2 50s21.49 48 48 48 48-21.49 48-48S76.51 2 50 2zm0 10c20.987 0 38 17.013 38 38S70.987 88 50 88 12 70.987 12 50 29.013 12 50 12z" />
+              <!-- Upward Arrow (Stem & Wings as filled polygon) -->
+              <path
+                d="M50 24.172a4 4 0 0 1 2.828 1.171l20 20a4 4 0 0 1-5.656 5.657L54 37.828V72a4 4 0 1 1-8 0V37.828L32.828 51a4 4 0 0 1-5.656-5.657l20-20A4 4 0 0 1 50 24.172z" />
             </svg>
             <span data-i18n="nav_upload">Local Upload</span>
           </li>
@@ -254,33 +281,42 @@
       <div class="am-sidebar-section">
         <div class="am-section-label" data-i18n="nav_library">Library</div>
         <ul class="am-sidebar-nav">
+          <li class="am-nav-item" data-page="library-hub" id="nav-item-library-hub">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path
+                d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
+            </svg>
+            <span>Full Library</span>
+          </li>
           <li class="am-nav-item" data-page="recently-added">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 20c4.376 0 8-3.631 8-8 0-4.376-3.631-8-8.008-8C7.624 4 4 7.624 4 12c0 4.369 3.631 8 8 8m0-1.333A6.634 6.634 0 0 1 5.341 12a6.63 6.63 0 0 1 6.651-6.667A6.653 6.653 0 0 1 18.667 12 6.636 6.636 0 0 1 12 18.667m-.008-5.82a.54.54 0 0 0 .55-.549V7.012a.54.54 0 0 0-.55-.541.53.53 0 0 0-.541.54v4.746H7.898a.534.534 0 0 0-.549.541c0 .314.235.55.549.55h4.094z">
+              </path>
             </svg>
             <span data-i18n="nav_recently_added">Recently Added</span>
           </li>
-          <li class="am-nav-item" data-page="recent">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
-            </svg>
-            <span data-i18n="nav_recent">Recently Listened</span>
-          </li>
           <li class="am-nav-item" data-page="library-artists">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M18.39 9.42c1.289-1.282 1.34-2.908.102-4.139-1.23-1.216-2.85-1.186-4.138.103zm-6.08 9.858a.66.66 0 0 0 .667-.667v-4.328l-.051-1.048 2.234-2.072c.842.11 1.728-.235 2.49-1.004l-4.03-4.035c-.776.761-1.098 1.633-.988 2.475l-6.805 7.332c-.278.3-.322.717.022 1.062L4.913 18.2a.31.31 0 0 0 .037.418l.212.22a.31.31 0 0 0 .425.029l1.208-.945c.33.344.755.3 1.048.022l3.8-3.516v4.182a.66.66 0 0 0 .667.667zm-5.053-2.073-.674-.674 6.453-6.84q.186.307.461.593.274.276.571.476z">
+              </path>
             </svg>
             <span data-i18n="nav_artists">Artists</span>
           </li>
           <li class="am-nav-item" data-page="library-albums">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M15.477 3.937c-.044-.61-.396-.937-1.07-.937H9.431c-.675 0-1.027.327-1.07.937h7.115zm1.24 2.013c-.11-.654-.425-1.025-1.159-1.025H8.222c-.741 0-1.057.37-1.167 1.025zm-.3 14.05c1.313 0 2.083-.756 2.083-2.252v-8.37c0-1.496-.778-2.252-2.304-2.252H7.804Q5.502 7.124 5.5 9.38v8.369C5.5 19.244 6.27 20 7.804 20h8.612zm-.023-1.17H7.818c-.733 0-1.137-.392-1.137-1.148V9.437c0-.756.404-1.14 1.137-1.14h8.356c.727 0 1.145.384 1.145 1.14v8.245c0 .756-.418 1.148-.925 1.148">
+              </path>
             </svg>
             <span data-i18n="nav_albums">Albums</span>
           </li>
           <li class="am-nav-item" data-page="songs">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M9.732 19.241c1.077 0 2.688-.79 2.688-2.922V9.617c0-.388.074-.469.418-.542l3.347-.732a.48.48 0 0 0 .403-.484V5.105c0-.388-.315-.637-.689-.563l-3.764.82c-.47.102-.725.359-.725.769l.014 8.144c.037.36-.132.594-.454.66l-1.164.241c-1.465.308-2.154 1.055-2.154 2.16 0 1.122.864 1.905 2.08 1.905">
+              </path>
             </svg>
             <span data-i18n="nav_songs">Songs</span>
           </li>
@@ -292,8 +328,11 @@
         <div class="am-section-label" data-i18n="nav_playlists">Playlists</div>
         <ul class="am-sidebar-nav">
           <li class="am-nav-item" data-page="playlists">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+            <svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="24" height="24" viewBox="0 0 24 24"
+              aria-hidden="true">
+              <path
+                d="M5.55 8.73H7.4c.45 0 .8-.13 1.06-.38.25-.26.37-.62.37-1.1V5.5c0-.46-.12-.83-.37-1.08-.26-.26-.6-.39-1.06-.39H5.55c-.45 0-.8.13-1.06.39-.25.25-.37.62-.37 1.08v1.77c0 .47.12.83.37 1.09.26.25.6.38 1.06.38Zm.16-1.14c-.15 0-.26-.04-.34-.12-.07-.07-.1-.2-.1-.35V5.63c0-.15.03-.27.1-.35.08-.07.2-.11.34-.11h1.52c.14 0 .25.04.34.11.08.08.12.2.12.35v1.49c0 .16-.04.28-.12.35a.46.46 0 0 1-.34.12H5.7Zm5.62 1.14h1.84c.46 0 .8-.13 1.06-.38.25-.26.37-.62.37-1.1V5.5c0-.46-.12-.83-.37-1.08a1.4 1.4 0 0 0-1.06-.39h-1.84q-.675 0-1.05.39A1.5 1.5 0 0 0 9.9 5.5v1.77c0 .47.13.83.38 1.09.25.25.6.38 1.05.38Zm.16-1.14c-.15 0-.26-.04-.34-.12-.07-.07-.11-.2-.11-.35V5.63c0-.15.04-.27.11-.35.08-.07.19-.11.34-.11h1.53c.14 0 .25.04.33.11.08.08.11.2.11.35v1.49c0 .16-.04.28-.11.35-.08.08-.2.12-.33.12zm5.63 1.14h1.84c.45 0 .8-.13 1.06-.38.25-.26.38-.62.38-1.1V5.5c0-.46-.13-.83-.38-1.08-.25-.26-.6-.39-1.06-.39h-1.84q-.675 0-1.05.39c-.26.25-.38.62-.38 1.08v1.77c0 .47.12.83.38 1.09.25.25.6.38 1.05.38Zm.16-1.14c-.15 0-.26-.04-.34-.12-.08-.07-.12-.2-.12-.35V5.63c0-.15.04-.27.12-.35.08-.07.2-.11.34-.11h1.52c.14 0 .25.04.33.11.08.08.12.2.12.35v1.49c0 .16-.04.28-.12.35q-.105.12-.33.12zM5.55 14.35H7.4c.45 0 .8-.13 1.06-.38.25-.26.37-.62.37-1.08V11.1c0-.47-.12-.83-.37-1.09-.26-.25-.6-.38-1.06-.38H5.55c-.45 0-.8.13-1.06.38-.25.26-.37.62-.37 1.09v1.78c0 .46.12.82.37 1.08.26.25.6.38 1.06.38Zm.16-1.14c-.15 0-.26-.04-.34-.12-.07-.08-.1-.2-.1-.35v-1.5c0-.15.03-.26.1-.34.08-.08.2-.12.34-.12h1.52c.14 0 .25.04.34.12.08.08.12.2.12.34v1.5c0 .15-.04.27-.12.35a.45.45 0 0 1-.34.12H5.7Zm5.62 1.14h1.84c.46 0 .8-.13 1.06-.38.25-.26.37-.62.37-1.08V11.1c0-.47-.12-.83-.37-1.09a1.4 1.4 0 0 0-1.06-.38h-1.84c-.45 0-.8.13-1.05.38-.25.26-.38.62-.38 1.09v1.78c0 .46.13.82.38 1.08.25.25.6.38 1.05.38Zm.16-1.14c-.15 0-.26-.04-.34-.12a.52.52 0 0 1-.11-.35v-1.5c0-.15.04-.26.11-.34.08-.08.19-.12.34-.12h1.53q.21 0 .33.12c.08.08.11.2.11.34v1.5c0 .15-.04.27-.11.35-.08.08-.2.12-.33.12zm5.63 1.14h1.84c.45 0 .8-.13 1.06-.38.25-.26.38-.62.38-1.08V11.1c0-.47-.13-.83-.38-1.09-.25-.25-.6-.38-1.06-.38h-1.84c-.45 0-.8.13-1.05.38-.26.26-.38.62-.38 1.09v1.78c0 .46.12.82.38 1.08.25.25.6.38 1.05.38Zm.16-1.14c-.15 0-.26-.04-.34-.12s-.12-.2-.12-.35v-1.5c0-.15.04-.26.12-.34s.2-.12.34-.12h1.52q.21 0 .33.12c.08.08.12.2.12.34v1.5c0 .15-.04.27-.12.35q-.105.12-.33.12zM5.55 19.97H7.4c.45 0 .8-.13 1.06-.38.25-.26.37-.62.37-1.1v-1.76c0-.47-.12-.83-.37-1.09-.26-.25-.6-.38-1.06-.38H5.55c-.45 0-.8.13-1.06.38-.25.26-.37.62-.37 1.09v1.77c0 .47.12.83.37 1.09.26.25.6.38 1.06.38m.16-1.15c-.15 0-.26-.04-.34-.11-.07-.08-.1-.2-.1-.35v-1.49c0-.16.03-.28.1-.36.08-.07.2-.11.34-.11h1.52c.14 0 .25.04.34.11q.12.12.12.36v1.49c0 .15-.04.27-.12.35a.46.46 0 0 1-.34.11H5.7Zm5.62 1.15h1.84c.46 0 .8-.13 1.06-.38.25-.26.37-.62.37-1.1v-1.76c0-.47-.12-.83-.37-1.09a1.4 1.4 0 0 0-1.06-.38h-1.84c-.45 0-.8.13-1.05.38-.25.26-.38.62-.38 1.09v1.77c0 .47.13.83.38 1.09.25.25.6.38 1.05.38m.16-1.15c-.15 0-.26-.04-.34-.11a.52.52 0 0 1-.11-.35v-1.49c0-.16.04-.28.11-.36.08-.07.19-.11.34-.11h1.53c.14 0 .25.04.33.11.08.08.11.2.11.36v1.49c0 .15-.04.27-.11.35-.08.07-.2.11-.33.11zm5.63 1.15h1.84c.45 0 .8-.13 1.06-.38.25-.26.38-.62.38-1.1v-1.76c0-.47-.13-.83-.38-1.09-.25-.25-.6-.38-1.06-.38h-1.84c-.45 0-.8.13-1.05.38-.26.26-.38.62-.38 1.09v1.77c0 .47.12.83.38 1.09.25.25.6.38 1.05.38m.16-1.15c-.15 0-.26-.04-.34-.11-.08-.08-.12-.2-.12-.35v-1.49q0-.24.12-.36c.08-.07.2-.11.34-.11h1.52c.14 0 .25.04.33.11q.12.12.12.36v1.49c0 .15-.04.27-.12.35-.07.07-.18.11-.33.11z"
+                transform="translate(.7 .94)scale(.92237)" style="fill-rule: nonzero;"></path>
             </svg>
             <span data-i18n="nav_all_playlists">All Playlists</span>
           </li>
@@ -303,15 +342,22 @@
       </div>
 
       <!-- Footer with User Profile and Discord Community -->
-      <div class="am-sidebar-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-        <button id="user-profile-btn" class="am-sidebar-profile-btn" title="Profile & Preferences" style="flex: 1; min-width: 0;">
+      <div class="am-sidebar-footer"
+        style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+        <button id="user-profile-btn" class="am-sidebar-profile-btn" title="Profile & Preferences"
+          style="flex: 1; min-width: 0;">
           <img class="user-profile-avatar-img" src="icons/account_avatar.png" alt="Profile">
           <div class="am-sidebar-profile-info">
             <span class="user-profile-name-text" id="sidebar-user-name">Listener</span>
           </div>
         </button>
-        <a href="https://discord.gg/VBU2BuqsC" target="_blank" rel="noopener noreferrer" class="am-sidebar-discord-btn" title="Join our Discord Community" style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(88, 101, 242, 0.18); border: 1px solid rgba(88, 101, 242, 0.35); color: #5865F2; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); flex-shrink: 0; text-decoration: none;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+        <a href="https://discord.gg/VBU2BuqsC" target="_blank" rel="noopener noreferrer" class="am-sidebar-discord-btn"
+          title="Join our Discord Community"
+          style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(88, 101, 242, 0.18); border: 1px solid rgba(88, 101, 242, 0.35); color: #5865F2; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); flex-shrink: 0; text-decoration: none;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path
+              d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+          </svg>
         </a>
       </div>
     </aside>
@@ -326,7 +372,7 @@
       <!-- Mobile Header without toggle button -->
       <header class="am-mobile-header">
         <div class="am-mobile-brand">
-          <img src="images/logo.png" class="am-mobile-logo" alt="Lyricsflow">
+          <img src="images/logo.png" class="am-mobile-logo" alt="LyricsFlow">
         </div>
         <button id="mobile-user-profile-btn" class="am-profile-btn" aria-label="Profile">
           <img class="user-profile-avatar-img" src="icons/account_avatar.png" alt="Profile">
@@ -346,7 +392,8 @@
           <div class="am-hero" style="margin-bottom: 28px;">
             <div class="am-hero-text">
               <h1 class="am-hero-title" id="home-greeting-heading">Welcome back, Listener</h1>
-              <p class="am-hero-subtitle" data-i18n="home_top_picks_sub">Curated recommendations based on your listening taste.</p>
+              <p class="am-hero-subtitle" data-i18n="home_top_picks_sub">Curated recommendations based on your listening
+                taste.</p>
             </div>
           </div>
 
@@ -362,7 +409,8 @@
 
           <!-- Section 2: Recently Played (Up to 10 with Back Icon link to full recent page) -->
           <div class="am-search-section" style="margin-top: 36px;">
-            <div class="am-section-header-row am-clickable-header" id="home-recent-header" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <div class="am-section-header-row am-clickable-header" id="home-recent-header"
+              style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
               <h2 class="am-search-section-title" data-i18n="home_recently_played">Recently Played</h2>
             </div>
             <div class="am-cards-horizontal-scroll" id="home-recent-scroll">
@@ -401,7 +449,8 @@
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <input type="text" id="catalog-search" placeholder="Search songs, artists, albums..." data-i18n-placeholder="search_placeholder" autocomplete="off">
+              <input type="text" id="catalog-search" placeholder="Search songs, artists, albums..."
+                data-i18n-placeholder="search_placeholder" autocomplete="off">
               <button id="search-clear-btn" class="am-search-clear-btn hidden" aria-label="Clear Search">✕</button>
             </div>
           </div>
@@ -412,7 +461,8 @@
             <div id="recently-searched-section" class="am-search-section hidden">
               <div class="am-section-header-row">
                 <h2 class="am-search-section-title" data-i18n="search_recent">Recently Searched</h2>
-                <button id="clear-recent-searches-btn" class="am-text-action-btn" data-i18n="search_clear">Clear</button>
+                <button id="clear-recent-searches-btn" class="am-text-action-btn"
+                  data-i18n="search_clear">Clear</button>
               </div>
               <div class="am-recently-searched-grid" id="recently-searched-grid"></div>
             </div>
@@ -431,80 +481,80 @@
 
           <!-- Search Results Layout Container -->
           <div id="search-results-container" class="am-search-results-layout hidden">
-             <!-- Top Results -->
-             <div id="section-top-results" class="am-search-section hidden">
-                <h2 class="am-search-section-title" data-i18n="search_top_results">Top Results</h2>
-                <div class="am-top-results-grid" id="top-results-grid"></div>
-             </div>
+            <!-- Top Results -->
+            <div id="section-top-results" class="am-search-section hidden">
+              <h2 class="am-search-section-title" data-i18n="search_top_results">Top Results</h2>
+              <div class="am-top-results-grid" id="top-results-grid"></div>
+            </div>
 
-             <!-- Artists -->
-             <div id="section-artists" class="am-search-section hidden">
-                <h2 class="am-search-section-title" data-i18n="search_artists">Artists</h2>
-                <div class="am-artists-horizontal-scroll" id="artists-grid"></div>
-             </div>
+            <!-- Artists -->
+            <div id="section-artists" class="am-search-section hidden">
+              <h2 class="am-search-section-title" data-i18n="search_artists">Artists</h2>
+              <div class="am-artists-horizontal-scroll" id="artists-grid"></div>
+            </div>
 
-             <!-- Songs -->
-             <div id="section-songs" class="am-search-section hidden">
-                <h2 class="am-search-section-title" data-i18n="search_songs">Songs</h2>
-                <div class="am-songs-flex-grid" id="songs-grid"></div>
-             </div>
+            <!-- Songs -->
+            <div id="section-songs" class="am-search-section hidden">
+              <h2 class="am-search-section-title" data-i18n="search_songs">Songs</h2>
+              <div class="am-songs-flex-grid" id="songs-grid"></div>
+            </div>
 
-             <!-- Albums -->
-             <div id="section-albums" class="am-search-section hidden">
-                <h2 class="am-search-section-title" data-i18n="search_albums">Albums</h2>
-                <div class="am-cards-horizontal-scroll" id="albums-grid"></div>
-             </div>
+            <!-- Albums -->
+            <div id="section-albums" class="am-search-section hidden">
+              <h2 class="am-search-section-title" data-i18n="search_albums">Albums</h2>
+              <div class="am-cards-horizontal-scroll" id="albums-grid"></div>
+            </div>
 
-             <!-- Playlists -->
-             <div id="section-playlists" class="am-search-section hidden">
-                <h2 class="am-search-section-title" data-i18n="search_playlists">Playlists</h2>
-                <div class="am-cards-horizontal-scroll" id="playlists-search-grid"></div>
-             </div>
+            <!-- Playlists -->
+            <div id="section-playlists" class="am-search-section hidden">
+              <h2 class="am-search-section-title" data-i18n="search_playlists">Playlists</h2>
+              <div class="am-cards-horizontal-scroll" id="playlists-search-grid"></div>
+            </div>
 
-             <!-- Music Videos -->
-             <div id="section-videos" class="am-search-section hidden">
-                <h2 class="am-search-section-title" data-i18n="search_videos">Music Videos</h2>
-                <div class="am-cards-horizontal-scroll" id="videos-grid"></div>
-             </div>
+            <!-- Music Videos -->
+            <div id="section-videos" class="am-search-section hidden">
+              <h2 class="am-search-section-title" data-i18n="search_videos">Music Videos</h2>
+              <div class="am-cards-horizontal-scroll" id="videos-grid"></div>
+            </div>
 
-             <!-- Stations -->
-             <div id="section-stations" class="am-search-section hidden">
-                <h2 class="am-search-section-title">Radio Stations</h2>
-                <div class="am-cards-horizontal-scroll" id="stations-grid"></div>
-             </div>
+            <!-- Stations -->
+            <div id="section-stations" class="am-search-section hidden">
+              <h2 class="am-search-section-title">Radio Stations</h2>
+              <div class="am-cards-horizontal-scroll" id="stations-grid"></div>
+            </div>
 
-             <!-- Record Labels -->
-             <div id="section-labels" class="am-search-section hidden">
-                <h2 class="am-search-section-title">Record Labels</h2>
-                <div class="am-cards-horizontal-scroll" id="labels-grid"></div>
-             </div>
+            <!-- Record Labels -->
+            <div id="section-labels" class="am-search-section hidden">
+              <h2 class="am-search-section-title">Record Labels</h2>
+              <div class="am-cards-horizontal-scroll" id="labels-grid"></div>
+            </div>
 
-             <!-- Curators & Activities -->
-             <div id="section-curators" class="am-search-section hidden">
-                <h2 class="am-search-section-title">Curators & Categories</h2>
-                <div class="am-cards-horizontal-scroll" id="curators-grid"></div>
-             </div>
+            <!-- Curators & Activities -->
+            <div id="section-curators" class="am-search-section hidden">
+              <h2 class="am-search-section-title">Curators & Categories</h2>
+              <div class="am-cards-horizontal-scroll" id="curators-grid"></div>
+            </div>
           </div>
 
           <!-- Song View Container -->
           <div id="song-view-container" class="am-song-view hidden">
-             <div id="song-view-content"></div>
+            <div id="song-view-content"></div>
           </div>
 
           <!-- Album View Container -->
           <div id="album-view-container" class="am-album-view hidden">
-             <div id="album-header" class="am-album-header"></div>
-             <div class="am-album-tracks" id="album-tracks-grid"></div>
+            <div id="album-header" class="am-album-header"></div>
+            <div class="am-album-tracks" id="album-tracks-grid"></div>
           </div>
 
           <!-- Artist View Container -->
           <div id="artist-view-container" class="am-artist-view hidden">
-             <div id="artist-view-content"></div>
+            <div id="artist-view-content"></div>
           </div>
 
           <!-- Remote Playlist View Container -->
           <div id="playlist-view-container" class="am-playlist-view hidden">
-             <div id="playlist-view-content"></div>
+            <div id="playlist-view-content"></div>
           </div>
         </div>
 
@@ -513,12 +563,13 @@
           <div class="am-hero">
             <div class="am-hero-icon" style="background: linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
               </svg>
             </div>
             <div class="am-hero-text">
               <h1 class="am-hero-title" data-i18n="rec_added_title">Recently Added</h1>
-              <p class="am-hero-subtitle" data-i18n="rec_added_sub">All music, albums, and artists added to your personal library.</p>
+              <p class="am-hero-subtitle" data-i18n="rec_added_sub">All music, albums, and artists added to your
+                personal library.</p>
             </div>
           </div>
 
@@ -549,9 +600,30 @@
 
         <!-- ── Unified Library Hub (Mobile & Responsive) ── -->
         <div id="page-library-hub" class="am-page">
-          <div class="am-hero" style="margin-bottom: 20px;">
+          <div class="am-hero"
+            style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 14px;">
             <div class="am-hero-text">
               <h1 class="am-hero-title" data-i18n="lib_hub_title">Library</h1>
+              <p class="am-hero-subtitle">Your collection, playlists, and local music files</p>
+            </div>
+            <div class="pc-library-actions" style="display: flex; gap: 10px; align-items: center;">
+              <input type="file" id="local-folder-input" webkitdirectory directory multiple style="display: none;">
+              <input type="file" id="local-files-input" accept="audio/*" multiple style="display: none;">
+              <button class="am-start-btn" id="btn-scan-folder"
+                style="padding: 9px 18px; border-radius: 999px; font-size: 0.88rem; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(20px);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" />
+                </svg>
+                <span>Scan Music Folder</span>
+              </button>
+              <button class="am-start-btn" id="btn-upload-music-files"
+                style="padding: 9px 18px; border-radius: 999px; font-size: 0.88rem; display: flex; align-items: center; gap: 8px; background: #fc576b; border: none; color: #fff;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                </svg>
+                <span>Upload Songs</span>
+              </button>
             </div>
           </div>
 
@@ -573,7 +645,8 @@
           <div class="am-search-section" style="margin-top: 30px;">
             <div class="am-section-header-row">
               <h2 class="am-search-section-title" data-i18n="lib_hub_playlists">Playlists</h2>
-              <button class="am-text-action-btn" id="hub-create-playlist-btn" data-i18n="lib_create_playlist">+ New</button>
+              <button class="am-text-action-btn" id="hub-create-playlist-btn" data-i18n="lib_create_playlist">+
+                New</button>
             </div>
             <div class="am-cards-horizontal-scroll" id="hub-playlists-row"></div>
           </div>
@@ -590,7 +663,8 @@
           <div class="am-hero">
             <div class="am-hero-icon" style="background: linear-gradient(135deg, #3a3a3c 0%, #2c2c2e 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                <path
+                  d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
               </svg>
             </div>
             <div class="am-hero-text">
@@ -606,7 +680,8 @@
           <div class="am-hero">
             <div class="am-hero-icon" style="background: linear-gradient(135deg, #48484a 0%, #3a3a3c 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5z"/>
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5z" />
               </svg>
             </div>
             <div class="am-hero-text">
@@ -627,16 +702,19 @@
             </div>
             <div class="am-hero-text">
               <h1 class="am-hero-title" data-i18n="upload_title">Upload Your Music</h1>
-              <p class="am-hero-subtitle" data-i18n="upload_subtitle">Drop audio files and lyrics to experience synchronized visuals.</p>
+              <p class="am-hero-subtitle" data-i18n="upload_subtitle">Drop audio files and lyrics to experience
+                synchronized visuals.</p>
             </div>
           </div>
 
           <div class="am-upload-area">
             <div class="am-upload-cards">
-              <div class="am-upload-card am-card-primary" id="audio-zone" data-i18n-title="upload_audio_file" title="Drop or click to upload audio">
+              <div class="am-upload-card am-card-primary" id="audio-zone" data-i18n-title="upload_audio_file"
+                title="Drop or click to upload audio">
                 <div class="am-card-icon">
                   <svg viewBox="0 0 24 24">
-                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+                    <path
+                      d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
                   </svg>
                 </div>
                 <div class="am-card-info">
@@ -645,13 +723,16 @@
                   <p class="zone-filename"></p>
                 </div>
                 <div class="am-card-badge" data-i18n="upload_badge_required">Required</div>
-                <input type="file" id="audio-input" accept="audio/*,.mp3,.flac,.wav,.ogg,.m4a,.aac,.mp4,.m4b,.opus,.webm" multiple>
+                <input type="file" id="audio-input"
+                  accept="audio/*,.mp3,.flac,.wav,.ogg,.m4a,.aac,.mp4,.m4b,.opus,.webm" multiple>
               </div>
 
-              <div class="am-upload-card am-card-optional" id="ttml-zone" data-i18n-title="upload_ttml_lyrics" title="Drop or click to upload lyrics">
+              <div class="am-upload-card am-card-optional" id="ttml-zone" data-i18n-title="upload_ttml_lyrics"
+                title="Drop or click to upload lyrics">
                 <div class="am-card-icon">
                   <svg viewBox="0 0 24 24">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-6h8v1.5H8V14zm0 3h6v1.5H8V17zm0-6h8v1.5H8V11z" />
+                    <path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-6h8v1.5H8V14zm0 3h6v1.5H8V17zm0-6h8v1.5H8V11z" />
                   </svg>
                 </div>
                 <div class="am-card-info">
@@ -690,7 +771,8 @@
           <div class="am-hero">
             <div class="am-hero-icon" style="background: linear-gradient(135deg, #48484a 0%, #3a3a3c 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                <path
+                  d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
               </svg>
             </div>
             <div class="am-hero-text">
@@ -706,7 +788,8 @@
           <div class="am-hero">
             <div class="am-hero-icon" style="background: linear-gradient(135deg, #3a3a3c 0%, #2c2c2e 100%);">
               <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                <path
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
               </svg>
             </div>
             <div class="am-hero-text">
@@ -728,17 +811,19 @@
             <div class="am-hero-text">
               <h1 class="am-hero-title" data-i18n="nav_all_playlists">My Playlists</h1>
               <div class="am-hero-actions" style="margin-top: 15px;">
-                <button class="am-start-btn" id="create-playlist-btn" data-i18n="lib_create_playlist">Create New Playlist</button>
+                <button class="am-start-btn" id="create-playlist-btn" data-i18n="lib_create_playlist">Create New
+                  Playlist</button>
               </div>
             </div>
           </div>
           <div class="playlists-grid" id="playlists-grid"></div>
           <div id="playlist-detail" class="am-playlist-detail hidden">
-             <div class="section-header">
-                <h2 class="section-title" id="playlist-detail-title">Playlist Name</h2>
-                <button class="am-back-btn" id="playlist-back-btn" data-i18n="btn_back_to_playlists">Back to Playlists</button>
-             </div>
-             <div class="playlist-tracks-grid" id="playlist-tracks-grid"></div>
+            <div class="section-header">
+              <h2 class="section-title" id="playlist-detail-title">Playlist Name</h2>
+              <button class="am-back-btn" id="playlist-back-btn" data-i18n="btn_back_to_playlists">Back to
+                Playlists</button>
+            </div>
+            <div class="playlist-tracks-grid" id="playlist-tracks-grid"></div>
           </div>
         </div>
 
@@ -750,16 +835,18 @@
               <div class="downloader-header">
                 <div class="header-icon-wrapper">
                   <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
                   </svg>
                 </div>
                 <h1 class="premium-title" data-i18n="ttml_downloader_title">TTML Downloader</h1>
-                <p class="premium-subtitle" data-i18n="ttml_downloader_sub">Enter a Song ID to extract high-fidelity synchronized lyrics.</p>
+                <p class="premium-subtitle" data-i18n="ttml_downloader_sub">Enter a Song ID to extract high-fidelity
+                  synchronized lyrics.</p>
               </div>
 
               <div class="premium-input-group">
                 <div class="premium-search-box">
-                  <input type="text" id="ttml-song-id" placeholder="Paste Song ID (e.g. 1738734057)" data-i18n-placeholder="ttml_input_placeholder" autocomplete="off">
+                  <input type="text" id="ttml-song-id" placeholder="Paste Song ID (e.g. 1738734057)"
+                    data-i18n-placeholder="ttml_input_placeholder" autocomplete="off">
                   <button id="fetch-ttml-btn" class="premium-btn primary">
                     <span class="btn-text" data-i18n="ttml_btn_fetch">Fetch Lyrics</span>
                     <div class="aero-spinner btn-loader hidden"></div>
@@ -771,7 +858,7 @@
                 <div class="result-backdrop"></div>
                 <div class="song-identity">
                   <div class="art-pulse-wrapper">
-                     <img id="ttml-preview-art" src="" alt="Album Art">
+                    <img id="ttml-preview-art" src="" alt="Album Art">
                   </div>
                   <div class="song-details">
                     <h2 id="ttml-preview-name">Song Name</h2>
@@ -785,7 +872,9 @@
                     <div class="dots"><span></span><span></span><span></span></div>
                     <span class="stage-label">TTML SOURCE</span>
                     <button id="download-ttml-file-btn" class="premium-btn secondary" disabled>
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="16"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="16">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                      </svg>
                       <span data-i18n="ttml_btn_quick_download">Quick Download</span>
                     </button>
                   </div>
@@ -808,25 +897,33 @@
               <div class="downloader-header" style="margin-bottom: 22px;">
                 <div class="header-icon-wrapper" style="background: linear-gradient(135deg, #fc576b 0%, #ff6b8b 100%);">
                   <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
+                    <path
+                      d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
                   </svg>
                 </div>
                 <h1 class="premium-title">Download</h1>
-                <p class="premium-subtitle">Paste any track or album link (spicyamll.online, Apple Music) or search below.</p>
+                <p class="premium-subtitle">Paste any track or album link (spicyamll.online, Apple Music) or search
+                  below.</p>
               </div>
 
               <!-- Main Input Area -->
               <div class="premium-input-group" style="position: relative;">
-                <div class="premium-search-box" style="display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.06); padding: 8px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12);">
-                  <input type="text" id="dl-song-input" placeholder="Paste link (e.g. spicyamll.online/song/1813160359, album link, or search)" style="flex: 1; background: transparent; border: none; color: #fff; font-size: 0.95rem; outline: none; padding: 6px 4px;" autocomplete="off">
-                  
+                <div class="premium-search-box"
+                  style="display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.06); padding: 8px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12);">
+                  <input type="text" id="dl-song-input"
+                    placeholder="Paste link (e.g. spicyamll.online/song/1813160359, album link, or search)"
+                    style="flex: 1; background: transparent; border: none; color: #fff; font-size: 0.95rem; outline: none; padding: 6px 4px;"
+                    autocomplete="off">
+
                   <!-- AeroUI Format Dropdown -->
                   <div class="aero-dropdown" id="dl-format-dropdown">
-                    <button class="am-macos-select" data-aero-dropdown="" data-selected="atmos-m4a" id="dl-format-trigger-btn">
+                    <button class="am-macos-select" data-aero-dropdown="" data-selected="atmos-m4a"
+                      id="dl-format-trigger-btn">
                       Dolby Atmos (M4A)
                     </button>
                     <div class="aero-menu" id="dl-format-menu">
-                      <button type="button" class="aero-menu-item" data-value="atmos-m4a" aria-current="true">Dolby Atmos (M4A)</button>
+                      <button type="button" class="aero-menu-item" data-value="atmos-m4a" aria-current="true">Dolby
+                        Atmos (M4A)</button>
                       <button type="button" class="aero-menu-item" data-value="atmos-mp4">Dolby Atmos (MP4)</button>
                       <button type="button" class="aero-menu-item" data-value="alac-flac">ALAC (FLAC 24-bit)</button>
                       <button type="button" class="aero-menu-item" data-value="alac-m4a">ALAC (Original M4A)</button>
@@ -835,41 +932,61 @@
                     </div>
                   </div>
 
-                  <button id="fetch-song-btn" class="premium-btn primary" style="padding: 9px 20px; border-radius: 10px; background: #fc576b; color: #fff; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                  <button id="fetch-song-btn" class="premium-btn primary"
+                    style="padding: 9px 20px; border-radius: 10px; background: #fc576b; color: #fff; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                     <span class="btn-text">Download</span>
                     <div class="aero-spinner btn-loader hidden"></div>
                   </button>
                 </div>
-                
+
                 <!-- Live Search Suggestions / Results -->
-                <div id="dl-search-results" class="dl-search-results hidden" style="margin-top: 10px; max-height: 380px; overflow-y: auto; border-radius: 12px; background: #1c1c1e; border: 1px solid rgba(255,255,255,0.1);"></div>
+                <div id="dl-search-results" class="dl-search-results hidden"
+                  style="margin-top: 10px; max-height: 380px; overflow-y: auto; border-radius: 12px; background: #1c1c1e; border: 1px solid rgba(255,255,255,0.1);">
+                </div>
               </div>
 
               <!-- Power User Download Settings Accordion -->
-              <div style="margin-top: 16px; border-radius: 14px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); overflow: hidden;">
-                <div id="dl-settings-toggle" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; cursor: pointer; user-select: none;">
-                  <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; color: #d0d0d4;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <div
+                style="margin-top: 16px; border-radius: 14px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); overflow: hidden;">
+                <div id="dl-settings-toggle"
+                  style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; cursor: pointer; user-select: none;">
+                  <div
+                    style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; color: #d0d0d4;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="3" />
+                      <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
                     <span>Download Options & Embedding</span>
                   </div>
-                  <span id="dl-settings-arrow" style="font-size: 0.8rem; opacity: 0.7; transition: transform 0.2s;">⌵</span>
+                  <span id="dl-settings-arrow"
+                    style="font-size: 0.8rem; opacity: 0.7; transition: transform 0.2s;">⌵</span>
                 </div>
-                <div id="dl-settings-body" style="display: none; padding: 14px 18px 18px; border-top: 1px solid rgba(255,255,255,0.06); gap: 14px; flex-direction: column;">
+                <div id="dl-settings-body"
+                  style="display: none; padding: 14px 18px 18px; border-top: 1px solid rgba(255,255,255,0.06); gap: 14px; flex-direction: column;">
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
-                    <label style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
-                      <input type="checkbox" id="dl-opt-embed-ttml" checked style="accent-color: #fc576b; width: 16px; height: 16px;">
+                    <label
+                      style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
+                      <input type="checkbox" id="dl-opt-embed-ttml" checked
+                        style="accent-color: #fc576b; width: 16px; height: 16px;">
                       <span>Embed TTML / ELRC into audio file (Spotiflac style)</span>
                     </label>
-                    <label style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
-                      <input type="checkbox" id="dl-opt-save-ttml" checked style="accent-color: #fc576b; width: 16px; height: 16px;">
+                    <label
+                      style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
+                      <input type="checkbox" id="dl-opt-save-ttml" checked
+                        style="accent-color: #fc576b; width: 16px; height: 16px;">
                       <span>Save separate .ttml lyrics file</span>
                     </label>
-                    <label style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
-                      <input type="checkbox" id="dl-opt-animated-art" style="accent-color: #fc576b; width: 16px; height: 16px;">
+                    <label
+                      style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
+                      <input type="checkbox" id="dl-opt-animated-art"
+                        style="accent-color: #fc576b; width: 16px; height: 16px;">
                       <span>Include Animated Cover Art (MP4 video)</span>
                     </label>
-                    <label style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
-                      <input type="checkbox" id="dl-opt-zip-album" checked style="accent-color: #fc576b; width: 16px; height: 16px;">
+                    <label
+                      style="display: flex; align-items: center; gap: 9px; font-size: 0.84rem; color: #fff; cursor: pointer;">
+                      <input type="checkbox" id="dl-opt-zip-album" checked
+                        style="accent-color: #fc576b; width: 16px; height: 16px;">
                       <span>Bundle full albums as a single .ZIP file</span>
                     </label>
                   </div>
@@ -889,19 +1006,29 @@
       <!-- ═══ Mobile Bottom Navigation Bar ═══ -->
       <nav class="am-mobile-bottom-nav" id="mobile-bottom-nav">
         <button class="am-mob-nav-btn hidden" data-page="home" id="mob-nav-home">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+          </svg>
           <span data-i18n="nav_home">Home</span>
         </button>
         <button class="am-mob-nav-btn am-mob-active" data-page="listen" id="mob-nav-search">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          </svg>
           <span data-i18n="nav_search">Search</span>
         </button>
         <button class="am-mob-nav-btn" data-page="library-hub" id="mob-nav-library">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
+          </svg>
           <span data-i18n="nav_library">Library</span>
         </button>
         <button class="am-mob-nav-btn" data-page="upload" id="mob-nav-upload">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+          </svg>
           <span data-i18n="nav_upload">Upload</span>
         </button>
       </nav>
@@ -933,35 +1060,58 @@
       </div>
       <div class="am-mobile-modal-items">
         <div class="am-mob-modal-item" id="mob-ctx-play">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
           <span data-i18n="ctx_play">Play Now</span>
         </div>
         <div class="am-mob-modal-item" id="mob-ctx-add-lib">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+          </svg>
           <span id="mob-ctx-lib-label" data-i18n="ctx_add_library">Add to Library</span>
         </div>
         <div class="am-mob-modal-item" id="mob-ctx-add-playlist">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
+          </svg>
           <span data-i18n="ctx_add_playlist">Add to Playlist...</span>
         </div>
         <div class="am-mob-modal-item" id="mob-ctx-view-album">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5z" />
+          </svg>
           <span data-i18n="ctx_view_album">View Entire Album</span>
         </div>
         <div class="am-mob-modal-item" id="mob-ctx-view-artist">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+          </svg>
           <span data-i18n="ctx_view_artist">View Artist</span>
         </div>
         <div class="am-mob-modal-item" id="mob-ctx-favorite">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+          </svg>
           <span id="mob-ctx-fav-label" data-i18n="ctx_favorite">Add to Favorites</span>
         </div>
         <div class="am-mob-modal-item" id="mob-ctx-share">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+            <polyline points="16 6 12 2 8 6" />
+            <line x1="12" y1="2" x2="12" y2="15" />
+          </svg>
           <span>Share Song...</span>
         </div>
         <div class="am-mob-modal-item" id="mob-ctx-copy-id">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+          </svg>
           <span data-i18n="ctx_copy_id">Copy Song ID</span>
         </div>
       </div>
@@ -970,14 +1120,15 @@
 
   <!-- Playlist Selection Modal -->
   <div id="playlist-select-modal" class="am-modal hidden">
-     <div class="am-modal-content">
-        <h3 data-i18n="ctx_add_playlist">Add to Playlist</h3>
-        <div id="playlist-options-list"></div>
-        <div style="margin-top:20px;display:flex;gap:10px;">
-          <button class="am-start-btn" id="modal-create-playlist-btn" style="flex:1;padding:8px;font-size:0.9rem;" data-i18n="lib_create_playlist">Create New</button>
-          <button class="am-text-btn" id="close-playlist-modal" style="flex:1;" data-i18n="modal_cancel">Cancel</button>
-        </div>
-     </div>
+    <div class="am-modal-content">
+      <h3 data-i18n="ctx_add_playlist">Add to Playlist</h3>
+      <div id="playlist-options-list"></div>
+      <div style="margin-top:20px;display:flex;gap:10px;">
+        <button class="am-start-btn" id="modal-create-playlist-btn" style="flex:1;padding:8px;font-size:0.9rem;"
+          data-i18n="lib_create_playlist">Create New</button>
+        <button class="am-text-btn" id="close-playlist-modal" style="flex:1;" data-i18n="modal_cancel">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <!-- Mobile Sidebar Controls -->
@@ -1030,9 +1181,10 @@
 
   <!-- Fullscreen Sliding Player Drawer (Slide up from down) -->
   <div id="player-drawer" class="player-drawer">
-    <iframe id="player-drawer-iframe" class="player-drawer-iframe" src="/player.html" allow="autoplay"></iframe>
+    <iframe id="player-drawer-iframe" class="player-drawer-iframe" src="player.html" allow="autoplay"></iframe>
   </div>
 
   <script type="module" src="js/upload.js"></script>
   <script type="module" src="js/song-downloader.js"></script>
+  <script type="module" src="js/electron-bridge.js"></script>
 </body>

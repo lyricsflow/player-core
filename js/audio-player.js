@@ -1,7 +1,7 @@
 import { EQ_BANDS } from './equalizer-presets.js';
 
 /**
- * Lyricsflow — Audio Engine
+ * LyricsFlow — Audio Engine
  * Dual-channel Web Audio graph supporting equalizers and seamless transitions.
  */
 export default class AudioPlayer {
@@ -67,7 +67,7 @@ export default class AudioPlayer {
     this._bindChannelEvents(this.audioA, 'A');
     this._bindChannelEvents(this.audioB, 'B');
 
-    this.repeatMode = 0; 
+    this.repeatMode = 0;
     this.shuffleActive = false;
 
     // Tracking loop
@@ -206,8 +206,8 @@ export default class AudioPlayer {
     const dur = crossfadeSeconds;
 
     const nextAudio = this._inactiveAudio;
-    const nextGain  = this._inactiveGain;
-    const prevGain  = this.activeGain;
+    const nextGain = this._inactiveGain;
+    const prevGain = this.activeGain;
     const prevAudio = this.audio;
 
     nextAudio.pause();

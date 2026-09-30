@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   Lyricsflow — Keyframe Animations
+   LyricsFlow — Keyframe Animations
    ═══════════════════════════════════════════════ */
 
 @keyframes skeleton {
@@ -9,11 +9,14 @@
 }
 
 @keyframes Marquee_SongName {
-  0%, 20% {
+
+  0%,
+  20% {
     transform: translateX(0);
   }
 
-  80%, 100% {
+  80%,
+  100% {
     transform: translateX(calc(min(-100% + 100cqw, 0px)));
   }
 }

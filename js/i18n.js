@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Internationalization (i18n) Module
+ * LyricsFlow — Internationalization (i18n) Module
  * Supports:
  *  1. en-US: English - US
  *  2. ar: العربية (Arabic)
@@ -30,7 +30,7 @@ const TRANSLATIONS = {
   'en-US': {
     // Setup Wizard
     setup_title: 'Setup Assistant',
-    setup_welcome: 'Welcome to Lyricsflow',
+    setup_welcome: 'Welcome to LyricsFlow',
     setup_welcome_sub: "Let's personalize your music and lyrics experience in a few quick steps.",
     setup_lang_label: 'Select Your Language',
     setup_name_label: 'What should we call you?',
@@ -277,7 +277,7 @@ const TRANSLATIONS = {
 
   'ar': {
     setup_title: 'مساعد الإعداد',
-    setup_welcome: 'مرحبًا بك في Lyricsflow',
+    setup_welcome: 'مرحبًا بك في LyricsFlow',
     setup_welcome_sub: 'لنقم بتخصيص تجربة الموسيقى والكلمات في خطوات سريعة.',
     setup_lang_label: 'اختر لغتك',
     setup_name_label: 'ما هو اسمك؟',
@@ -503,7 +503,7 @@ const TRANSLATIONS = {
 
   'es-ES': {
     setup_title: 'Asistente de configuración',
-    setup_welcome: 'Bienvenido a Lyricsflow',
+    setup_welcome: 'Bienvenido a LyricsFlow',
     setup_welcome_sub: 'Personalicemos tu experiencia de música y letras en pocos pasos.',
     setup_lang_label: 'Selecciona tu idioma',
     setup_name_label: '¿Cómo te llamas?',
@@ -717,7 +717,7 @@ const TRANSLATIONS = {
 
   'es-MX': {
     setup_title: 'Asistente de configuración',
-    setup_welcome: 'Bienvenido a Lyricsflow',
+    setup_welcome: 'Bienvenido a LyricsFlow',
     setup_welcome_sub: 'Personalicemos tu experiencia de música y letras en pocos pasos.',
     setup_lang_label: 'Selecciona tu idioma',
     setup_name_label: '¿Cómo te llamas?',
@@ -931,7 +931,7 @@ const TRANSLATIONS = {
 
   'pt-BR': {
     setup_title: 'Assistente de Configuração',
-    setup_welcome: 'Bem-vindo ao Lyricsflow',
+    setup_welcome: 'Bem-vindo ao LyricsFlow',
     setup_welcome_sub: 'Vamos personalizar sua experiência de música e letras em poucos passos.',
     setup_lang_label: 'Selecione seu idioma',
     setup_name_label: 'Como devemos te chamar?',
@@ -1145,7 +1145,7 @@ const TRANSLATIONS = {
 
   'zh-Hans': {
     setup_title: '设置助理',
-    setup_welcome: '欢迎使用 Lyricsflow',
+    setup_welcome: '欢迎使用 LyricsFlow',
     setup_welcome_sub: '只需简单几步，即可开启个性化的音乐与歌词体验。',
     setup_lang_label: '选择您的语言',
     setup_name_label: '我们该如何称呼您？',
@@ -1359,7 +1359,7 @@ const TRANSLATIONS = {
 
   'ja': {
     setup_title: 'セットアップアシスタント',
-    setup_welcome: 'Lyricsflow へようこそ',
+    setup_welcome: 'LyricsFlow へようこそ',
     setup_welcome_sub: '簡単な手順で音楽と歌詞の体験をカスタマイズしましょう。',
     setup_lang_label: '言語を選択',
     setup_name_label: 'お名前を教えてください',
@@ -1787,7 +1787,7 @@ const TRANSLATIONS = {
 
   'de': {
     setup_title: 'Einrichtungsassistent',
-    setup_welcome: 'Willkommen bei Lyricsflow',
+    setup_welcome: 'Willkommen bei LyricsFlow',
     setup_welcome_sub: 'Passen Sie Ihr Musik- und Songtext-Erlebnis in wenigen Schritten an.',
     setup_lang_label: 'Sprache wählen',
     setup_name_label: 'Wie dürfen wir Sie nennen?',
@@ -2001,7 +2001,7 @@ const TRANSLATIONS = {
 
   'fr': {
     setup_title: 'Assistant de configuration',
-    setup_welcome: 'Bienvenue sur Lyricsflow',
+    setup_welcome: 'Bienvenue sur LyricsFlow',
     setup_welcome_sub: 'Personnalisons votre expérience musicale et vos paroles synchronisées.',
     setup_lang_label: 'Sélectionnez votre langue',
     setup_name_label: 'Comment devons-nous vous appeler ?',

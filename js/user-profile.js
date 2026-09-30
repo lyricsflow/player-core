@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — User Profile & Setup Wizard
+ * LyricsFlow — User Profile & Setup Wizard
  * Manages user profile, macOS styled Setup Assistant modal,
  * and Index.html Profile Settings modal with Player Settings iframe.
  */
@@ -8,6 +8,7 @@ import { SUPPORTED_LANGUAGES, getCurrentLang, setLanguage, t, detectBrowserLangu
 import { settingsUI } from './settings-ui.js';
 import { escapeHTML, cleanArtworkUrl } from './security-utils.js';
 import { initDropdowns, closeMenu } from "https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js";
+import { aeroAlert } from "./aero-dialog.js";
 
 function langDropdownHTML(id, selectedCode) {
   const current = SUPPORTED_LANGUAGES.find(l => l.code === selectedCode) || SUPPORTED_LANGUAGES[0];
@@ -261,9 +262,10 @@ export function showSetupAssistant() {
         <h2 class="am-setup-step-title">${t('setup_name_label')}</h2>
         <p class="am-setup-step-desc">${t('setup_name_hint')}</p>
         
-        <div class="am-setup-field">
-          <input type="text" id="setup-name-input" class="am-macos-input" placeholder="${t('setup_name_placeholder')}" autofocus autocomplete="off">
-        </div>
+        <label class="aero-field" style="margin-top: 14px;">
+          <input type="text" id="setup-name-input" class="aero-input" placeholder="${t('setup_name_placeholder')}" autofocus autocomplete="off">
+          <span class="aero-field-label">${t('setup_name_placeholder')}</span>
+        </label>
 
         <div class="am-macos-actions">
           <button id="setup-step2-skip" class="am-macos-btn secondary">${t('setup_btn_skip')}</button>
@@ -349,11 +351,11 @@ export function showSetupAssistant() {
           if (file) {
             // Check file size (max ~2MB) and MIME type
             if (file.size > 2 * 1024 * 1024) {
-              alert('Image file size must be less than 2MB.');
+              aeroAlert({ title: 'Invalid Image', message: 'Image file size must be less than 2MB.' });
               return;
             }
             if (file.type && !file.type.startsWith('image/')) {
-              alert('Only image files are allowed.');
+              aeroAlert({ title: 'Invalid File', message: 'Only image files are allowed.' });
               return;
             }
             const reader = new FileReader();
@@ -388,7 +390,7 @@ export function showSetupAssistant() {
       content.innerHTML = `
         <div class="am-setup-step-icon">✨</div>
         <h2 class="am-setup-step-title">You're All Set!</h2>
-        <p class="am-setup-step-desc">Here are a few quick recommendations to make the most of Lyricsflow:</p>
+        <p class="am-setup-step-desc">Here are a few quick recommendations to make the most of LyricsFlow:</p>
 
         <div style="display: flex; flex-direction: column; gap: 10px; margin: 16px 0; text-align: left;">
           <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
@@ -512,8 +514,10 @@ export function openProfileSettingsModal() {
 
       <!-- Name Editor -->
       <div class="am-setup-field" style="margin-top: 20px;">
-        <label class="am-setup-label">${t('profile_name_label')}</label>
-        <input type="text" id="prof-modal-name-input" class="am-macos-input" autocomplete="off">
+        <label class="aero-field">
+          <input type="text" id="prof-modal-name-input" class="aero-input" placeholder="${t('profile_name_label')}" autocomplete="off">
+          <span class="aero-field-label">${t('profile_name_label')}</span>
+        </label>
       </div>
 
       <!-- Language Selector -->
@@ -589,7 +593,7 @@ export function openProfileSettingsModal() {
       if (menu) {
         menu.querySelectorAll('.aero-menu-item').forEach(i => i.removeAttribute('aria-current'));
         item.setAttribute('aria-current', 'true');
-        try { closeMenu(menu); } catch (_) {}
+        try { closeMenu(menu); } catch (_) { }
       }
     };
     if (menu) {
@@ -617,7 +621,7 @@ export function openProfileSettingsModal() {
       if (menu) {
         menu.querySelectorAll('.aero-menu-item').forEach(i => i.removeAttribute('aria-current'));
         item.setAttribute('aria-current', 'true');
-        try { closeMenu(menu); } catch (_) {}
+        try { closeMenu(menu); } catch (_) { }
       }
     };
     if (menu) {
@@ -677,11 +681,11 @@ export function openProfileSettingsModal() {
       const file = e.target.files[0];
       if (file) {
         if (file.size > 2 * 1024 * 1024) {
-          alert('Image file size must be less than 2MB.');
+          aeroAlert({ title: 'Invalid Image', message: 'Image file size must be less than 2MB.' });
           return;
         }
         if (file.type && !file.type.startsWith('image/')) {
-          alert('Only image files are allowed.');
+          aeroAlert({ title: 'Invalid File', message: 'Only image files are allowed.' });
           return;
         }
         const reader = new FileReader();

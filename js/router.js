@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Router & Queue Manager
+ * LyricsFlow — Router & Queue Manager
  * Manages state transfer and queue persistence.
  * Uses IndexedDB for audio files and session storage for queue metadata.
  */
@@ -23,7 +23,7 @@ function openDB() {
         const tx = e.target.transaction;
         const store = tx.objectStore('tracks');
         if (!store.indexNames.contains('sortOrder')) {
-           store.createIndex('sortOrder', 'sortOrder', { unique: false });
+          store.createIndex('sortOrder', 'sortOrder', { unique: false });
         }
       }
 
@@ -67,6 +67,8 @@ export async function addTrackToQueue(buffer, metadata) {
       type: metadata.type,
       ttml: metadata.ttml || null,
       amTrackId: metadata.amTrackId || null,
+      isVideo: Boolean(metadata.isVideo),
+      videoUrl: metadata.videoUrl || null,
       sortOrder: nextOrder,
       addedAt: Date.now()
     });
@@ -79,6 +81,41 @@ export async function addTrackToQueue(buffer, metadata) {
     };
 
     tx.oncomplete = () => resolve(addRequest.result);
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * Replace entire queue atomically in a single fast IndexedDB transaction.
+ */
+export async function bulkReplaceQueue(items) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(['tracks', 'buffers'], 'readwrite');
+    const trackStore = tx.objectStore('tracks');
+    const bufferStore = tx.objectStore('buffers');
+    trackStore.clear();
+    bufferStore.clear();
+
+    const now = Date.now();
+    for (let i = 0; i < items.length; i++) {
+      const meta = items[i];
+      trackStore.add({
+        name: meta.name || 'Track',
+        artist: meta.artist || 'Unknown Artist',
+        album: meta.album || null,
+        artUrl: meta.artUrl || null,
+        type: meta.type || 'audio/mp4',
+        ttml: meta.ttml || null,
+        amTrackId: meta.amTrackId || null,
+        isVideo: Boolean(meta.isVideo),
+        videoUrl: meta.videoUrl || null,
+        sortOrder: i,
+        addedAt: now + i
+      });
+    }
+
+    tx.oncomplete = () => resolve();
     tx.onerror = (e) => reject(e.target.error);
   });
 }
@@ -157,7 +194,7 @@ export async function updateTrackAmTrackId(id, amTrackId) {
     const tx = db.transaction('tracks', 'readwrite');
     const store = tx.objectStore('tracks');
     const getReq = store.get(id);
-    
+
     getReq.onsuccess = () => {
       const data = getReq.result;
       if (data) {
@@ -165,7 +202,7 @@ export async function updateTrackAmTrackId(id, amTrackId) {
         store.put(data);
       }
     };
-    
+
     tx.oncomplete = () => resolve();
     tx.onerror = (e) => reject(e.target.error);
   });
@@ -264,7 +301,7 @@ export async function deletePlaylist(id) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(['playlists', 'playlist_tracks'], 'readwrite');
     tx.objectStore('playlists').delete(id);
-    
+
     // delete associated tracks
     const pTrackStore = tx.objectStore('playlist_tracks');
     const index = pTrackStore.index('playlistId');
@@ -315,8 +352,8 @@ export async function getPlaylistTracks(playlistId) {
 
 export async function findTrackInPlaylist(playlistId, amTrackId, name, artist) {
   const tracks = await getPlaylistTracks(playlistId);
-  return tracks.find(t => 
-    (amTrackId && t.amTrackId === amTrackId) || 
+  return tracks.find(t =>
+    (amTrackId && t.amTrackId === amTrackId) ||
     (t.name === name && t.artist === artist)
   );
 }
@@ -352,7 +389,7 @@ export async function updatePlaylistTrack(id, patch) {
 export async function playPlaylist(playlistId) {
   const tracks = await getPlaylistTracks(playlistId);
   if (!tracks.length) return false;
-  
+
   await clearQueue();
   for (const t of tracks) {
     await addTrackToQueue(t.buffer, t);

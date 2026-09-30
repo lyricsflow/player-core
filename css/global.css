@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   Lyricsflow — Global Styles
+   LyricsFlow — Global Styles
    ═══════════════════════════════════════════════ */
 
 /* Google Fonts (fallback for Georgian, CJK, Cyrillic, Devanagari, etc.) */
@@ -96,7 +96,7 @@ html {
 body {
   margin: 0;
   padding: 0;
-  background: #000000;
+  background: #1c1c1e;
   color: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', 'PingFang SC', 'Hiragino Sans', 'SF Arabic', Inter, "Noto Sans Georgian", "Vazirmatn", sans-serif;
   font-synthesis: none;
@@ -111,7 +111,8 @@ body {
   user-select: none;
 }
 
-img, a {
+img,
+a {
   -webkit-user-drag: none;
 }
 
@@ -143,7 +144,7 @@ input {
 
   /* Lyrics sizing */
   --DefaultLyricsSize: clamp(1.85rem, calc(1cqw * 7), 3.5rem);
-  --Lyricsflow-LineSpacing: 1cqw 0;
+  --LyricsFlow-LineSpacing: 1cqw 0;
 
   /* Glow definitions */
   --TextGlowDef: rgba(255, 255, 255, 0.15) 0px 0px 6px;
@@ -155,7 +156,7 @@ input {
   --Simplebar-Scrollbar-Color: rgba(255, 255, 255, 0.6);
 
   /* NowBar sizing (Apple Music Layout) */
-  --NowBarWidth: 34cqw;
+  --NowBarWidth: 40cqw;
   /* Compact panel */
   --NowBarRightSpacing: 4cqw;
   --NowBarLeftSpacing: 6cqw;
@@ -292,4 +293,167 @@ input {
   background: rgba(255, 255, 255, 0.2) !important;
   color: #ffffff !important;
   font-weight: 600 !important;
+}
+
+/* ── AeroUI Dialog Enhancements ── */
+dialog.aero-modal {
+  z-index: 10000001 !important;
+}
+
+dialog.aero-modal::backdrop {
+  z-index: 10000000 !important;
+}
+
+.aero-prompt-dialog,
+.aero-confirm-dialog,
+.aero-alert-dialog {
+  min-width: 320px;
+  max-width: 420px;
+}
+
+.aero-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 0.92rem;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.aero-btn:active {
+  transform: scale(0.96);
+}
+
+/* ── Playlist Detail & Tracklist Table Fixes ── */
+#page-playlists .am-hero.is-detail {
+  display: none !important;
+}
+
+.am-playlist-detail-header {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 32px !important;
+  padding: 24px 0 32px !important;
+}
+
+.am-playlist-detail-art-wrap {
+  width: 230px !important;
+  height: 230px !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
+  flex-shrink: 0 !important;
+  background: #1c1c1e !important;
+}
+
+.am-playlist-detail-art {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+.am-playlist-detail-info {
+  flex: 1 !important;
+}
+
+.am-playlist-detail-title {
+  font-size: clamp(2rem, 4vw, 2.8rem) !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  margin: 0 0 6px 0 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.am-playlist-detail-curator {
+  font-size: 1.25rem !important;
+  color: #fa586a !important;
+  font-weight: 600 !important;
+  margin: 0 0 8px 0 !important;
+  display: inline-block !important;
+  text-decoration: none !important;
+}
+
+.am-playlist-detail-meta {
+  font-size: 0.84rem !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+  margin-bottom: 6px !important;
+}
+
+.am-playlist-detail-desc {
+  font-size: 0.92rem !important;
+  line-height: 1.5 !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  margin-bottom: 20px !important;
+  max-width: 680px !important;
+}
+
+.am-playlist-detail-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.am-tracklist-table-header {
+  display: flex !important;
+  align-items: center !important;
+  padding: 8px 16px !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin-bottom: 6px !important;
+}
+
+.am-suggested-list {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  gap: 12px 18px !important;
+}
+
+.am-suggested-song-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 8px 12px !important;
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease !important;
+}
+
+.am-suggested-song-row:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.am-suggested-art {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 6px !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+}
+
+.am-suggested-info {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.am-suggested-title {
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.am-suggested-artist {
+  font-size: 0.76rem !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }

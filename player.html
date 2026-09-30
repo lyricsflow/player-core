@@ -5,9 +5,34 @@
   <meta charset="UTF-8">
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Lyricsflow — Web Lyrics Player</title>
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline' https: data: blob:; script-src 'self' 'unsafe-inline' https://nurislamaibekuly.github.io; style-src 'self' 'unsafe-inline' https://nurislamaibekuly.github.io; font-src 'self' data: https:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: data: blob: ws: wss:; worker-src 'self' blob:;">
+  <title>LyricsFlow — Web Lyrics Player</title>
+  <script>
+    const isElectron = !!(window.wave?.windowControls || window.lyricsflow?.windowControls || (window.parent && (window.parent.wave || window.parent.lyricsflow)) || /electron/i.test(navigator.userAgent));
+    const isInsideIframe = window.parent && window.parent !== window;
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+    if (isElectron) {
+      document.documentElement.classList.add('is-electron');
+    } else {
+      document.documentElement.classList.add('is-web');
+    }
+
+    if (isInsideIframe) {
+      document.documentElement.classList.add('is-iframe');
+    }
+
+    if (isTouchDevice) {
+      document.documentElement.classList.add('is-touch');
+    }
+
+    if (window.location.search.includes('embed=1')) {
+      document.documentElement.classList.add('is-embed-mode');
+    }
+  </script>
   <meta name="description"
-    content="Play and experience synchronized Apple Music lyrics with beautiful animations and high-fidelity graphics on Lyricsflow.">
+    content="Play and experience synchronized Apple Music lyrics with beautiful animations and high-fidelity graphics on LyricsFlow.">
 
   <!-- AeroUI Design System (no SRI pins: the CDN tracks a mutable branch,
        so pinned hashes break on every upstream update — always load live) -->
@@ -45,6 +70,7 @@
   <link rel="stylesheet" href="css/dynamic-bg.css">
   <link rel="stylesheet" href="css/player.css">
   <link rel="stylesheet" href="css/lyrics.css">
+  <link rel="stylesheet" href="css/electron-desktop.css">
 
   <style>
     /* ── Apple Music Translation / Pronunciation Sub-lines ── */
@@ -263,6 +289,7 @@
 
     /* Mobile Circular Button Masks & Placement */
     @media (max-width: 768px) {
+
       .lyrics-button.translation-menu-btn,
       .lyrics-button#btn-mobile-translation-menu {
         position: fixed !important;
@@ -311,6 +338,284 @@
         background: rgba(255, 255, 255, 0.25) !important;
         border-radius: 50% !important;
       }
+    }
+
+    /* Top-Left Controls: macOS Traffic Lights + Frosted Pill Side-by-Side */
+    .pc-top-left-bar {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 2147483647;
+      background: transparent;
+      border: none;
+      padding: 0;
+      box-shadow: none;
+      -webkit-app-region: no-drag;
+      pointer-events: auto;
+    }
+
+    .pc-top-left-bar * {
+      -webkit-app-region: no-drag;
+    }
+
+    .pc-top-left-bar .electron-window-controls {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+      pointer-events: auto;
+    }
+
+    .pc-top-left-bar .electron-window-control {
+      -webkit-app-region: no-drag;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    /* Scoped strictly to Desktop Electron */
+    @media (min-width: 1025px) {
+      html.is-electron:not(.is-web) .pc-top-left-bar {
+        display: flex !important;
+      }
+      html.is-electron:not(.is-web) .pc-top-left-bar .electron-window-controls {
+        display: flex !important;
+      }
+    }
+
+    /* In iframe mode (e.g. drawer), show only the drawer close button */
+    html.is-iframe .pc-top-left-bar {
+      display: flex !important;
+    }
+    html.is-iframe .pc-top-left-bar .electron-window-controls,
+    html.is-iframe #pc-btn-mini {
+      display: none !important;
+    }
+
+    .pc-traffic-pill {
+      z-index: 9999 !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 2px !important;
+      background: rgba(255, 255, 255, 0.14) !important;
+      backdrop-filter: blur(24px) saturate(160%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+      border: 0.5px solid rgba(255, 255, 255, 0.25) !important;
+      border-radius: 999px !important;
+      padding: 3px 6px !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22) !important;
+      -webkit-app-region: no-drag !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      position: relative !important;
+      z-index: 2147483647 !important;
+    }
+
+    .pc-pill-btn {
+      background: transparent !important;
+      border: none !important;
+      cursor: pointer !important;
+      color: rgba(255, 255, 255, 0.85) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 26px !important;
+      height: 26px !important;
+      border-radius: 50% !important;
+      transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease !important;
+      outline: none !important;
+      -webkit-app-region: no-drag !important;
+      pointer-events: auto !important;
+      position: relative !important;
+      z-index: 2147483647 !important;
+    }
+
+    .pc-pill-btn svg {
+      pointer-events: none !important;
+    }
+
+    .pc-pill-btn:hover {
+      color: #ffffff !important;
+      background: rgba(255, 255, 255, 0.2) !important;
+      transform: scale(1.05) !important;
+    }
+
+    .pc-pill-btn:active {
+      transform: scale(0.95) !important;
+    }
+
+    /* ── Apple Music Full Screen Video Player View ── */
+    .player-video-view {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+      border-radius: 14px;
+      z-index: 5;
+      outline: none;
+    }
+
+    body.video-playing #album-art {
+      background: #000 !important;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
+    }
+
+    /* When video is in normal centered view, expand MediaBox for cinematic aspect */
+    body.video-playing #LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox {
+      max-width: 820px !important;
+      width: min(85vw, 820px) !important;
+      height: auto !important;
+      aspect-ratio: 16 / 9 !important;
+    }
+
+    body.video-playing #LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox .MediaImageContainer {
+      aspect-ratio: 16 / 9 !important;
+      border-radius: 16px !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* Fullscreen button on video container */
+    .video-fs-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 10;
+      width: 34px;
+      height: 34px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .MediaBox:hover .video-fs-btn {
+      opacity: 1;
+    }
+
+    .video-fs-btn:hover {
+      transform: scale(1.1);
+      background: rgba(0, 0, 0, 0.85);
+    }
+
+    /* ── Apple Music Synchronized Crossfade Transitions ── */
+    #album-art {
+      transition: background-image 0.2s ease, opacity 0.2s ease;
+      will-change: opacity;
+    }
+
+    #album-art.crossfading {
+      transition: opacity var(--crossfade-duration, 3s) cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .lyricsflow-dynamic-bg {
+      transition: opacity var(--crossfade-duration, 3s) cubic-bezier(0.25, 1, 0.5, 1);
+      will-change: opacity;
+    }
+
+    .NowBarBottomWrapper.crossfading {
+      transition: opacity calc(var(--crossfade-duration, 3s) * 0.4) ease;
+      opacity: 0.2;
+    }
+
+    .NowBarBottomWrapper {
+      transition: opacity 0.35s ease;
+    }
+
+    .LyricsContainer.crossfading {
+      transition: opacity calc(var(--crossfade-duration, 3s) * 0.4) ease;
+      opacity: 0.15;
+    }
+
+    .LyricsContainer {
+      transition: opacity 0.35s ease;
+    }
+
+    /* ── LyricsFlow Editor Embed Mode: Pure Centered Lyrics ── */
+    html.is-embed-mode #now-bar,
+    html.is-embed-mode .NowBar,
+    html.is-embed-mode .pc-top-volume-bar,
+    html.is-embed-mode #pc-top-volume-bar,
+    html.is-embed-mode .pc-top-left-bar,
+    html.is-embed-mode #pc-top-left-bar,
+    html.is-embed-mode .pc-top-right-bar,
+    html.is-embed-mode .pc-bottom-right-bar,
+    html.is-embed-mode #pc-bottom-right-bar,
+    html.is-embed-mode .pc-capsule-toggle,
+    html.is-embed-mode #pc-capsule-toggle,
+    html.is-embed-mode .BottomBar,
+    html.is-embed-mode .touch-shield,
+    html.is-embed-mode #queue-panel,
+    html.is-embed-mode .QueuePanel,
+    html.is-embed-mode #lyrics-source-badge,
+    html.is-embed-mode .lyrics-source-badge,
+    html.is-embed-mode .Grabber,
+    body.is-embed-mode #now-bar,
+    body.is-embed-mode .NowBar,
+    body.is-embed-mode .pc-top-volume-bar,
+    body.is-embed-mode #pc-top-volume-bar,
+    body.is-embed-mode .pc-top-left-bar,
+    body.is-embed-mode #pc-top-left-bar,
+    body.is-embed-mode .pc-top-right-bar,
+    body.is-embed-mode .pc-bottom-right-bar,
+    body.is-embed-mode #pc-bottom-right-bar,
+    body.is-embed-mode .pc-capsule-toggle,
+    body.is-embed-mode #pc-capsule-toggle,
+    body.is-embed-mode .BottomBar,
+    body.is-embed-mode .touch-shield,
+    body.is-embed-mode #queue-panel,
+    body.is-embed-mode .QueuePanel,
+    body.is-embed-mode #lyrics-source-badge,
+    body.is-embed-mode .lyrics-source-badge,
+    body.is-embed-mode .Grabber {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    html.is-embed-mode #LyricsflowPage .ContentBox,
+    body.is-embed-mode #LyricsflowPage .ContentBox {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      justify-content: center !important;
+      align-items: center !important;
+      display: flex !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    html.is-embed-mode #LyricsflowPage .LyricsContainer,
+    body.is-embed-mode #LyricsflowPage .LyricsContainer {
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 0 40px !important;
+      margin: 0 auto !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+    }
+
+    html.is-embed-mode #LyricsflowPage .LyricsContainer .LyricsContent,
+    body.is-embed-mode #LyricsflowPage .LyricsContainer .LyricsContent {
+      --LyricsLeftSidePadding: 0px !important;
+      --LyricsRightSidePadding: 0px !important;
+      margin: 0 auto !important;
+      width: 100% !important;
+      max-width: 900px !important;
     }
   </style>
 </head>
@@ -436,21 +741,28 @@
     <!-- Dynamic Background -->
     <div class="lyricsflow-dynamic-bg" id="dynamic-bg"></div>
 
-    <!-- PC Desktop Top-Right Controls (AirPlay & Volume Slider) -->
-    <div class="pc-top-right-bar" id="pc-top-right-bar">
-      <button class="pc-airplay-btn" id="pc-btn-airplay" title="AirPlay / Audio Output">
-        <img src="icons/airplay.png" alt="AirPlay" id="pc-airplay-icon"
-          style="width: 22px; height: 22px; filter: brightness(0) invert(1);">
-      </button>
-      <div class="pc-volume-group">
-        <input type="range" class="pc-volume-slider" id="pc-volume-slider" min="0" max="1" step="0.01" value="1">
-        <img src="icons/volume_full.png" class="pc-volume-icon" alt="Volume"
-          style="width: 18px; height: 18px; filter: brightness(0) invert(1); opacity: 0.85;">
+    <!-- PC Desktop Top Controls (AirPlay & Aero Volume Capsule + Apple Music Sing) -->
+    <div class="pc-top-volume-bar" id="pc-top-volume-bar">
+      <!-- Master Volume Capsule -->
+      <div class="pc-volume-capsule">
+        <button class="pc-airplay-btn" id="pc-btn-airplay" title="AirPlay / Audio Output">
+          <img src="icons/airplay.png" alt="AirPlay" id="pc-airplay-icon"
+            style="width: 22px; height: 22px; filter: brightness(0) invert(1);">
+        </button>
+        <div class="pc-volume-slider-box">
+          <input type="range" class="aero-slider aero-slider--lg pc-aero-vol-slider" id="pc-volume-slider" min="0"
+            max="1" step="0.005" value="1">
+        </div>
+        <div class="pc-vol-speaker-icon" id="pc-volume-icon">
+          <img src="icons/volume_full.png" class="pc-volume-icon" alt="Volume"
+            style="width: 18px; height: 18px; filter: brightness(0) invert(1); opacity: 0.85;">
+        </div>
       </div>
     </div>
 
-    <!-- PC Desktop Bottom-Right Controls (Translation Menu, Lyrics & Queue Glass Buttons) -->
+    <!-- PC Desktop Bottom-Right Liquid Glass Controls (Translation, Segmented Lyrics & Queue Capsule) -->
     <div class="pc-bottom-right-bar" id="pc-bottom-right-bar">
+      <!-- Translation Menu Button -->
       <button class="pc-dock-glass-btn translation-menu-btn" id="pc-btn-translation-menu"
         title="Translations & Pronunciations" style="display: none;">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28" role="presentation">
@@ -463,33 +775,73 @@
               transform="translate(-.51 4.44)scale(.101)" fill="white"></path>
           </g>
         </svg>
+      </button>
 
-      </button>
-      <button class="pc-dock-glass-btn active" id="pc-btn-lyrics" title="Lyrics" data-i18n-title="player_btn_lyrics">
-        <img src="icons/lyrics.svg" alt="Lyrics" style="width: 22px; height: 22px; filter: brightness(0) invert(1);">
-      </button>
-      <button class="pc-dock-glass-btn" id="pc-btn-queue" title="Playing Next / Queue" data-i18n-title="upload_up_next">
-        <img src="icons/queue.svg" alt="Queue" style="width: 20px; height: 20px; filter: brightness(0) invert(1);">
-      </button>
+      <!-- Liquid Glass Capsule Switcher: Lyrics & Queue -->
+      <div class="pc-capsule-toggle" id="pc-capsule-toggle">
+        <div class="pc-capsule-thumb" id="pc-capsule-thumb"></div>
+        <button class="pc-capsule-item active" id="pc-btn-lyrics" title="Lyrics" data-i18n-title="player_btn_lyrics"
+          aria-label="Lyrics">
+          <!-- Apple Music Quote Bubble Icon -->
+          <img src="icons/lyrics.png" alt="Lyrics" style="width: 22px; height: 22px;">
+        </button>
+        <button class="pc-capsule-item" id="pc-btn-queue" title="Playing Next / Queue" data-i18n-title="upload_up_next"
+          aria-label="Queue">
+          <!-- Apple Music Playing Next List Icon -->
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <circle cx="5" cy="7" r="2"></circle>
+            <rect x="9" y="6" width="12" height="2" rx="1"></rect>
+            <circle cx="5" cy="12" r="2"></circle>
+            <rect x="9" y="11" width="12" height="2" rx="1"></rect>
+            <circle cx="5" cy="17" r="2"></circle>
+            <rect x="9" y="16" width="12" height="2" rx="1"></rect>
+          </svg>
+        </button>
+      </div>
     </div>
 
-    <!-- PC Desktop Top-Left Controls (Close Drawer & Mini-Player Popout) -->
+    <!-- PC Desktop Top-Left Controls (macOS Traffic Lights + Mini-Player Popout Side-by-Side) -->
     <div class="pc-top-left-bar" id="pc-top-left-bar">
-      <button class="pc-top-btn" id="pc-btn-close" title="Close" aria-label="Close">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"
-          stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-      <button class="pc-top-btn" id="pc-btn-mini" title="Mini Player" data-i18n-title="mini_player_title"
-        aria-label="Mini Player">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none"
-          stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect>
-          <rect x="11" y="11" width="8" height="8" rx="1.5" ry="1.5" fill="currentColor" fill-opacity="0.25"></rect>
-        </svg>
-      </button>
+      <!-- Traffic Lights Trio -->
+      <div class="electron-window-controls" id="player-window-controls">
+        <button class="electron-window-control electron-window-control--close" id="pc-btn-close" title="Close"
+          aria-label="Close">
+          <svg class="electron-window-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <button class="electron-window-control electron-window-control--minimize" id="pc-btn-minimize" title="Minimize"
+          aria-label="Minimize">
+          <svg class="electron-window-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <button class="electron-window-control electron-window-control--maximize" id="pc-btn-maximize" title="Maximize"
+          aria-label="Maximize">
+          <svg class="electron-window-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Frosted Capsule Pill: Drawer Close & Mini Popout -->
+      <div class="pc-traffic-pill" id="pc-top-left-pill">
+        <button class="pc-pill-btn" id="pc-btn-drawer-close" title="Close Player" aria-label="Close Player">
+          <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.4" fill="none"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <button class="pc-pill-btn" id="pc-btn-mini" title="Mini Player" aria-label="Mini Player">
+          <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <rect x="9" y="9" width="12" height="12" rx="1.5" ry="1.5" fill="currentColor"></rect>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Content Box -->
@@ -513,11 +865,15 @@
               </div>
               <div class="MetadataActions">
                 <button class="favorite-button" id="btn-favorite" title="Favorite" data-i18n-title="ctx_favorite">
-                  <img src="icons/favorite.png" alt="Favorite" id="favorite-icon" width="32" height="32">
+                  <img src="icons/favorite.svg" alt="Favorite" id="favorite-icon" width="32" height="32">
                 </button>
                 <button class="options-button" id="btn-options" title="Player Settings"
                   data-i18n-title="player_settings">
-                  <img src="icons/settings.png" id="setting-icon" alt="Settings" width="32" height="32">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" style="transform: rotate(90deg);">
+                    <circle cx="12" cy="5" r="2" />
+                    <circle cx="12" cy="12" r="2" />
+                    <circle cx="12" cy="19" r="2" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -631,7 +987,9 @@
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          <text x="12" y="12.5" font-size="9" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="bold" fill="currentColor" stroke="none" text-anchor="middle" dominant-baseline="middle">A</text>
+          <text x="12" y="12.5" font-size="9" font-family="-apple-system, BlinkMacSystemFont, sans-serif"
+            font-weight="bold" fill="currentColor" stroke="none" text-anchor="middle"
+            dominant-baseline="middle">A</text>
         </svg>
       </span>
       <span class="am-menu-item-text" id="menu-text-translation">Show Translation</span>
@@ -648,6 +1006,7 @@
     import { applySyllableLyrics, applyLineLyrics, applyStaticLyrics, LyricsObject, convertToSyllable } from './js/lyrics-applyer.js';
     import { setLyricsTime } from './js/lyrics-setter.js';
     import { animateLyrics } from './js/lyrics-animator.js';
+    import { animateSpicyLyrics, resetSpicyLyrics } from './js/spicy-animator.js';
     import { initScrollManager, scrollToActiveLine, resetScrollManager, queueForceScroll, isUserScrolling } from './js/scroll-manager.js';
 
     import AudioPlayer from './js/audio-player.js';
@@ -663,6 +1022,7 @@
     import { escapeHTML, cleanArtworkUrl } from './js/security-utils.js';
     import extensionManager from './js/extensions.js';
     import { generateTTML } from './js/ttml-parser.js';
+    import { aeroConfirm } from './js/aero-dialog.js';
     import isRtl from './js/is-rtl.js';
     import { t, getCurrentLang, applyDOMTranslations, formatLocalizedDate, formatLocalizedYear } from './js/i18n.js';
     import {
@@ -707,8 +1067,93 @@
     const btnRomanization = document.getElementById('btn-romanization');
     const btnTranslation = document.getElementById('btn-translation');
 
+    // ── Apple Music Sing (Separate Audio Track & Control) ──
+    const pcBtnSing = document.getElementById('pc-btn-sing');
+    const pcSingCapsule = document.getElementById('pc-sing-capsule');
+    const pcSingTrack = document.getElementById('pc-sing-slider-track');
+    const pcSingFill = document.getElementById('pc-sing-slider-fill');
+    const pcSingThumb = document.getElementById('pc-sing-slider-thumb');
+
+    let _singAudio = new Audio();
+    _singAudio.preload = 'auto';
+    _singAudio.volume = 0;
+    let _singLevel = 0; // 0 = original song, 1 = max non-vocals (vocals eliminated)
+
+    function setSingLevel(ratio) {
+      _singLevel = Math.max(0, Math.min(1, ratio));
+      if (pcSingFill) pcSingFill.style.height = `${_singLevel * 100}%`;
+      if (pcSingThumb) pcSingThumb.style.bottom = `${_singLevel * 100}%`;
+      _updateSingMix();
+      if (_singLevel > 0.02) {
+        pcBtnSing?.classList.add('active');
+      } else {
+        pcBtnSing?.classList.remove('active');
+      }
+    }
+
+    function _updateSingMix() {
+      const masterVol = player.getVolume ? player.getVolume() : (parseFloat(volumeSlider?.value) || 1);
+      // As Sing level goes up: attenuate vocal audio, boost non-vocal audio
+      const mainGain = Math.cos(_singLevel * 0.5 * Math.PI) * masterVol;
+      const singGain = Math.sin(_singLevel * 0.5 * Math.PI) * masterVol;
+
+      if (player.audio) player.audio.volume = Math.max(0, Math.min(1, mainGain));
+      if (player.audioA) player.audioA.volume = Math.max(0, Math.min(1, mainGain));
+      if (player.audioB) player.audioB.volume = Math.max(0, Math.min(1, mainGain));
+      _singAudio.volume = Math.max(0, Math.min(1, singGain));
+    }
+
+    function syncSingAudio() {
+      if (!_singAudio || !_singAudio.src) return;
+      const mainAudio = player.audio || player.audioA || player.audioB;
+      if (!mainAudio) return;
+      const diff = Math.abs((_singAudio.currentTime || 0) - (mainAudio.currentTime || 0));
+      if (diff > 0.08) {
+        try { _singAudio.currentTime = mainAudio.currentTime; } catch (_) { }
+      }
+      if (mainAudio.paused && !_singAudio.paused) {
+        _singAudio.pause();
+      } else if (!mainAudio.paused && _singAudio.paused) {
+        _singAudio.play().catch(() => { });
+      }
+    }
+
+    // Toggle expanded vertical slider on button click
+    if (pcBtnSing && pcSingCapsule) {
+      pcBtnSing.addEventListener('click', (e) => {
+        e.stopPropagation();
+        pcSingCapsule.classList.toggle('active');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('#pc-sing-widget')) {
+          pcSingCapsule.classList.remove('active');
+        }
+      });
+    }
+
+    // Vertical slider interaction (fill rises from bottom up)
+    if (pcSingTrack) {
+      const handleSingPointer = (e) => {
+        const rect = pcSingTrack.getBoundingClientRect();
+        if (rect.height <= 0) return;
+        const ratio = Math.max(0, Math.min(1, (rect.bottom - e.clientY) / rect.height));
+        setSingLevel(ratio);
+      };
+
+      pcSingTrack.addEventListener('pointerdown', (e) => {
+        handleSingPointer(e);
+        const onMove = (ev) => handleSingPointer(ev);
+        const onUp = () => {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    }
+
     // ── State ──
-    // Strictly enforce LTR mode on player.html at all times
     document.documentElement.dir = 'ltr';
     document.documentElement.setAttribute('dir', 'ltr');
     if (document.body) document.body.setAttribute('dir', 'ltr');
@@ -718,14 +1163,27 @@
       if (document.body) document.body.setAttribute('dir', 'ltr');
     });
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const isEmbedMode = urlParams.get('embed') === '1';
+    if (isEmbedMode) {
+      document.body.classList.add('is-embed-mode');
+    }
+
     let songMetadata = { title: '', artist: '', album: '', artUrl: null };
     const player = new AudioPlayer();
+    player.crossfadeDuration = parseFloat(settingsManager.get('crossfadeDuration')) || 3;
     window.lyricsflowPlayer = player;
     window.lyricsflowSettingsManager = settingsManager;
     window._lyricsflowCurrentLyrics = null;
     window._lyricsflowSongMetadata = songMetadata;
     window._lyricsflowGenerateTTML = generateTTML;
     settingsManager.apply();
+
+    window.addEventListener('lyricsflow-settings-changed', (e) => {
+      if (e.detail && e.detail.crossfadeDuration !== undefined) {
+        player.crossfadeDuration = parseFloat(e.detail.crossfadeDuration) || 0;
+      }
+    });
 
     const mediaSessionManager = new MediaSessionManager(
       player,
@@ -745,8 +1203,6 @@
       videoExporter.startExport(songMetadata);
     });
 
-    // ── Audio Device State (Static AirPods Icon) ──
-
     // ── TTML Test Listener ──
     window.addEventListener('lyricsflow_ttml_test_loaded', (e) => {
       const lyrics = e.detail;
@@ -760,12 +1216,11 @@
 
     // ── Init ──
     async function init() {
-      // Check for test TTML in localStorage!
       const testDataStr = localStorage.getItem('lyricsflow_ttml_test');
       if (testDataStr) {
         try {
           const testData = JSON.parse(testDataStr);
-          if (Date.now() - testData.timestamp < 30000) { // 30 sec expiry
+          if (Date.now() - testData.timestamp < 30000) {
             console.log('[TTML Tester] Loading test lyrics from localStorage');
             parsedLyrics = testData.lyrics;
             window._lyricsflowCurrentLyrics = testData.lyrics;
@@ -777,12 +1232,12 @@
       }
 
       const isIframe = window.self !== window.top;
-      if (!(await hasPlayerData())) {
+
+      if (!isEmbedMode && !(await hasPlayerData())) {
         if (!isIframe) {
           window.location.href = 'index.html';
           return;
         } else {
-          // Inside iframe drawer: Wait for queue data to arrive without redirecting
           console.log('[Player] Inside iframe drawer, waiting for queue data...');
           let retries = 0;
           while (!(await hasPlayerData()) && retries < 15) {
@@ -796,7 +1251,6 @@
         }
       }
 
-      // Wire Grabber click & swipe down to close drawer
       const grabber = document.querySelector('.Grabber');
       if (grabber) {
         grabber.onclick = (e) => {
@@ -806,7 +1260,6 @@
           }
         };
 
-        // Mobile touch swipe down gesture
         let touchStartY = 0;
         grabber.addEventListener('touchstart', (e) => {
           touchStartY = e.touches[0].clientY;
@@ -816,7 +1269,7 @@
         grabber.addEventListener('touchend', (e) => {
           grabber.classList.remove('touch-active');
           const touchEndY = e.changedTouches[0].clientY;
-          if (touchEndY - touchStartY > 35) { // Swiped down
+          if (touchEndY - touchStartY > 35) {
             if (isIframe) {
               window.parent.postMessage({ action: 'closePlayerDrawer' }, '*');
             }
@@ -824,7 +1277,6 @@
         }, { passive: true });
       }
 
-      // Mobile cover pull-down swipe gesture to slide down & close the player drawer
       const mediaBoxEl = document.getElementById('media-box');
       if (mediaBoxEl) {
         let coverTouchStartY = 0;
@@ -840,7 +1292,6 @@
           if (window.innerWidth <= 768 && e.changedTouches.length === 1) {
             const deltaY = e.changedTouches[0].clientY - coverTouchStartY;
             const deltaX = Math.abs(e.changedTouches[0].clientX - coverTouchStartX);
-            // Swipe down predominantly (more vertical than horizontal, > 45px distance)
             if (deltaY > 45 && deltaY > deltaX * 1.3) {
               if (isIframe) {
                 window.parent.postMessage({ action: 'closePlayerDrawer' }, '*');
@@ -850,7 +1301,6 @@
         }, { passive: true });
       }
 
-      // Wire Artists text click: Slide down and trigger AeroUI dialog in parent
       const artistsEl = document.getElementById('artists');
       if (artistsEl) {
         artistsEl.style.cursor = 'pointer';
@@ -878,14 +1328,19 @@
         document.documentElement.dir = e.detail.dir;
       });
 
+      if (isEmbedMode) {
+        hideTrackLoader();
+        const contentBox = document.querySelector('.ContentBox');
+        if (contentBox) contentBox.style.opacity = '1';
+        setViewMode('lyrics');
+        return;
+      }
+
       showGlobalLoader();
       await refreshQueue();
       await loadTrack(getCurrentIndex(), false, false);
-
-      // Update audio output icon (static AirPods)
       updateBluetoothState();
 
-      // Default view mode on mobile: normal (centered cover art, no lyrics/queue)
       const isMobile = window.innerWidth <= 768;
       if (isMobile) {
         setViewMode('normal');
@@ -934,23 +1389,20 @@
 
         item.onclick = (e) => {
           if (e.target.classList.contains('drag-handle')) return;
-          loadTrack(index);
+          loadTrack(index, false, true);
         };
 
-        // Drag Events
         item.addEventListener('dragstart', () => item.classList.add('dragging'));
         item.addEventListener('dragend', () => item.classList.remove('dragging'));
 
         playerQueueList.appendChild(item);
       });
 
-      // Reordering logic
       playerQueueList.onsyncorder = async () => {
         const newIds = Array.from(playerQueueList.querySelectorAll('.player-queue-item')).map(el => parseInt(el.dataset.id));
         await updateQueueOrder(newIds);
         currentQueue = await getQueue();
 
-        // Restore correct currentIndex for the playing track
         const newIdx = currentQueue.findIndex(t => t.id === currentTrackId);
         if (newIdx !== -1) setCurrentIndex(newIdx);
 
@@ -1046,13 +1498,15 @@
     async function loadTrack(index, isCrossfade = false, autoPlay = true) {
       if (index < 0 || index >= currentQueue.length) return;
 
-      showTrackLoader();
-
       const contentBox = document.querySelector('.ContentBox');
-      if (contentBox) contentBox.style.opacity = '0';
 
-      // Short delay for fade out
-      await new Promise(r => setTimeout(r, 340));
+      if (!isCrossfade) {
+        showTrackLoader();
+        if (contentBox) contentBox.style.opacity = '0';
+        await new Promise(r => setTimeout(r, 220));
+      } else {
+        window._isCurrentTrackCrossfading = true;
+      }
 
       setCurrentIndex(index);
       let track = await getTrackData(currentQueue[index].id);
@@ -1067,13 +1521,170 @@
         nowBar.setAttribute('data-art-url', track.artUrl || '');
       }
 
+      // Preload non-vocals audio for Apple Music Sing
+      if (track.amTrackId) {
+        const apiBase = window.API_BASE || 'https://api.spicyamll.online';
+        _singAudio.src = `${apiBase}/stream?song=${track.amTrackId}&novocals=true&codec=aac`;
+        _singAudio.currentTime = 0;
+        _singAudio.load();
+      }
+
+      // ── Handle Video Track Playback ──
+      if (track.isVideo || track.videoUrl) {
+        try {
+          player.pause();
+          document.body.classList.add('video-playing');
+
+          let streamUrl = track.videoUrl;
+          if (!streamUrl && track.amTrackId) {
+            const apiBase = window.API_BASE || 'https://api.spicyamll.online';
+            streamUrl = `${apiBase}/stream?url=${encodeURIComponent('https://music.apple.com/kz/music-video/' + track.amTrackId)}&mode=gamdl&fallback=false&websupport=false`;
+          }
+
+          albumArt.innerHTML = '';
+          albumArt.className = 'MediaImageContainer';
+          albumArt.style.backgroundImage = 'none';
+
+          const videoEl = document.createElement('video');
+          videoEl.id = 'player-video-element';
+          videoEl.className = 'player-video-view';
+          videoEl.playsInline = true;
+          videoEl.autoplay = autoPlay;
+          videoEl.src = streamUrl;
+
+          videoEl.ondblclick = () => {
+            if (!document.fullscreenElement) {
+              videoEl.requestFullscreen().catch(() => { });
+            } else {
+              document.exitFullscreen().catch(() => { });
+            }
+          };
+
+          const fsBtn = document.createElement('button');
+          fsBtn.className = 'video-fs-btn';
+          fsBtn.title = 'Full Screen';
+          fsBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
+          `;
+          fsBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (!document.fullscreenElement) {
+              videoEl.requestFullscreen().catch(() => { });
+            } else {
+              document.exitFullscreen().catch(() => { });
+            }
+          };
+
+          albumArt.appendChild(videoEl);
+          albumArt.appendChild(fsBtn);
+
+          player._activeVideoEl = videoEl;
+          player.audio.pause();
+
+          videoEl.onloadedmetadata = () => {
+            const dur = videoEl.duration || 0;
+            player.duration = dur * 1000;
+            timeTotal.textContent = AudioPlayer.formatTime(dur, true);
+            if (progressElastic) {
+              progressElastic.dataset.max = String(Math.max(1, Math.round(dur)));
+              progressElastic.dataset.step = '1000';
+              setElasticValue(progressElastic, 0);
+            }
+            hideTrackLoader();
+            if (contentBox) contentBox.style.opacity = '1';
+          };
+
+          videoEl.ontimeupdate = () => {
+            if (!isDraggingProgress && progressElastic) {
+              const cur = videoEl.currentTime || 0;
+              const dur = videoEl.duration || 0;
+              timeCurrent.textContent = AudioPlayer.formatTime(cur);
+              timeTotal.textContent = AudioPlayer.formatTime(dur - cur, true);
+              setElasticValue(progressElastic, cur);
+            }
+          };
+
+          videoEl.onplay = () => {
+            player.isPlaying = true;
+            updatePlayPauseIcon(true);
+            setPlayButtonBuffering(false);
+          };
+
+          videoEl.onpause = () => {
+            player.isPlaying = false;
+            updatePlayPauseIcon(false);
+            setPlayButtonBuffering(false);
+          };
+
+          videoEl.onwaiting = () => {
+            setPlayButtonBuffering(true);
+          };
+
+          videoEl.onended = () => {
+            player.isPlaying = false;
+            updatePlayPauseIcon(false);
+            goNextTrack();
+          };
+
+          player.play = () => videoEl.play();
+          player.pause = () => videoEl.pause();
+          player.togglePlay = () => {
+            if (videoEl.paused) videoEl.play();
+            else videoEl.pause();
+            return !videoEl.paused;
+          };
+          player.seek = (ms) => {
+            videoEl.currentTime = ms / 1000;
+          };
+          player.setVolume = (v) => {
+            videoEl.volume = Math.max(0, Math.min(1, v));
+          };
+          player.getPosition = () => (videoEl.currentTime || 0) * 1000;
+
+          songMetadata = {
+            title: track.name || '',
+            artist: track.artist || '',
+            album: track.album || 'Music Video',
+            artUrl: track.artUrl || null,
+            audioTraits: ['video']
+          };
+          window._lyricsflowSongMetadata = songMetadata;
+          updateMetadataUI(songMetadata);
+
+          setViewMode('normal');
+
+          if (autoPlay) {
+            videoEl.play().catch(() => { });
+          }
+
+          refreshQueue();
+          hideTrackLoader();
+          if (contentBox) contentBox.style.opacity = '1';
+          return;
+        } catch (vErr) {
+          console.error("Failed to load video in player.html:", vErr);
+        }
+      } else {
+        document.body.classList.remove('video-playing');
+        if (player._activeVideoEl) {
+          try { player._activeVideoEl.pause(); } catch (_) { }
+          player._activeVideoEl = null;
+        }
+        delete player.play;
+        delete player.pause;
+        delete player.togglePlay;
+        delete player.seek;
+        delete player.setVolume;
+        delete player.getPosition;
+      }
+
       function isMP4Buffer(buf) {
         const view = new DataView(buf);
         if (view.byteLength < 12) return false;
-        // Standard position: ftyp at offset 4
         if (view.getUint8(4) === 0x66 && view.getUint8(5) === 0x74 &&
           view.getUint8(6) === 0x79 && view.getUint8(7) === 0x70) return true;
-        // Some encoders prepend ID3v2 tags before the ftyp atom — scan first 256 bytes
         const limit = Math.min(256, view.byteLength - 4);
         for (let i = 4; i < limit; i++) {
           if (view.getUint8(i) === 0x66 && view.getUint8(i + 1) === 0x74 &&
@@ -1087,8 +1698,6 @@
         try {
           const apiBase = window.API_BASE || 'https://api.spicyamll.online';
 
-          // Determine codec fallback chain according to user preferences:
-          // Read enableAlac & enableDolby from localStorage (lyricsflow_user_profile)
           let enableAlac = true;
           let enableDolby = true;
           try {
@@ -1100,16 +1709,63 @@
             }
           } catch (_) { }
 
-          let codecChain = [];
-          if (enableDolby && enableAlac) {
-            codecChain = ['atmos', 'alac', 'aac', 'aac-web'];
-          } else if (enableAlac) {
-            codecChain = ['alac', 'aac', 'aac-web'];
-          } else if (enableDolby) {
-            codecChain = ['atmos', 'aac', 'aac-web'];
-          } else {
-            codecChain = ['aac', 'aac-web'];
+          // Query official Apple Music catalog API for accurate audioTraits & direct albumId
+          let fetchedTraits = Array.isArray(track.audioTraits) ? track.audioTraits : [];
+          let directAlbumId = track.albumId || null;
+
+          if (track.amTrackId) {
+            try {
+              const cacheKey = `am_cat_${track.amTrackId}`;
+              let catData = null;
+              try {
+                const raw = sessionStorage.getItem(cacheKey);
+                if (raw) catData = JSON.parse(raw);
+              } catch (_) { }
+
+              if (!catData) {
+                const catRes = await fetch(`https://api.spicyamll.online/v1/catalog/kz/songs/${track.amTrackId}?art[url]=f&extend=lyricsExcerpt,offers&fields[albums]=artistName,artistUrl,artwork,name,url&fields[artists]=name,url&format[resources]=map&include=albums,artists,credits,lyrics,music-videos&l=en-US&platform=web`);
+                if (catRes.ok) {
+                  catData = await catRes.json();
+                  try { sessionStorage.setItem(cacheKey, JSON.stringify(catData)); } catch (_) { }
+                }
+              }
+
+              if (catData) {
+                const songObj = catData.resources?.songs?.[String(track.amTrackId)] || catData.data?.[0];
+                const attrs = songObj?.attributes || {};
+                if (Array.isArray(attrs.audioTraits) && attrs.audioTraits.length > 0) {
+                  fetchedTraits = attrs.audioTraits;
+                  track.audioTraits = fetchedTraits;
+                }
+                const albData = songObj?.relationships?.albums?.data || catData.resources?.albums;
+                if (Array.isArray(albData) && albData.length > 0 && albData[0].id) {
+                  directAlbumId = albData[0].id;
+                  track.albumId = directAlbumId;
+                } else if (albData && typeof albData === 'object') {
+                  const firstAlb = Object.values(albData)[0];
+                  if (firstAlb?.id) {
+                    directAlbumId = firstAlb.id;
+                    track.albumId = directAlbumId;
+                  }
+                }
+              }
+            } catch (catErr) {
+              console.warn('[CatalogTraits] Failed to fetch audioTraits:', catErr);
+            }
           }
+
+          // User specification: "atmos is atmos and spatial should be ignored, lossless is alac, lossy is aac or aac web"
+          const trackHasDolby = fetchedTraits.some(t => typeof t === 'string' && t.toLowerCase() === 'atmos');
+          const trackHasLossless = fetchedTraits.some(t => typeof t === 'string' && (t.includes('lossless') || t.includes('hi-res')));
+
+          let codecChain = [];
+          if (enableDolby && trackHasDolby) {
+            codecChain.push('atmos');
+          }
+          if (enableAlac && trackHasLossless) {
+            codecChain.push('alac');
+          }
+          codecChain.push('aac', 'aac-web');
 
           let currentCodecIdx = 0;
           const buildStreamUrl = (codec) => {
@@ -1135,6 +1791,7 @@
               qualityIcon.style.height = '18px';
               qualityIcon.style.marginRight = '0px';
               badgeContainer.style.display = 'flex';
+              badgeContainer.classList.remove('hidden');
             } else if (activeCodec === 'alac') {
               qualityIcon.src = 'icons/lossless.svg';
               qualityIcon.style.display = 'inline-block';
@@ -1144,9 +1801,12 @@
               qualityIcon.style.height = '14px';
               qualityIcon.style.marginRight = '4px';
               badgeContainer.style.display = 'flex';
+              badgeContainer.classList.remove('hidden');
             } else {
-              // AAC or aac-web standard quality
               badgeContainer.style.display = 'none';
+              badgeContainer.classList.add('hidden');
+              qualityIcon.style.display = 'none';
+              qualityText.style.display = 'none';
             }
           };
 
@@ -1154,7 +1814,6 @@
           updateActiveQualityBadge(codecChain[0]);
 
           track.type = 'audio/mp4';
-          // Background download for IndexedDB caching while audio streams
           fetch(`${apiBase}/download?song=${track.amTrackId}&l=en-US`)
             .then(res => res.ok ? res.arrayBuffer() : null)
             .then(async (buf) => {
@@ -1171,20 +1830,21 @@
             })
             .catch(() => { });
 
-          // Reset UI
-          parsedLyrics = null;
-          window._lyricsflowCurrentLyrics = null;
-          lyricsContent.innerHTML = '';
-          lyricsType = 'None';
-          if (sourceBadge) sourceBadge.textContent = '';
-          showNotice(`⏳ ${t('player_loading_track')}`);
+          if (!isCrossfade) {
+            parsedLyrics = null;
+            window._lyricsflowCurrentLyrics = null;
+            lyricsContent.innerHTML = '';
+            lyricsType = 'None';
+            if (sourceBadge) sourceBadge.textContent = '';
+            showNotice(`⏳ ${t('player_loading_track')}`);
 
-          albumArt.innerHTML = '';
-          albumArt.className = 'MediaImageContainer';
-          albumArt.style.backgroundImage = 'none';
+            albumArt.innerHTML = '';
+            albumArt.className = 'MediaImageContainer';
+            albumArt.style.backgroundImage = 'none';
 
-          dynamicBg.innerHTML = '';
-          dynamicBg.className = 'lyricsflow-dynamic-bg';
+            dynamicBg.innerHTML = '';
+            dynamicBg.className = 'lyricsflow-dynamic-bg';
+          }
 
           songMetadata = {
             title: track.name || '',
@@ -1199,7 +1859,7 @@
           };
           window._lyricsflowSongMetadata = songMetadata;
           updateMetadataUI(songMetadata);
-          fetchAnimatedArt(songMetadata.artist, songMetadata.album, songMetadata.title);
+          fetchAnimatedArt(songMetadata.artist, songMetadata.album, songMetadata.title, directAlbumId);
 
           if (track.ttml && track.ttml !== '__AUTO_FETCH__') {
             try {
@@ -1215,7 +1875,6 @@
             autoFetchLyrics(songMetadata, track.amTrackId);
           }
 
-          // Wire graceful error fallback for audio decoding
           player.onError = () => {
             currentCodecIdx++;
             if (currentCodecIdx < codecChain.length) {
@@ -1224,6 +1883,7 @@
               updateActiveQualityBadge(nextCodec);
               console.warn(`[CodecFallback] Switching audio format to: ${nextCodec}`);
               showToast(`Switching to ${nextCodec.toUpperCase()}...`);
+              if (songMetadata) updateMetadataUI(songMetadata);
               player.setSource(buildStreamUrl(nextCodec));
               if (autoPlay) player.play();
             } else {
@@ -1232,9 +1892,29 @@
             }
           };
 
-          player.setSource(buildStreamUrl(codecChain[0]));
+          player.onLoadedMetadata = (duration) => {
+            timeTotal.textContent = AudioPlayer.formatTime(duration, true);
+            if (progressElastic) {
+              progressElastic.dataset.max = String(Math.max(1, Math.round(duration)));
+              progressElastic.dataset.step = '1000';
+              setElasticValue(progressElastic, 0);
+            }
+          };
+
+          const streamUrl = buildStreamUrl(codecChain[0]);
+          if (isCrossfade && player.crossfadeDuration > 0) {
+            window._isCurrentTrackCrossfading = true;
+            player.transitionTo(streamUrl, player.crossfadeDuration);
+            setTimeout(() => {
+              window._isCurrentTrackCrossfading = false;
+            }, (player.crossfadeDuration || 3) * 1000);
+          } else {
+            window._isCurrentTrackCrossfading = false;
+            player.setSource(streamUrl);
+            if (autoPlay) player.play();
+          }
+
           if (autoPlay) {
-            player.play();
             updatePlayPauseIcon(true);
           } else {
             updatePlayPauseIcon(false);
@@ -1243,6 +1923,7 @@
           queueForceScroll();
           hideTrackLoader();
           if (contentBox) contentBox.style.opacity = '1';
+          preloadQueueTracks();
           return;
         } catch (e) {
           console.error("Failed to stream track:", e);
@@ -1252,20 +1933,21 @@
         }
       }
 
-      // Reset UI
-      parsedLyrics = null;
-      window._lyricsflowCurrentLyrics = null;
-      lyricsContent.innerHTML = '';
-      lyricsType = 'None';
-      if (sourceBadge) sourceBadge.textContent = '';
-      showNotice(`⏳ ${t('player_loading_track')}`);
+      if (!isCrossfade) {
+        parsedLyrics = null;
+        window._lyricsflowCurrentLyrics = null;
+        lyricsContent.innerHTML = '';
+        lyricsType = 'None';
+        if (sourceBadge) sourceBadge.textContent = '';
+        showNotice(`⏳ ${t('player_loading_track')}`);
 
-      albumArt.innerHTML = '';
-      albumArt.className = 'MediaImageContainer';
-      albumArt.style.backgroundImage = 'none';
+        albumArt.innerHTML = '';
+        albumArt.className = 'MediaImageContainer';
+        albumArt.style.backgroundImage = 'none';
 
-      dynamicBg.innerHTML = '';
-      dynamicBg.className = 'lyricsflow-dynamic-bg';
+        dynamicBg.innerHTML = '';
+        dynamicBg.className = 'lyricsflow-dynamic-bg';
+      }
 
       const blob = new Blob([track.buffer], { type: track.type });
       const url = URL.createObjectURL(blob);
@@ -1278,6 +1960,7 @@
           setElasticValue(progressElastic, 0);
         }
         songMetadata = await parseAudioMetadata(track.buffer, track.name);
+        window._activePlaybackCodec = null;
         window._lyricsflowSongMetadata = songMetadata;
 
         if (!songMetadata.album && track.album) {
@@ -1343,14 +2026,13 @@
 
         hideTrackLoader();
         if (contentBox) contentBox.style.opacity = '1';
-        preloadNextTrack();
+        preloadQueueTracks();
       };
 
       return new Promise((resolve) => {
         let settled = false;
 
         const cleanup = () => {
-          player.onLoadedMetadata = null;
           player.onError = null;
         };
 
@@ -1392,50 +2074,75 @@
         }, 15000);
 
         if (isCrossfade) {
+          window._isCurrentTrackCrossfading = true;
           player.transitionTo(url, player.crossfadeDuration);
+          setTimeout(() => {
+            window._isCurrentTrackCrossfading = false;
+          }, (player.crossfadeDuration || 3) * 1000);
         } else {
+          window._isCurrentTrackCrossfading = false;
           player.setSource(url);
         }
       });
     }
 
-    async function preloadNextTrack() {
-      const nextIdx = getCurrentIndex() + 1;
-      if (nextIdx < 0 || nextIdx >= currentQueue.length) return;
+    let _preloaderActive = false;
+    async function preloadQueueTracks() {
+      if (_preloaderActive || !currentQueue || currentQueue.length <= 1) return;
+      _preloaderActive = true;
 
       try {
-        const nextTrack = await getTrackData(currentQueue[nextIdx].id);
-        if (!nextTrack) return;
+        const curIdx = getCurrentIndex();
+        const order = [];
+        for (let i = curIdx + 1; i < currentQueue.length; i++) order.push(i);
+        if (curIdx - 1 >= 0) order.push(curIdx - 1);
+        for (let i = 0; i < curIdx - 1; i++) order.push(i);
 
-        if (!nextTrack.buffer && nextTrack.amTrackId) {
-          console.log(`[Preloader] Preloading next track in queue: ${nextTrack.name}`);
-          const audioUrl = `https://api.spicyamll.online/download?song=${nextTrack.amTrackId}&l=${getCurrentLang()}`;
-          const response = await fetch(audioUrl);
-          if (!response.ok) throw new Error("HTTP " + response.status);
-          const buf = await response.arrayBuffer();
+        for (const idx of order) {
+          if (!currentQueue[idx]) continue;
+          const trackInfo = currentQueue[idx];
 
-          const db = await new Promise((res, rej) => {
-            const req = indexedDB.open('LyricsflowDB');
-            req.onsuccess = (e) => res(e.target.result);
-            req.onerror = (e) => rej(e.target.error);
-          });
-          await new Promise((res, rej) => {
-            const tx = db.transaction('buffers', 'readwrite');
-            const req = tx.objectStore('buffers').put(buf, nextTrack.id);
-            req.onsuccess = () => res();
-            req.onerror = () => rej(req.error);
-          });
-          console.log(`[Preloader] Preloaded and cached: ${nextTrack.name}`);
+          try {
+            const track = await getTrackData(trackInfo.id);
+            if (!track || track.buffer || !track.amTrackId || track.isVideo || track.videoUrl) continue;
+
+            console.log(`[Preloader] Background caching track ${idx + 1}/${currentQueue.length}: ${track.name}`);
+            const audioUrl = `https://api.spicyamll.online/download?song=${track.amTrackId}&l=${getCurrentLang()}`;
+            const response = await fetch(audioUrl);
+            if (response.ok) {
+              const buf = await response.arrayBuffer();
+              if (buf && buf.byteLength > 1000) {
+                const db = await new Promise((res, rej) => {
+                  const req = indexedDB.open('LyricsflowDB');
+                  req.onsuccess = (e) => res(e.target.result);
+                  req.onerror = (e) => rej(e.target.error);
+                });
+                await new Promise((res, rej) => {
+                  const tx = db.transaction('buffers', 'readwrite');
+                  const req = tx.objectStore('buffers').put(buf, track.id);
+                  req.onsuccess = () => res();
+                  req.onerror = () => rej(req.error);
+                });
+                track.buffer = buf;
+                console.log(`[Preloader] Successfully cached: ${track.name}`);
+              }
+            }
+          } catch (itemErr) {
+            console.warn(`[Preloader] Failed to cache track at index ${idx}:`, itemErr);
+          }
+          await new Promise(r => setTimeout(r, 600));
         }
       } catch (e) {
-        console.warn("[Preloader] Preload failed:", e);
+        console.warn("[Preloader] Preloader queue cycle error:", e);
+      } finally {
+        _preloaderActive = false;
       }
     }
 
     function updateMetadataUI(metadata) {
       if (metadata.title) {
         songNameEl.querySelector('span').textContent = metadata.title;
-        document.title = `Lyricsflow — ${metadata.title}`;
+        document.title = `LyricsFlow — ${metadata.title}`;
         songNameEl.classList.remove('rtl');
       }
       const explicitTag = document.getElementById('song-explicit-tag');
@@ -1454,11 +2161,39 @@
 
       if (metadata.artUrl) {
         const highResArt = cleanArtworkUrl(metadata.artUrl, 1200, 1200);
-        albumArt.style.backgroundImage = `url("${highResArt}")`;
+        const crossfadeDur = player.crossfadeDuration || 3;
+
+        if (window._isCurrentTrackCrossfading) {
+          document.documentElement.style.setProperty('--crossfade-duration', `${crossfadeDur}s`);
+          albumArt.classList.add('crossfading');
+          albumArt.style.opacity = '0.35';
+          setTimeout(() => {
+            albumArt.style.backgroundImage = `url("${highResArt}")`;
+            albumArt.style.opacity = '1';
+            setTimeout(() => albumArt.classList.remove('crossfading'), (crossfadeDur + 0.1) * 1000);
+          }, 150);
+        } else {
+          albumArt.classList.remove('crossfading');
+          albumArt.style.opacity = '1';
+          albumArt.style.backgroundImage = `url("${highResArt}")`;
+        }
+
         extractColors(highResArt).then(async colors => {
-          dynamicBg.innerHTML = '';
-          dynamicBg.className = 'lyricsflow-dynamic-bg';
-          await applyLegacyBackground(dynamicBg, highResArt);
+          if (window._isCurrentTrackCrossfading) {
+            dynamicBg.style.transition = `opacity ${crossfadeDur}s cubic-bezier(0.25, 1, 0.5, 1)`;
+            dynamicBg.style.opacity = '0.4';
+            await new Promise(r => setTimeout(r, 200));
+            dynamicBg.innerHTML = '';
+            dynamicBg.className = 'lyricsflow-dynamic-bg';
+            await applyLegacyBackground(dynamicBg, highResArt);
+            dynamicBg.style.opacity = '1';
+          } else {
+            dynamicBg.style.transition = '';
+            dynamicBg.style.opacity = '1';
+            dynamicBg.innerHTML = '';
+            dynamicBg.className = 'lyricsflow-dynamic-bg';
+            await applyLegacyBackground(dynamicBg, highResArt);
+          }
           setKawarpPlaybackState(!lyricsContainer.classList.contains('hidden'));
           if (colors.vibrant) document.documentElement.style.setProperty('--ArtworkGlowColor', colors.vibrant.join(', '));
         }).catch(e => console.warn('Color extraction failed:', e));
@@ -1472,16 +2207,19 @@
         nowBar.setAttribute('data-album-name', metadata.album || '');
       }
 
-      // Automatically reflect active playback codec (e.g. dolby atmos, lossless) or audioTraits
       const badgeContainer = document.getElementById('quality-badge-container');
       const qualityText = document.getElementById('quality-badge-text');
       const qualityIcon = document.getElementById('quality-badge-icon');
       let badgeShown = false;
+      const hasDolbyTrait = Array.isArray(metadata.audioTraits) && metadata.audioTraits.some(t => typeof t === 'string' && t.toLowerCase() === 'atmos');
+      const hasHiResTrait = Array.isArray(metadata.audioTraits) && metadata.audioTraits.some(t => typeof t === 'string' && t.includes('hi-res'));
+      const hasLosslessTrait = Array.isArray(metadata.audioTraits) && metadata.audioTraits.some(t => typeof t === 'string' && t.includes('lossless'));
 
-      const activeCodec = window._activePlaybackCodec || (metadata.audioTraits?.includes('spatial') || metadata.audioTraits?.includes('dolby-atmos') ? 'atmos' : (metadata.audioTraits?.includes('lossless') ? 'alac' : null));
+      const activeCodec = window._activePlaybackCodec || (hasDolbyTrait ? 'atmos' : (hasLosslessTrait ? 'alac' : null));
+      const isAAC = activeCodec === 'aac' || activeCodec === 'aac-web';
 
-      if (activeCodec && qualityIcon && qualityText && !settingsManager.get('airPodsIcon')) {
-        if (activeCodec === 'atmos') {
+      if (!isAAC && activeCodec && qualityIcon && qualityText && !settingsManager.get('airPodsIcon')) {
+        if (activeCodec === 'atmos' || (hasDolbyTrait && !window._activePlaybackCodec)) {
           qualityIcon.src = 'icons/dolby_atmos.svg';
           qualityIcon.style.display = 'inline-block';
           qualityText.textContent = '';
@@ -1490,11 +2228,11 @@
           qualityIcon.style.height = '18px';
           qualityIcon.style.marginRight = '0px';
           badgeShown = true;
-        } else if (activeCodec === 'alac') {
+        } else if (activeCodec === 'alac' || (hasLosslessTrait && !window._activePlaybackCodec)) {
           qualityIcon.src = 'icons/lossless.svg';
           qualityIcon.style.display = 'inline-block';
           qualityText.style.display = 'inline';
-          qualityText.textContent = (metadata.audioTraits?.includes('hi-res-lossless')) ? 'Hi-Res Lossless' : (t('player_quality_lossless') || 'Lossless');
+          qualityText.textContent = hasHiResTrait ? 'Hi-Res Lossless' : (t('player_quality_lossless') || 'Lossless');
           qualityIcon.style.width = '17px';
           qualityIcon.style.height = '14px';
           qualityIcon.style.marginRight = '4px';
@@ -1502,11 +2240,26 @@
         }
       }
 
+      let audioQualityStr = 'AAC • 16-bit • 44.1kHz';
+      if (!isAAC) {
+        if (activeCodec === 'atmos' || (hasDolbyTrait && !window._activePlaybackCodec)) {
+          audioQualityStr = 'Dolby Atmos';
+        } else if (activeCodec === 'alac' || (hasLosslessTrait && !window._activePlaybackCodec)) {
+          audioQualityStr = hasHiResTrait ? 'ALAC • 24-bit • 192.0kHz' : 'ALAC • 24-bit • 48.0kHz';
+        }
+      }
+      _currentAudioQualityStr = audioQualityStr;
+
       if (badgeContainer) {
         badgeContainer.style.display = badgeShown ? 'flex' : 'none';
+        badgeContainer.classList.toggle('hidden', !badgeShown);
+      }
+      if (!badgeShown) {
+        if (qualityIcon) qualityIcon.style.display = 'none';
+        if (qualityText) qualityText.style.display = 'none';
       }
 
-      mediaSessionManager.updateMetadata(metadata.title, metadata.artist, metadata.album, metadata.artUrl);
+      mediaSessionManager.updateMetadata(metadata.title, metadata.artist, metadata.album, metadata.artUrl, metadata.amTrackId || metadata.id, audioQualityStr);
     }
 
     async function autoFetchLyrics(metadata, amTrackId = null) {
@@ -1518,7 +2271,6 @@
           showNotice(t('player_loading_lyrics'));
           await new Promise(resolve => setTimeout(resolve, 300));
 
-          // Attach maker metadata for the credits renderer
           result.lyricsData.makerHandle = result.makerHandle;
           result.lyricsData.makerId = result.makerId;
           result.lyricsData.makerDisplayName = result.makerDisplayName;
@@ -1532,13 +2284,12 @@
             sourceBadge.textContent = `Lyrics: ${result.sourceDisplayName || 'Auto-fetched'}`;
           }
 
-          // Save song ID to IndexedDB if it was found and not already saved
           if (result.songId && !amTrackId) {
             const currentTrack = currentQueue[getCurrentIndex()];
             if (currentTrack) {
               console.log(`[Player] Saving found song ID ${result.songId} to IndexedDB`);
               updateTrackAmTrackId(currentTrack.id, result.songId);
-              currentTrack.amTrackId = result.songId; // Update in memory too
+              currentTrack.amTrackId = result.songId;
               document.getElementById('now-bar')?.setAttribute('data-am-track-id', result.songId);
             }
           }
@@ -1551,9 +2302,6 @@
       }
     }
 
-    /**
-     * Cleans and filters lyrics data (filters composer info, handles 'Written by').
-     */
     function cleanLyricsData(data) {
       if (!data || (!data.Content && !data.Lines)) return data;
 
@@ -1571,19 +2319,16 @@
         }
         text = text || "";
 
-        // 1. Delete lines containing technical metadata or empty lines
         if (!text.trim() ||
           text.includes("作曲") || text.includes("作词") ||
           text.includes("编曲") || text.includes("制作人") ||
           text.includes("©") ||
           text.toLowerCase().includes("produced by")) continue;
 
-        // 2. Handle "Written by"
         const writtenByMatch = text.match(/Written\s+by[:\s]+(.*)/i);
         if (writtenByMatch) {
           const names = writtenByMatch[1].trim();
           writers.push(...parseSongwriterString(names));
-          // Truncate here (don't show "Written by" as a line, and stop processing further lines)
           break;
         }
 
@@ -1608,7 +2353,6 @@
     function applyLyricsToUI(lyrics) {
       if (!lyrics) return;
 
-      // Check if genuine Romanization and Translation are available (distinct from native lyrics)
       let hasRomanization = false;
       let hasTranslation = false;
 
@@ -1668,7 +2412,6 @@
       updateTranslationMenuUI(isTranslated, isRomanized);
 
       let typeToRender = lyrics.Type;
-      // Handle line lyrics as syllable/word lyrics
       if (typeToRender === 'Line') {
         typeToRender = 'Syllable';
       }
@@ -1699,25 +2442,19 @@
     }
 
     function showNotice(text, forceInView = false) {
-      // If we already have lyrics loaded in the UI and this is a transient notice, display as AeroUI toast to protect lyrics view
       if (!forceInView && (window._lyricsflowCurrentLyrics || parsedLyrics)) {
         showToast(text);
         return;
       }
 
       if (lyricsNotice) {
-        // Clear static/scrolled lyrics dynamic items
         lyricsContent.innerHTML = '';
-
-        // Re-append notice element to ensure it's in the DOM
         lyricsContent.appendChild(lyricsNotice);
-
         lyricsNotice.style.display = '';
         lyricsNotice.querySelector('.notice-descriptor').textContent = text;
 
         const loaderGif = document.getElementById('lyrics-loader-gif');
         if (loaderGif) {
-          // Show the loader GIF for finding/loading/searching notices
           if (text.includes('Finding') || text.includes('Loading') || text.includes('Searching')) {
             loaderGif.style.display = 'block';
           } else {
@@ -1727,17 +2464,15 @@
       }
     }
 
-    async function fetchAnimatedArt(artist, album, title) {
-      // Check if animated cover art is enabled in settings
+    async function fetchAnimatedArt(artist, album, title, directAlbumId = null) {
       if (!settingsManager.get('coverArtAnimation')) {
-        // Remove any existing animated art if the setting was just toggled off
         const existingVideo = albumArt?.querySelector('.animated-art-video');
         if (existingVideo) existingVideo.remove();
         return;
       }
 
       try {
-        const videoUrl = await getAnimatedArtwork(artist, album, title);
+        const videoUrl = await getAnimatedArtwork(artist, album, title, directAlbumId);
         if (videoUrl) {
           applyAnimatedArt(albumArt, videoUrl);
         }
@@ -1746,12 +2481,10 @@
       }
     }
 
-    // Listen for settings changes to remove animated art in real-time when toggled off
     window.addEventListener('lyricsflow-settings-changed', (e) => {
       if (!e.detail.coverArtAnimation) {
         const existingVideo = albumArt?.querySelector('.animated-art-video');
         if (existingVideo) existingVideo.remove();
-        // Also remove background video
         const bgVideo = dynamicBg?.querySelector('video');
         if (bgVideo) {
           bgVideo.remove();
@@ -1759,7 +2492,6 @@
         }
       }
 
-      // Check if provider order changed and refetch lyrics if needed
       const currentOrder = JSON.stringify(e.detail.lyricsSourceOrder);
       if (currentOrder !== previousLyricsSourceOrder) {
         previousLyricsSourceOrder = currentOrder;
@@ -1772,7 +2504,6 @@
       }
     });
 
-    // ── AirPods / Audio Output Icon (Static AirPods Icon, No Device Name) ──
     async function updateBluetoothState() {
       const airplayIcon = document.getElementById('airplay-icon');
       const deviceNameEl = document.getElementById('airplay-device-name');
@@ -1788,7 +2519,6 @@
     if (navigator.mediaDevices) {
       navigator.mediaDevices.addEventListener('devicechange', updateBluetoothState);
     }
-    // Listen to iOS webkit playback target changes on underlying audio elements
     if (player && player.audio) {
       player.audio.addEventListener('webkitplaybacktargetchange', updateBluetoothState);
     }
@@ -1808,7 +2538,9 @@
         progressElastic.dataset.max = String(Math.max(1, Math.round(duration)));
         setElasticValue(progressElastic, 0);
       }
-      // Broadcast duration immediately to parent window so mini-player time syncs instantly
+      if (mediaSessionManager) {
+        mediaSessionManager.updatePlaybackState(player.isPlaying ? 'playing' : 'paused');
+      }
       if (window.parent && window.parent !== window) {
         const parentTargetOrigin = (window.location.origin && window.location.origin !== 'null') ? window.location.origin : '*';
         window.parent.postMessage({
@@ -1825,20 +2557,31 @@
       const nextIdx = getCurrentIndex() + 1;
       if (nextIdx < currentQueue.length) {
         loadTrack(nextIdx, true);
-      } else if (player.repeatMode === 1) { // Repeat All
+      } else if (player.repeatMode === 1) {
         loadTrack(0, true);
       }
     };
 
+    const prevOnPlay = player.onPlay;
     player.onPlay = () => {
       setPlayButtonBuffering(false);
       updatePlayPauseIcon(true);
       if (!animationFrameId) startAnimationLoop();
+      if (mediaSessionManager) mediaSessionManager.updatePlaybackState('playing');
+      if (_singAudio && _singAudio.src) {
+        try { _singAudio.currentTime = player.getPosition() / 1000; } catch (_) { }
+        _singAudio.play().catch(() => { });
+      }
+      if (prevOnPlay) prevOnPlay();
     };
 
+    const prevOnPause = player.onPause;
     player.onPause = () => {
       setPlayButtonBuffering(false);
       updatePlayPauseIcon(false);
+      if (mediaSessionManager) mediaSessionManager.updatePlaybackState('paused');
+      if (_singAudio) _singAudio.pause();
+      if (prevOnPause) prevOnPause();
     };
 
     player.onWaiting = () => {
@@ -1849,12 +2592,16 @@
       setPlayButtonBuffering(false);
     };
 
+    const prevOnEnded = player.onEnded;
     player.onEnded = () => {
+      if (mediaSessionManager) mediaSessionManager.updatePlaybackState('paused');
+      if (_singAudio) _singAudio.pause();
+      if (prevOnEnded) prevOnEnded();
       const nextIdx = getCurrentIndex() + 1;
       if (nextIdx < currentQueue.length) {
         loadTrack(nextIdx);
         player.play();
-      } else if (player.repeatMode === 1) { // Repeat All
+      } else if (player.repeatMode === 1) {
         loadTrack(0);
         player.play();
       } else {
@@ -1883,9 +2630,6 @@
       }
     }
 
-    // AeroUI player-button owns the press gesture and suppresses the native
-    // click, so `pressend` (pointer / keyboard / assistive-tech) is the
-    // single source of truth — do NOT also bind onclick (double-fire).
     if (btnPlayPause) {
       initPlayerButton(btnPlayPause);
       setPlayerIcon(btnPlayPause, 'play');
@@ -1938,12 +2682,17 @@
     };
     queueClose.onclick = () => setViewMode('normal');
     queueClear.onclick = async () => {
-      if (confirm('Clear entire queue?')) {
+      const confirmed = await aeroConfirm({
+        title: 'Clear Queue',
+        message: 'Clear entire queue?',
+        confirmText: 'Clear',
+        isDestructive: true
+      });
+      if (confirmed) {
         await goToUpload();
       }
     };
 
-    // ── Dynamic Audio Adding (Drag & Drop) ──
     const dropOverlay = document.createElement('div');
     dropOverlay.className = 'drop-zone-overlay';
     dropOverlay.innerHTML = '<div class="drop-zone-content"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><h2>Drop to Add to Queue</h2></div>';
@@ -1986,7 +2735,6 @@
       }
     });
 
-    // ── Rest of the Player Utilities ──
     const backBtn = document.getElementById('back-button');
     if (backBtn) {
       backBtn.onclick = async () => {
@@ -1999,9 +2747,7 @@
       };
     }
 
-    // Remote Control listener from parent window (mini preview player controls audio in player.html)
     window.addEventListener('message', async (e) => {
-      // Validate origin to prevent cross-origin command spoofing
       if (e.origin !== window.location.origin && e.origin !== 'null' && window.location.origin !== 'null') {
         if (window.parent && e.source !== window.parent) return;
       }
@@ -2023,6 +2769,9 @@
         }
       } else if (data.action === 'seek' && typeof data.time === 'number') {
         player.seek(data.time);
+        if (_singAudio) {
+          try { _singAudio.currentTime = data.time / 1000; } catch (_) { }
+        }
       } else if (data.action === 'loadTrack') {
         await refreshQueue();
         const autoPlay = data.autoPlay !== undefined ? !!data.autoPlay : true;
@@ -2040,10 +2789,89 @@
           if (pcBtnQueue) pcBtnQueue.classList.add('active');
           if (pcBtnLyrics) pcBtnLyrics.classList.remove('active');
         }
+      } else if (data.type === 'LYRICSFLOW_LOAD_DATA') {
+        try {
+          if (data.metadata && Array.isArray(data.metadata)) {
+            const getMetaVal = (keyName) => {
+              const item = data.metadata.find(m => m.key?.toLowerCase() === keyName.toLowerCase());
+              if (!item) return '';
+              return Array.isArray(item.value) ? item.value[0] || '' : (item.value || '');
+            };
+            const title = getMetaVal('title') || songMetadata.title || 'LyricsFlow Track';
+            const artist = getMetaVal('artist') || songMetadata.artist || 'Apple Music';
+            const album = getMetaVal('album') || songMetadata.album || '';
+            songMetadata = {
+              title,
+              artist,
+              album,
+              artUrl: data.coverArt || songMetadata.artUrl || null
+            };
+            window._lyricsflowSongMetadata = songMetadata;
+            updateMetadataUI(songMetadata);
+            if (data.coverArt) {
+              applyLegacyBackground(dynamicBg, data.coverArt).catch(() => {});
+            }
+          }
+
+          if (Array.isArray(data.lyrics) && data.lyrics.length > 0) {
+            const lines = data.lyrics.map(line => {
+              const syllables = (line.words || []).map(w => ({
+                Text: w.word || '',
+                StartTime: (typeof w.startTime === 'number' ? w.startTime : 0) / 1000,
+                EndTime: (typeof w.endTime === 'number' ? w.endTime : 0) / 1000,
+                IsPartOfWord: !w.word?.endsWith(' ')
+              }));
+              return {
+                StartTime: (typeof line.startTime === 'number' ? line.startTime : 0) / 1000,
+                EndTime: (typeof line.endTime === 'number' ? line.endTime : 0) / 1000,
+                OppositeAligned: !!line.isDuet,
+                BGLine: !!line.isBG,
+                Lead: {
+                  StartTime: (typeof line.startTime === 'number' ? line.startTime : 0) / 1000,
+                  EndTime: (typeof line.endTime === 'number' ? line.endTime : 0) / 1000,
+                  Syllables: syllables
+                },
+                Text: (line.words || []).map(w => w.word || '').join(''),
+                TranslatedText: line.translatedLyric || '',
+                RomanizedText: line.romanLyric || ''
+              };
+            });
+
+            const parsed = {
+              Type: 'Syllable',
+              StartTime: lines[0]?.StartTime ?? 0,
+              Content: lines
+            };
+            parsedLyrics = parsed;
+            window._lyricsflowCurrentLyrics = parsed;
+            applyLyricsToUI(parsed);
+          }
+
+          hideTrackLoader();
+          if (lyricsNotice) lyricsNotice.style.display = 'none';
+          const contentBox = document.querySelector('.ContentBox');
+          if (contentBox) contentBox.style.opacity = '1';
+          setViewMode('lyrics');
+
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'LYRICSFLOW_DATA_ACK' }, '*');
+          }
+        } catch (loadErr) {
+          console.error('[LyricsFlow] Error loading data from editor:', loadErr);
+        }
+      } else if (data.type === 'LYRICSFLOW_TIME_UPDATE') {
+        if (typeof data.currentTime === 'number' && Number.isFinite(data.currentTime)) {
+          window._lyricsflowExternalTime = data.currentTime;
+          window._lyricsflowExternalPlaying = !!data.isPlaying;
+        }
       }
     });
 
-    // Broadcast playback state to parent window and popped-out mini-player window
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'LYRICSFLOW_PLAYER_READY' }, '*');
+    }
+
+    let _currentAudioQualityStr = 'AAC • 16-bit • 44.1kHz';
     let _miniPlayerWin = null;
     const parentTargetOrigin = (window.location.origin && window.location.origin !== 'null') ? window.location.origin : '*';
     setInterval(() => {
@@ -2055,6 +2883,7 @@
         isBuffering: isBuffering,
         position: player.getPosition ? player.getPosition() : 0,
         duration: player.duration || 0,
+        audioQuality: _currentAudioQualityStr,
         songMetadata: songMetadata,
         lyricsData: activeLyrics,
         ttml: currentQueue[getCurrentIndex()]?.ttml || null
@@ -2065,30 +2894,92 @@
       if (_miniPlayerWin && !_miniPlayerWin.closed) {
         _miniPlayerWin.postMessage(statePayload, '*');
       }
+      const desktopApi = window.wave || window.lyricsflow;
+      if (desktopApi?.sendMiniState) {
+        desktopApi.sendMiniState(statePayload);
+      }
     }, 250);
 
+    const desktopApi = window.wave || window.lyricsflow;
+    if (desktopApi?.onMiniAction) {
+      desktopApi.onMiniAction(({ command, data }) => {
+        if (!command) return;
+        if (command === 'togglePlay') {
+          player.togglePlay();
+        } else if (command === 'play') {
+          player.play();
+        } else if (command === 'pause') {
+          player.pause();
+        } else if (command === 'seek' && data && typeof data.time === 'number') {
+          player.seek(data.time);
+        } else if (command === 'next') {
+          playNext();
+        } else if (command === 'prev') {
+          playPrev();
+        } else if (command === 'shuffle') {
+          if (btnShuffle) btnShuffle.click();
+        } else if (command === 'repeat') {
+          if (btnRepeat) btnRepeat.click();
+        } else if (command === 'volume' && data && typeof data.volume === 'number') {
+          player.setVolume(data.volume);
+          if (volumeSlider) volumeSlider.value = data.volume;
+          updateVolumeSliderFill(data.volume);
+          _updateSingMix();
+        }
+      });
+    }
+
     function updateVolumeSliderFill(val) {
-      volumeSlider.style.background = `linear-gradient(to right, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.8) ${val * 100}%, rgba(255, 255, 255, 0.15) ${val * 100}%, rgba(255, 255, 255, 0.15) 100%)`;
+      const gradient = `linear-gradient(to right, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.88) ${val * 100}%, rgba(255, 255, 255, 0.18) ${val * 100}%, rgba(255, 255, 255, 0.18) 100%)`;
+      if (volumeSlider) volumeSlider.style.background = gradient;
+      const pcSlider = document.getElementById('pc-volume-slider');
+      if (pcSlider) pcSlider.style.background = gradient;
     }
 
     const pcVolumeSlider = document.getElementById('pc-volume-slider');
     if (pcVolumeSlider) {
+      const handleVolPointer = (e) => {
+        const rect = pcVolumeSlider.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        pcVolumeSlider.value = ratio;
+        player.setVolume(ratio);
+        if (volumeSlider) volumeSlider.value = ratio;
+        updateVolumeSliderFill(ratio);
+        _updateSingMix();
+      };
+      pcVolumeSlider.addEventListener('pointerdown', handleVolPointer);
+
       pcVolumeSlider.oninput = (e) => {
         const val = parseFloat(e.target.value);
         player.setVolume(val);
         if (volumeSlider) volumeSlider.value = val;
         updateVolumeSliderFill(val);
+        _updateSingMix();
       };
     }
 
-    volumeSlider.oninput = (e) => {
-      const val = parseFloat(e.target.value);
-      player.setVolume(val);
-      if (pcVolumeSlider) pcVolumeSlider.value = val;
-      updateVolumeSliderFill(val);
-    };
+    if (volumeSlider) {
+      volumeSlider.addEventListener('pointerdown', (e) => {
+        const rect = volumeSlider.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        volumeSlider.value = ratio;
+        player.setVolume(ratio);
+        if (pcVolumeSlider) pcVolumeSlider.value = ratio;
+        updateVolumeSliderFill(ratio);
+        _updateSingMix();
+      });
 
-    // Queue button logic
+      volumeSlider.oninput = (e) => {
+        const val = parseFloat(e.target.value);
+        player.setVolume(val);
+        if (pcVolumeSlider) pcVolumeSlider.value = val;
+        updateVolumeSliderFill(val);
+        _updateSingMix();
+      };
+    }
+
     if (btnQueue) {
       btnQueue.onclick = () => {
         const isQueueActive = queuePanel.classList.contains('active');
@@ -2103,17 +2994,14 @@
       };
     }
 
-    // AirPlay Action Logic
     const btnAirplay = document.getElementById('btn-airplay');
     const airplayPopup = document.getElementById('airplay-popup');
     const btnClosePopup = document.getElementById('btn-close-popup');
-
 
     if (btnAirplay) {
       btnAirplay.onclick = async () => {
         const activeAudio = window.lyricsflowPlayer?.audio;
 
-        // Try browser audio output sink selection (e.g. desktop Chrome)
         if (navigator.mediaDevices && typeof navigator.mediaDevices.selectAudioOutput === 'function') {
           try {
             const device = await navigator.mediaDevices.selectAudioOutput();
@@ -2139,7 +3027,6 @@
           }
         }
 
-        // Fallback for iOS / Android if selectAudioOutput was not used or supported
         if (activeAudio && typeof activeAudio.webkitShowPlaybackTargetPicker === 'function') {
           try {
             activeAudio.webkitShowPlaybackTargetPicker();
@@ -2159,10 +3046,10 @@
       };
     }
 
-    // Lyrics Toggle Logic
     const btnLyrics = document.getElementById('btn-lyrics');
     const lyricsContainer = document.getElementById('lyrics-container');
     const lyricsIcon = document.getElementById('lyrics-icon');
+    const queueIcon = document.getElementById('queue-icon');
     const nowBar = document.getElementById('now-bar');
 
     function updateShuffleRepeatLocation(lyricsActive) {
@@ -2176,34 +3063,29 @@
       const isMobile = window.innerWidth <= 768;
 
       if (lyricsActive && isMobile) {
-        // Move to top next to settings ONLY on mobile
         localMetadataActions.insertBefore(localShuffle, localMetadataActions.firstChild);
         localMetadataActions.insertBefore(localRepeat, localMetadataActions.firstChild);
       } else {
-        // Move back / keep in controls bottom on tablet, PC, or when lyrics closed
         localNowBarControls.insertBefore(localShuffle, localNowBarControls.firstChild);
         localNowBarControls.appendChild(localRepeat);
       }
     }
 
-    // Handle screen resizing & rotation dynamically
     window.addEventListener('resize', () => {
       const lyricsOpen = lyricsContainer && !lyricsContainer.classList.contains('hidden');
       updateShuffleRepeatLocation(lyricsOpen);
     });
 
-    // Master view mode coordinator
     function setViewMode(mode) {
       const isMobile = window.innerWidth <= 768;
 
-      // 1. Measure First State (First)
       let firstRect = null;
       let firstMetaRect = null;
-      const mediaBox = document.querySelector('#LyricsflowPage .ContentBox .NowBar .Header .MediaBox');
+      const albumArtEl = document.getElementById('album-art') || document.querySelector('#LyricsflowPage .ContentBox .NowBar .Header .MediaBox');
       const metadataRow = document.querySelector('#LyricsflowPage .ContentBox .NowBar .Header .NowBarBottomWrapper .MetadataRow');
 
-      if (isMobile && mediaBox) {
-        firstRect = mediaBox.getBoundingClientRect();
+      if (isMobile && albumArtEl) {
+        firstRect = albumArtEl.getBoundingClientRect();
       }
       if (isMobile && metadataRow) {
         firstMetaRect = metadataRow.getBoundingClientRect();
@@ -2212,7 +3094,6 @@
       const isHidden = (mode !== 'lyrics');
       const isQueueActive = (mode === 'queue');
 
-      // Set class states
       if (isHidden) {
         lyricsContainer.classList.add('hidden');
         lyricsContainer.classList.remove('lyrics-immersive');
@@ -2231,74 +3112,101 @@
         queuePanel.classList.remove('queue-immersive');
       }
 
-      // Center now-bar only if neither is active
       const nowBarCentered = (mode === 'normal');
       nowBar.classList.toggle('centered', nowBarCentered);
 
-      // Shift DOM layout for shuffle/repeat button location
+      const pcToggle = document.getElementById('pc-capsule-toggle');
+      const pcLyr = document.getElementById('pc-btn-lyrics');
+      const pcQue = document.getElementById('pc-btn-queue');
+      if (pcToggle) {
+        if (mode === 'lyrics') {
+          pcToggle.classList.remove('none-active', 'queue-active');
+          pcLyr?.classList.add('active');
+          pcQue?.classList.remove('active');
+        } else if (mode === 'queue') {
+          pcToggle.classList.add('queue-active');
+          pcToggle.classList.remove('none-active');
+          pcQue?.classList.add('active');
+          pcLyr?.classList.remove('active');
+        } else {
+          pcToggle.classList.add('none-active');
+          pcToggle.classList.remove('queue-active');
+          pcLyr?.classList.remove('active');
+          pcQue?.classList.remove('active');
+        }
+      }
+
       updateShuffleRepeatLocation(!nowBarCentered);
 
-      // Update lyrics toggle icon
       if (lyricsIcon) {
         lyricsIcon.src = (mode === 'lyrics') ? 'icons/lyricson.svg' : 'icons/lyrics.svg';
       }
-
-      setKawarpPlaybackState(!isHidden);
-
-      queueForceScroll();
-
-      // 2. Measure Last State & Animate from Bottom-Right Corner (FLIP)
-      if (isMobile && mediaBox && firstRect) {
-        const lastRect = mediaBox.getBoundingClientRect();
-
-        // Calculate size and position differences relative to bottom-right corner
-        const dX = firstRect.right - lastRect.right;
-        const dY = firstRect.bottom - lastRect.bottom;
-        const dW = firstRect.width / lastRect.width;
-        const dH = firstRect.height / lastRect.height;
-
-        // Invert: Put element back in starting position relative to bottom-right
-        mediaBox.style.transition = 'none';
-        mediaBox.style.transformOrigin = 'bottom right';
-        mediaBox.style.transform = `translate(${dX}px, ${dY}px) scale(${dW}, ${dH})`;
-
-        // Force layout reflow
-        mediaBox.offsetWidth;
-
-        // Play: Smooth enlarging/shrinking from down right corner
-        mediaBox.style.transition = 'transform 0.65s cubic-bezier(0.16, 1, 0.3, 1)';
-        mediaBox.style.transform = 'none';
-
-        // Clean up styles after animation completes
-        setTimeout(() => {
-          mediaBox.style.transition = '';
-          mediaBox.style.transformOrigin = '';
-          mediaBox.style.transform = '';
-        }, 650);
+      if (queueIcon) {
+        queueIcon.src = (mode === 'queue') ? 'icons/queueon.svg' : 'icons/queue.svg';
       }
 
-      if (isMobile && metadataRow && firstMetaRect) {
+      if (btnLyrics) {
+        btnLyrics.classList.toggle('active', mode === 'lyrics');
+      }
+      if (btnQueue) {
+        btnQueue.classList.toggle('active', mode === 'queue');
+      }
+
+      setKawarpPlaybackState(!isHidden);
+      queueForceScroll();
+
+      // Fluid Apple Music iOS FLIP physics
+      const appleSpring = '0.55s cubic-bezier(0.32, 0.72, 0, 1)';
+
+      if (isMobile && albumArtEl && firstRect && firstRect.width > 0) {
+        const lastRect = albumArtEl.getBoundingClientRect();
+        if (lastRect && lastRect.width > 0 && (Math.abs(firstRect.left - lastRect.left) > 1 || Math.abs(firstRect.top - lastRect.top) > 1 || Math.abs(firstRect.width - lastRect.width) > 1)) {
+          const dX = firstRect.left - lastRect.left;
+          const dY = firstRect.top - lastRect.top;
+          const scale = firstRect.width / lastRect.width;
+
+          albumArtEl.style.setProperty('transition', 'none', 'important');
+          albumArtEl.style.setProperty('transform-origin', 'top left', 'important');
+          albumArtEl.style.setProperty('transform', `translate3d(${dX}px, ${dY}px, 0) scale(${scale})`, 'important');
+
+          albumArtEl.getBoundingClientRect(); // Commit initial inverted FLIP frame
+
+          requestAnimationFrame(() => {
+            albumArtEl.style.setProperty('transition', `transform ${appleSpring}, border-radius ${appleSpring}, box-shadow ${appleSpring}`, 'important');
+            albumArtEl.style.setProperty('transform', 'translate3d(0, 0, 0) scale(1)', 'important');
+
+            setTimeout(() => {
+              albumArtEl.style.removeProperty('transition');
+              albumArtEl.style.removeProperty('transform-origin');
+              albumArtEl.style.removeProperty('transform');
+            }, 580);
+          });
+        }
+      }
+
+      if (isMobile && metadataRow && firstMetaRect && firstMetaRect.width > 0) {
         const lastMetaRect = metadataRow.getBoundingClientRect();
+        if (lastMetaRect && (Math.abs(firstMetaRect.left - lastMetaRect.left) > 1 || Math.abs(firstMetaRect.top - lastMetaRect.top) > 1)) {
+          const dX = firstMetaRect.left - lastMetaRect.left;
+          const dY = firstMetaRect.top - lastMetaRect.top;
 
-        const dX = firstMetaRect.left - lastMetaRect.left;
-        const dY = firstMetaRect.top - lastMetaRect.top;
-        const dW = firstMetaRect.width / lastMetaRect.width;
-        const dH = firstMetaRect.height / lastMetaRect.height;
+          metadataRow.style.setProperty('transition', 'none', 'important');
+          metadataRow.style.setProperty('transform-origin', 'top left', 'important');
+          metadataRow.style.setProperty('transform', `translate3d(${dX}px, ${dY}px, 0)`, 'important');
 
-        metadataRow.style.transition = 'none';
-        metadataRow.style.transformOrigin = 'top left';
-        metadataRow.style.transform = `translate(${dX}px, ${dY}px) scale(${dW}, ${dH})`;
+          metadataRow.getBoundingClientRect(); // Commit initial inverted FLIP frame
 
-        metadataRow.offsetWidth;
+          requestAnimationFrame(() => {
+            metadataRow.style.setProperty('transition', `transform ${appleSpring}`, 'important');
+            metadataRow.style.setProperty('transform', 'translate3d(0, 0, 0)', 'important');
 
-        metadataRow.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.2, 1)';
-        metadataRow.style.transform = 'none';
-
-        setTimeout(() => {
-          metadataRow.style.transition = '';
-          metadataRow.style.transformOrigin = '';
-          metadataRow.style.transform = '';
-        }, 600);
+            setTimeout(() => {
+              metadataRow.style.removeProperty('transition');
+              metadataRow.style.removeProperty('transform-origin');
+              metadataRow.style.removeProperty('transform');
+            }, 580);
+          });
+        }
       }
     }
 
@@ -2315,8 +3223,6 @@
     const menuTextTranslation = document.getElementById('menu-text-translation');
     const menuTextPronunciation = document.getElementById('menu-text-pronunciation');
 
-
-
     function toggleTranslationPopup(btn) {
       if (!lyricsTranslationPopup) return;
       const isVisible = lyricsTranslationPopup.style.display !== 'none';
@@ -2327,7 +3233,6 @@
         lyricsTranslationPopup.style.display = 'flex';
         const isMobile = window.innerWidth <= 768;
         if (isMobile) {
-          // Align directly above the mobile button flush with its left edge
           lyricsTranslationPopup.style.left = `${Math.max(16, rect.left)}px`;
           lyricsTranslationPopup.style.bottom = `${window.innerHeight - rect.top + 10}px`;
         } else {
@@ -2361,24 +3266,137 @@
       }
     });
 
-    if (pcBtnClose) {
-      pcBtnClose.onclick = () => {
+    const pcBtnMinimize = document.getElementById('pc-btn-minimize');
+    const pcBtnMaximize = document.getElementById('pc-btn-maximize');
+
+    const pcBtnDrawerClose = document.getElementById('pc-btn-drawer-close');
+    if (pcBtnDrawerClose) {
+      pcBtnDrawerClose.onclick = () => {
         if (window.parent && window.parent !== window) {
           window.parent.postMessage({ action: 'closePlayerDrawer' }, '*');
+        } else if (window.wave?.windowControls || window.lyricsflow?.windowControls) {
+          const api = window.wave || window.lyricsflow;
+          api.windowControls('close');
+        } else {
+          window.history.back();
+        }
+      };
+    }
+
+    if (pcBtnClose) {
+      pcBtnClose.onclick = () => {
+        if (window.wave?.windowControls || window.lyricsflow?.windowControls) {
+          const api = window.wave || window.lyricsflow;
+          api.windowControls('close');
+        } else if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ action: 'windowControl', control: 'close' }, '*');
+        } else {
+          window.close();
+        }
+      };
+    }
+
+    if (pcBtnMinimize) {
+      pcBtnMinimize.onclick = () => {
+        if (window.wave?.windowControls || window.lyricsflow?.windowControls) {
+          const api = window.wave || window.lyricsflow;
+          api.windowControls('minimize');
+        } else if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ action: 'windowControl', control: 'minimize' }, '*');
+        }
+      };
+    }
+
+    if (pcBtnMaximize) {
+      pcBtnMaximize.onclick = () => {
+        if (window.wave?.windowControls || window.lyricsflow?.windowControls) {
+          const api = window.wave || window.lyricsflow;
+          api.windowControls('maximize');
+        } else if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ action: 'windowControl', control: 'maximize' }, '*');
+        } else if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => { });
+        } else {
+          document.exitFullscreen().catch(() => { });
         }
       };
     }
 
     if (pcBtnMini) {
       pcBtnMini.onclick = () => {
-        const toast = document.getElementById('lyricsflow-toast');
-        if (toast) {
-          const toastText = toast.querySelector('.toast-text');
-          if (toastText) toastText.textContent = t('common_coming_soon') || 'Coming Soon...';
-          toast.classList.add('active');
-          setTimeout(() => toast.classList.remove('active'), 2200);
+        const api = window.wave || window.lyricsflow || window.parent?.wave || window.parent?.lyricsflow;
+        if (api?.openMiniPlayer) {
+          api.openMiniPlayer();
+        } else if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ action: 'openMiniPlayer' }, '*');
+        } else {
+          const miniWin = window.open('mini-player.html', 'LyricsflowMiniPlayer', 'width=340,height=160,menubar=no,toolbar=no,location=no,status=no');
+          if (miniWin) _miniPlayerWin = miniWin;
         }
       };
+    }
+
+    const pcCapsuleToggle = document.getElementById('pc-capsule-toggle');
+    const pcCapsuleThumb = document.getElementById('pc-capsule-thumb');
+
+    if (pcCapsuleToggle && pcCapsuleThumb) {
+      let isDraggingThumb = false;
+      let startX = 0;
+      let initialOffset = 0;
+      let currentOffset = 0;
+      const MAX_OFFSET = 44;
+
+      const getOffsetForCurrentView = () => {
+        if (queuePanel.classList.contains('active')) return MAX_OFFSET;
+        return 0;
+      };
+
+      const onPointerDown = (e) => {
+        isDraggingThumb = true;
+        startX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+        initialOffset = getOffsetForCurrentView();
+        currentOffset = initialOffset;
+        pcCapsuleToggle.classList.add('is-dragging');
+        pcCapsuleToggle.classList.remove('none-active');
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('pointercancel', onPointerUp);
+      };
+
+      const onPointerMove = (e) => {
+        if (!isDraggingThumb) return;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+        const deltaX = clientX - startX;
+        currentOffset = Math.max(0, Math.min(MAX_OFFSET, initialOffset + deltaX));
+        pcCapsuleThumb.style.transform = `translate3d(${currentOffset.toFixed(1)}px, -3px, 0) scale3d(1.08, 1.15, 1)`;
+      };
+
+      const onPointerUp = () => {
+        if (!isDraggingThumb) return;
+        isDraggingThumb = false;
+        pcCapsuleToggle.classList.remove('is-dragging');
+        pcCapsuleThumb.style.transform = '';
+
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', onPointerUp);
+        document.removeEventListener('pointercancel', onPointerUp);
+
+        if (currentOffset > MAX_OFFSET / 2) {
+          setViewMode('queue');
+          pcBtnQueue?.classList.add('active');
+          pcBtnLyrics?.classList.remove('active');
+          pcCapsuleToggle.classList.add('queue-active');
+          pcCapsuleToggle.classList.remove('none-active');
+        } else {
+          setViewMode('lyrics');
+          pcBtnLyrics?.classList.add('active');
+          pcBtnQueue?.classList.remove('active');
+          pcCapsuleToggle.classList.remove('queue-active');
+          pcCapsuleToggle.classList.remove('none-active');
+        }
+      };
+
+      pcCapsuleThumb.addEventListener('pointerdown', onPointerDown);
     }
 
     if (pcBtnLyrics) {
@@ -2387,10 +3405,14 @@
         if (isLyricsOpen) {
           setViewMode('normal');
           pcBtnLyrics.classList.remove('active');
+          pcCapsuleToggle?.classList.remove('queue-active');
+          pcCapsuleToggle?.classList.add('none-active');
         } else {
           setViewMode('lyrics');
           pcBtnLyrics.classList.add('active');
           if (pcBtnQueue) pcBtnQueue.classList.remove('active');
+          pcCapsuleToggle?.classList.remove('queue-active');
+          pcCapsuleToggle?.classList.remove('none-active');
         }
       };
     }
@@ -2401,10 +3423,14 @@
         if (isQueueActive) {
           setViewMode('normal');
           pcBtnQueue.classList.remove('active');
+          pcCapsuleToggle?.classList.remove('queue-active');
+          pcCapsuleToggle?.classList.add('none-active');
         } else {
           setViewMode('queue');
           pcBtnQueue.classList.add('active');
           if (pcBtnLyrics) pcBtnLyrics.classList.remove('active');
+          pcCapsuleToggle?.classList.add('queue-active');
+          pcCapsuleToggle?.classList.remove('none-active');
         }
       };
     }
@@ -2426,7 +3452,17 @@
       };
     }
 
-    // Cover art click handler on mobile to close lyrics or queue mode
+    if (btnQueue) {
+      btnQueue.onclick = () => {
+        const isQueueOpen = queuePanel && queuePanel.classList.contains('active');
+        if (isQueueOpen) {
+          setViewMode('normal');
+        } else {
+          setViewMode('queue');
+        }
+      };
+    }
+
     albumArt.onclick = () => {
       const isMobile = window.innerWidth <= 768;
       const lyricsActive = !lyricsContainer.classList.contains('hidden');
@@ -2436,82 +3472,63 @@
       }
     };
 
-    // Apple Music Immersive Gestures Engine
     let lyricsflowLastScrollTop = 0;
     const lyricsflowLyricsContent = lyricsContainer ? lyricsContainer.querySelector('.LyricsContent') : null;
 
     if (lyricsContainer && lyricsflowLyricsContent) {
-      // Scroll listener to toggle immersive state based on swipe direction
       lyricsflowLyricsContent.addEventListener('scroll', () => {
-        if (window.innerWidth > 768) return; // Mobile-only immersive view
-
-        // Guard: Do not trigger immersive gestures if lyrics mode is closed/hidden
+        if (window.innerWidth > 768) return;
         if (lyricsContainer.classList.contains('hidden')) return;
-
-        // Guard: Do not trigger immersive gestures from programmatic scrolling (auto-scroll to active line)
         if (lyricsflowLyricsContent._isInternalScroll) return;
 
         const scrollTop = lyricsflowLyricsContent.scrollTop;
         const delta = scrollTop - lyricsflowLastScrollTop;
-
-        lyricsflowLastScrollTop = Math.max(0, scrollTop); // Bind positive for rubber-banding safe bounds
+        lyricsflowLastScrollTop = Math.max(0, scrollTop);
 
         if (delta < -8) {
-          // Scrolling UP -> show controls
           if (lyricsContainer.classList.contains('lyrics-immersive')) {
             lyricsContainer.classList.remove('lyrics-immersive');
           }
         } else if (delta > 8) {
-          // Scrolling DOWN -> hide controls
           if (!lyricsContainer.classList.contains('lyrics-immersive')) {
             lyricsContainer.classList.add('lyrics-immersive');
           }
         }
       }, { passive: true });
 
-      // Click listener anywhere on lyrics to reveal controls
       lyricsContainer.addEventListener('click', () => {
         if (window.innerWidth > 768) return;
-
         if (lyricsContainer.classList.contains('lyrics-immersive')) {
           lyricsContainer.classList.remove('lyrics-immersive');
-          lyricsflowLastScrollTop = lyricsflowLyricsContent.scrollTop; // Sync scroll boundary to prevent instant re-fade
+          lyricsflowLastScrollTop = lyricsflowLyricsContent.scrollTop;
         }
       });
     }
 
-    // Apple Music Immersive Gestures Engine for Queue List
     const lyricsflowQueueContent = queuePanel ? queuePanel.querySelector('.QueueList') : null;
 
     if (queuePanel && lyricsflowQueueContent) {
       lyricsflowQueueContent.addEventListener('scroll', () => {
-        if (window.innerWidth > 768) return; // Mobile-only immersive view
-
-        // Guard: Do not trigger if queue is closed
+        if (window.innerWidth > 768) return;
         if (!queuePanel.classList.contains('active')) return;
 
         const scrollTop = lyricsflowQueueContent.scrollTop;
         const delta = scrollTop - lyricsflowLastScrollTop;
-
         lyricsflowLastScrollTop = Math.max(0, scrollTop);
 
         if (delta < -8) {
-          // Scrolling UP -> show controls
           if (queuePanel.classList.contains('queue-immersive')) {
             queuePanel.classList.remove('queue-immersive');
           }
         } else if (delta > 8) {
-          // Scrolling DOWN -> hide controls
           if (!queuePanel.classList.contains('queue-immersive')) {
             queuePanel.classList.add('queue-immersive');
           }
         }
       }, { passive: true });
 
-      // Click listener anywhere on queue to reveal controls
       queuePanel.addEventListener('click', (e) => {
         if (window.innerWidth > 768) return;
-        // Don't trigger if clicking list items
         if (e.target.closest('.player-queue-item')) return;
 
         if (queuePanel.classList.contains('queue-immersive')) {
@@ -2521,11 +3538,9 @@
       });
     }
 
-    // Favorite Button Logic
     const btnFavorite = document.getElementById('btn-favorite');
     const favoriteIcon = document.getElementById('favorite-icon');
 
-    // Check initial favorite status
     async function checkFavoriteStatus() {
       if (!btnFavorite) return;
       try {
@@ -2533,7 +3548,7 @@
         const currentTrack = queue[getCurrentIndex()];
         if (!currentTrack) {
           btnFavorite.classList.remove('active');
-          if (favoriteIcon) favoriteIcon.src = 'icons/favorite.png';
+          if (favoriteIcon) favoriteIcon.src = 'icons/favorite.svg';
           return;
         }
 
@@ -2543,21 +3558,20 @@
           const isFav = await findTrackInPlaylist(favPlaylist.id, currentTrack.amTrackId, currentTrack.name, currentTrack.artist);
           if (isFav) {
             btnFavorite.classList.add('active');
-            if (favoriteIcon) favoriteIcon.src = 'icons/favorited.png';
+            if (favoriteIcon) favoriteIcon.src = 'icons/favorited.svg';
           } else {
             btnFavorite.classList.remove('active');
-            if (favoriteIcon) favoriteIcon.src = 'icons/favorite.png';
+            if (favoriteIcon) favoriteIcon.src = 'icons/favorite.svg';
           }
         } else {
           btnFavorite.classList.remove('active');
-          if (favoriteIcon) favoriteIcon.src = 'icons/favorite.png';
+          if (favoriteIcon) favoriteIcon.src = 'icons/favorite.svg';
         }
       } catch (e) {
         console.error("Failed to check favorite status:", e);
       }
     }
 
-    // Run on load
     checkFavoriteStatus();
 
     if (btnFavorite) {
@@ -2577,10 +3591,9 @@
           const isFav = await findTrackInPlaylist(favPlaylist.id, currentTrack.amTrackId, currentTrack.name, currentTrack.artist);
 
           if (isFav) {
-            // UN-FAVORITE
             await removeTrackFromPlaylist(isFav.id);
             btnFavorite.classList.remove('active');
-            if (favoriteIcon) favoriteIcon.src = 'icons/favorite.png';
+            if (favoriteIcon) favoriteIcon.src = 'icons/favorite.svg';
 
             const toast = document.getElementById('lyricsflow-toast');
             if (toast) {
@@ -2590,7 +3603,6 @@
               setTimeout(() => toast.classList.remove('active'), 2000);
             }
           } else {
-            // FAVORITE
             const trackData = await getTrackData(currentTrack.id);
             if (!trackData) return;
 
@@ -2604,7 +3616,7 @@
             }, trackData.buffer);
 
             btnFavorite.classList.add('active');
-            if (favoriteIcon) favoriteIcon.src = 'icons/favorited.png';
+            if (favoriteIcon) favoriteIcon.src = 'icons/favorited.svg';
 
             const toast = document.getElementById('lyricsflow-toast');
             if (toast) {
@@ -2620,23 +3632,40 @@
       };
     }
 
-    // Initialize volume slider fill
     updateVolumeSliderFill(parseFloat(volumeSlider.value));
 
-    // ── Song duration scrubber: AeroUI elastic slider ──
-    // <div class="aero-elastic" id="progress-elastic"> owns its fill + stretch.
-    // We only bridge: input (live preview) -> dragPosition, change (release) -> seek.
     if (progressElastic) {
       initElasticSlider(progressElastic);
 
       // Place the quality badge (icon + text) inside the progress-bar labels row,
-      // between the current-time and total-time labels.
+      // between the current-time and total-time labels for all UIs.
       const qualityBadgeContainerEl = document.getElementById('quality-badge-container');
       const progressLabels = progressElastic.querySelector(':scope > .aero-elastic-labels');
       const timeCurrentEl = document.getElementById('time-current');
       if (qualityBadgeContainerEl && progressLabels && timeCurrentEl) {
         timeCurrentEl.after(qualityBadgeContainerEl);
       }
+
+      const progressTrack = progressElastic.querySelector('.aero-elastic-track') || progressElastic;
+      progressTrack.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.aero-elastic-label')) return;
+        const rect = (progressElastic.querySelector('.aero-elastic-track') || progressElastic).getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        if (player.duration > 0) {
+          const targetTime = ratio * player.duration;
+          isDraggingProgress = false;
+          dragPosition = targetTime;
+          setElasticValue(progressElastic, targetTime);
+          if (timeCurrent) timeCurrent.textContent = AudioPlayer.formatTime(targetTime);
+          if (timeTotal) timeTotal.textContent = AudioPlayer.formatTime(player.duration - targetTime, true);
+          player.seek(targetTime);
+          if (_singAudio) {
+            try { _singAudio.currentTime = targetTime / 1000; } catch (_) { }
+          }
+          queueForceScroll();
+        }
+      });
 
       progressElastic.addEventListener('input', (e) => {
         const v = e.detail?.value ?? getElasticValue(progressElastic);
@@ -2652,7 +3681,12 @@
         const v = e.detail?.value ?? getElasticValue(progressElastic);
         isDraggingProgress = false;
         dragPosition = Math.max(0, Math.min(v, player.duration || v));
-        if (player.duration > 0) player.seek(dragPosition);
+        if (player.duration > 0) {
+          player.seek(dragPosition);
+          if (_singAudio) {
+            try { _singAudio.currentTime = dragPosition / 1000; } catch (_) { }
+          }
+        }
         queueForceScroll();
       });
     }
@@ -2665,7 +3699,27 @@
       const lines = lyricsType === 'Syllable' ? LyricsObject.Types.Syllable.Lines : LyricsObject.Types.Line.Lines;
       for (const line of lines) {
         if (line.HTMLElement === lineEl) {
-          player.seek(line.Syllables?.Lead?.[0]?.StartTime ?? line.StartTime);
+          const seekTarget = line.Syllables?.Lead?.[0]?.StartTime ?? line.StartTime;
+          if (isEmbedMode) {
+            window._lyricsflowExternalTime = seekTarget;
+            setLyricsTime(seekTarget, lyricsType);
+            if (settingsManager.get('spicyLyricsAnimation')) {
+              animateSpicyLyrics(seekTarget, lyricsType, false);
+            } else {
+              animateLyrics(seekTarget, lyricsType, false);
+            }
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: 'LYRICSFLOW_SEEK', time: seekTarget }, '*');
+            }
+          } else {
+            player.seek(seekTarget);
+            if (_singAudio) {
+              try { _singAudio.currentTime = seekTarget / 1000; } catch (_) { }
+            }
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: 'LYRICSFLOW_SEEK', time: seekTarget }, '*');
+            }
+          }
           queueForceScroll();
           break;
         }
@@ -2735,11 +3789,7 @@
     }
 
     function startAnimationLoop() {
-      // FPS probe: window.__lyricsflowFps shows the real rAF rate on this page.
       let fpsCount = 0, fpsStamp = performance.now();
-
-      // Progress bar / time text don't need 144 updates/s; 10 Hz is visually
-      // identical and saves layout+paint every frame.
       let lastUiUpdate = 0;
       const UI_INTERVAL = 100;
 
@@ -2752,16 +3802,18 @@
           fpsStamp = nowMs;
         }
 
-        const pos = isDraggingProgress ? dragPosition : player.getPosition();
-        // Use latency-compensated position for lyrics so they sync to when audio is heard,
-        // not when it's scheduled into the Web Audio pipeline (~200–300ms earlier).
-        const lyricsPos = isDraggingProgress ? dragPosition : player.getLatencyCompensatedPosition();
+        const pos = typeof window._lyricsflowExternalTime === 'number'
+          ? window._lyricsflowExternalTime
+          : (isDraggingProgress ? dragPosition : player.getPosition());
+        const lyricsPos = typeof window._lyricsflowExternalTime === 'number'
+          ? window._lyricsflowExternalTime
+          : (isDraggingProgress ? dragPosition : player.getLatencyCompensatedPosition());
         const offset = settingsManager.get("playbackOffset") || 0;
         const adjustedLyricsPos = lyricsPos - offset;
 
         setLyricsTime(adjustedLyricsPos, lyricsType);
-        // Feed bass energy into the dybg background (volume-reactive twist/zoom)
         setKawarpVolume(player.getLowFreqLevel());
+        syncSingAudio();
 
         const doUi = isDraggingProgress || (nowMs - lastUiUpdate >= UI_INTERVAL);
         if (doUi) lastUiUpdate = nowMs;
@@ -2784,10 +3836,18 @@
           if (doUi && !isDraggingProgress) {
             timeCurrent.textContent = AudioPlayer.formatTime(pos);
           }
-          animateLyrics(adjustedLyricsPos, lyricsType, false);
-          scrollToActiveLine(lyricsContent, isDraggingProgress);
+          if (settingsManager.get('spicyLyricsAnimation')) {
+            animateSpicyLyrics(adjustedLyricsPos, lyricsType, false);
+          } else {
+            animateLyrics(adjustedLyricsPos, lyricsType, false);
+            scrollToActiveLine(lyricsContent, isDraggingProgress);
+          }
         } else {
-          animateLyrics(adjustedLyricsPos, lyricsType, true);
+          if (settingsManager.get('spicyLyricsAnimation')) {
+            animateSpicyLyrics(adjustedLyricsPos, lyricsType, true);
+          } else {
+            animateLyrics(adjustedLyricsPos, lyricsType, true);
+          }
         }
         animationFrameId = requestAnimationFrame(loop);
       }
@@ -2798,9 +3858,8 @@
     startAnimationLoop();
     btnOptions.onclick = () => settingsUI.show();
 
-    // Auto-open settings if launched with openSettings URL parameter (e.g. from index.html iframe)
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('openSettings') === '1' || urlParams.get('openSettings') === 'true') {
+    const urlParamSettings = new URLSearchParams(window.location.search);
+    if (urlParamSettings.get('openSettings') === '1' || urlParamSettings.get('openSettings') === 'true') {
       setTimeout(() => settingsUI.show(), 100);
     }
     window.addEventListener('message', (e) => {
@@ -2810,54 +3869,62 @@
       }
     });
 
-    // ── Live Settings Refresh ──
     window.addEventListener('lyricsflow-settings-changed', () => {
-      // Refresh Metadata Bar (Year position might have changed)
       if (songMetadata) updateMetadataUI(songMetadata);
-      // Refresh Lyrics (Alignment, Simple Mode, Force Word Sync)
+      resetSpicyLyrics();
       if (parsedLyrics) applyLyricsToUI(parsedLyrics);
-      // Refresh Force Scroll
       queueForceScroll();
 
-      // Update Lyrics Provider Visibility
       const sourceBadge = document.getElementById('lyrics-source-badge');
       if (sourceBadge) {
         sourceBadge.style.display = settingsManager.get('hideLyricsProvider') ? 'none' : 'block';
       }
 
-      // Update Lossless quality badge
       const qualityIcon = document.getElementById('quality-badge-icon');
       const qualityText = document.getElementById('quality-badge-text');
-      if (qualityIcon && qualityText) {
-        if (settingsManager.get('dolbyAtmos')) {
+      const qualityBadgeContainer = document.getElementById('quality-badge-container');
+      const curCodec = window._activePlaybackCodec;
+      const isAacCodec = curCodec === 'aac' || curCodec === 'aac-web';
+      const hasDolby = Array.isArray(songMetadata?.audioTraits) && songMetadata.audioTraits.some(t => typeof t === 'string' && t.toLowerCase() === 'atmos');
+      const hasLossless = Array.isArray(songMetadata?.audioTraits) && songMetadata.audioTraits.some(t => typeof t === 'string' && (t.includes('lossless') || t.includes('hi-res')));
+
+      const shouldShowBadge = !isAacCodec && (curCodec === 'atmos' || curCodec === 'alac' || hasDolby || hasLossless);
+
+      if (qualityIcon && qualityText && qualityBadgeContainer) {
+        if (!shouldShowBadge) {
+          qualityBadgeContainer.style.display = 'none';
+          qualityBadgeContainer.classList.add('hidden');
+          qualityIcon.style.display = 'none';
+          qualityText.style.display = 'none';
+        } else if (settingsManager.get('dolbyAtmos') || curCodec === 'atmos' || hasDolby) {
           qualityIcon.src = 'icons/dolby_atmos.svg';
           qualityText.textContent = '';
           qualityText.style.display = 'none';
+          qualityIcon.style.display = 'inline-block';
           qualityIcon.style.width = '82px';
           qualityIcon.style.height = '18px';
           qualityIcon.style.marginRight = '0px';
+          qualityBadgeContainer.style.display = 'flex';
+          qualityBadgeContainer.classList.remove('hidden');
         } else {
           qualityIcon.src = 'icons/lossless.svg';
           qualityText.style.display = 'inline';
+          qualityIcon.style.display = 'inline-block';
           qualityText.textContent = t('player_quality_lossless') || 'Lossless';
           qualityIcon.style.width = '17px';
           qualityIcon.style.height = '14px';
           qualityIcon.style.marginRight = '4px';
+          qualityBadgeContainer.style.display = 'flex';
+          qualityBadgeContainer.classList.remove('hidden');
         }
       }
 
-      // Update AirPods / AirPlay / Bluetooth state
       updateBluetoothState();
     });
 
-    // Apply settings on load
     window.dispatchEvent(new CustomEvent('lyricsflow-settings-changed', { detail: settingsManager.settings }));
 
-    // ── Keyboard Shortcuts ──
     window.addEventListener('keydown', (e) => {
-      // Don't trigger if typing in a text field, or if an AeroUI transport
-      // button has focus (it already handles Space/Enter via pressend —
-      // handling it here too would toggle twice).
       const tag = document.activeElement ? document.activeElement.tagName : '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
 
@@ -2879,6 +3946,7 @@
         player.setVolume(newVol);
         volumeSlider.value = newVol;
         updateVolumeSliderFill(newVol);
+        _updateSingMix();
       }
       if (e.key === 'VolumeDown' || e.code === 'VolumeDown' || e.key === 'AudioVolumeDown' || e.code === 'AudioVolumeDown') {
         e.preventDefault();
@@ -2886,11 +3954,12 @@
         player.setVolume(newVol);
         volumeSlider.value = newVol;
         updateVolumeSliderFill(newVol);
+        _updateSingMix();
       }
     }, { passive: false });
   </script>
 
-  <!-- Invisible touch shield — blocks accidental lyric seeks near the bottom -->
+  <!-- Invisible touch shield -->
   <div class="touch-shield" id="touch-shield"></div>
 
   <!-- Bottom Bar -->
@@ -2907,8 +3976,12 @@
           title="Translations & Pronunciations">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="30" height="30" role="presentation">
             <g transform="translate(1.5, 1.5) scale(1.50)">
-              <path d="M12.46-.44c0-12.76 8.13-20.17 20.37-20.17h47.4c12.24 0 20.4 7.41 20.4 20.17v4.47H98.3c-1.98 0-3.83.18-5.55.52v-4.7c0-8.62-4.82-13.14-13-13.14H33.3c-8.13-.01-13 4.52-13 13.14v28.34c0 8.62 4.88 13.04 12.99 13.04h5.16c2.07 0 3.76 1.24 3.76 4v12.32l15.71-14.03c1.92-1.7 3.1-2.3 5.76-2.3h14.24v7.37H63.37l-16.3 13.92c-2.92 2.56-4.53 3.87-6.9 3.87-3.41 0-5.27-2.38-5.27-6.07V48.59h-2.07c-12.24 0-20.37-7.39-20.37-20.2z" transform="translate(-.51 4.44)scale(.101)" fill="white"></path>
-              <path d="M39.43 28.52c-1.04 2.73.48 5.21 3.3 5.21 1.85 0 3-.98 3.71-3.05l2.96-8.6h14.37l3.01 8.6c.66 2.07 1.8 3.05 3.68 3.05 2.87 0 4.3-2.5 3.34-5.2L61.7-3.8c-.88-2.4-2.66-3.71-5.16-3.71-2.47 0-4.25 1.3-5.13 3.7L39.43 28.53ZM51.4 16.07l5.14-14.95 5.2 14.95H51.41Zm80.04 71.09-16.31-13.93H98.3c-12.77 0-20.38-7.38-20.38-20.13V24.2c0-12.77 7.6-20.17 20.38-20.17h47.38c12.24 0 20.37 7.4 20.37 20.16v28.83c0 12.81-8.13 20.2-20.37 20.2h-2.02v11.72c0 3.69-1.92 6.07-5.26 6.07-2.39 0-3.98-1.3-6.97-3.85Zm-6.9-66.08-2.42-4.92c-.93-1.85-2.8-2.68-4.58-1.7a3.35 3.35 0 0 0-1.55 4.57l2.37 4.97a3.35 3.35 0 0 0 4.47 1.66c1.84-.9 2.53-2.87 1.7-4.58Zm-21.63 9.57c0 1.87 1.5 3.25 3.46 3.25h3.74a32.44 32.44 0 0 0 7.25 13.18 35.9 35.9 0 0 1-11.69 4.86c-1.87.45-3 2.25-2.62 4.22.55 1.93 2.5 2.8 4.6 2.23a38.7 38.7 0 0 0 14.74-6.69 38.3 38.3 0 0 0 14.14 6.69c2.42.52 4.41-.2 4.9-2.23.6-2.12-.37-3.77-2.5-4.22a34.4 34.4 0 0 1-11.64-4.86 30.5 30.5 0 0 0 7.2-13.18h3.74c2.02 0 3.5-1.38 3.5-3.25s-1.48-3.26-3.5-3.26h-31.86c-1.97 0-3.46 1.4-3.46 3.26m19.48 12.3a26.45 26.45 0 0 1-5.46-9.05h10.74a27.3 27.3 0 0 1-5.28 9.05" transform="translate(-.51 4.44)scale(.101)" fill="white"></path>
+              <path
+                d="M12.46-.44c0-12.76 8.13-20.17 20.37-20.17h47.4c12.24 0 20.4 7.41 20.4 20.17v4.47H98.3c-1.98 0-3.83.18-5.55.52v-4.7c0-8.62-4.82-13.14-13-13.14H33.3c-8.13-.01-13 4.52-13 13.14v28.34c0 8.62 4.88 13.04 12.99 13.04h5.16c2.07 0 3.76 1.24 3.76 4v12.32l15.71-14.03c1.92-1.7 3.1-2.3 5.76-2.3h14.24v7.37H63.37l-16.3 13.92c-2.92 2.56-4.53 3.87-6.9 3.87-3.41 0-5.27-2.38-5.27-6.07V48.59h-2.07c-12.24 0-20.37-7.39-20.37-20.2z"
+                transform="translate(-.51 4.44)scale(.101)" fill="white"></path>
+              <path
+                d="M39.43 28.52c-1.04 2.73.48 5.21 3.3 5.21 1.85 0 3-.98 3.71-3.05l2.96-8.6h14.37l3.01 8.6c.66 2.07 1.8 3.05 3.68 3.05 2.87 0 4.3-2.5 3.34-5.2L61.7-3.8c-.88-2.4-2.66-3.71-5.16-3.71-2.47 0-4.25 1.3-5.13 3.7L39.43 28.53ZM51.4 16.07l5.14-14.95 5.2 14.95H51.41Zm80.04 71.09-16.31-13.93H98.3c-12.77 0-20.38-7.38-20.38-20.13V24.2c0-12.77 7.6-20.17 20.38-20.17h47.38c12.24 0 20.37 7.4 20.37 20.16v28.83c0 12.81-8.13 20.2-20.37 20.2h-2.02v11.72c0 3.69-1.92 6.07-5.26 6.07-2.39 0-3.98-1.3-6.97-3.85Zm-6.9-66.08-2.42-4.92c-.93-1.85-2.8-2.68-4.58-1.7a3.35 3.35 0 0 0-1.55 4.57l2.37 4.97a3.35 3.35 0 0 0 4.47 1.66c1.84-.9 2.53-2.87 1.7-4.58Zm-21.63 9.57c0 1.87 1.5 3.25 3.46 3.25h3.74a32.44 32.44 0 0 0 7.25 13.18 35.9 35.9 0 0 1-11.69 4.86c-1.87.45-3 2.25-2.62 4.22.55 1.93 2.5 2.8 4.6 2.23a38.7 38.7 0 0 0 14.74-6.69 38.3 38.3 0 0 0 14.14 6.69c2.42.52 4.41-.2 4.9-2.23.6-2.12-.37-3.77-2.5-4.22a34.4 34.4 0 0 1-11.64-4.86 30.5 30.5 0 0 0 7.2-13.18h3.74c2.02 0 3.5-1.38 3.5-3.25s-1.48-3.26-3.5-3.26h-31.86c-1.97 0-3.46 1.4-3.46 3.26m19.48 12.3a26.45 26.45 0 0 1-5.46-9.05h10.74a27.3 27.3 0 0 1-5.28 9.05"
+                transform="translate(-.51 4.44)scale(.101)" fill="white"></path>
             </g>
           </svg>
         </button>
@@ -2929,7 +4002,6 @@
       <button class="popup-close" id="btn-close-popup">Close</button>
     </div>
   </div>
-
 
   <!-- Apple Style Dynamic Toast -->
   <div class="LyricsflowToast" id="lyricsflow-toast">

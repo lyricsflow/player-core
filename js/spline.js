@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Cubic Spline Interpolation
+ * LyricsFlow — Cubic Spline Interpolation
  * Port of the cubic-spline npm package for smooth animation curves.
  */
 

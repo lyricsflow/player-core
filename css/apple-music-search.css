@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   Lyricsflow — Apple Music "Listen/Search" Page
+   LyricsFlow — Apple Music "Listen/Search" Page
    Styles for elements that previously had no CSS.
    Matches the Apple Music dark, glassy aesthetic already
    established in upload.css / global.css.
@@ -34,26 +34,28 @@
 
 .am-apple-search-input-wrapper #catalog-search {
   width: 100%;
-  padding: 11px 44px 11px 48px;
-  background: rgba(26, 26, 26, 0.85);
-  border: 1.5px solid rgba(225, 45, 75, 0.55);
+  padding: 12px 44px 12px 48px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 9999px;
   color: #fff;
   font-size: 0.96rem;
   font-family: inherit;
   outline: none;
-  box-shadow: 0 0 16px rgba(225, 45, 75, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22);
   transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .am-apple-search-input-wrapper #catalog-search::placeholder {
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .am-apple-search-input-wrapper #catalog-search:focus {
-  background: rgba(32, 32, 32, 0.95);
-  border-color: #fa586a;
-  box-shadow: 0 0 24px rgba(250, 88, 106, 0.38), 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(250, 88, 106, 0.75);
+  box-shadow: 0 0 28px rgba(250, 88, 106, 0.35), 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .am-search-clear-btn {
@@ -2209,12 +2211,12 @@
   height: 70px;
   margin: 0 auto;
   z-index: 1500;
-  background: rgba(26, 26, 28, 0.94);
-  backdrop-filter: blur(50px) saturate(200%);
-  -webkit-backdrop-filter: blur(50px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(26, 26, 32, 0.62) !important;
+  backdrop-filter: blur(48px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(210%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
   border-radius: 9999px;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), inset 0 1.5px 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.3) !important;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -2297,7 +2299,7 @@
   justify-content: center;
   border-radius: 50%;
   color: #fff;
-  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
   user-select: none;
   -webkit-user-select: none;
   padding: 0;
@@ -2317,12 +2319,14 @@
 }
 
 .am-preview-btn:hover {
-  transform: scale(1.08);
-  background: rgba(255, 255, 255, 0.08);
+  transform: scale3d(1.1, 1.1, 1);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .am-preview-btn:active {
-  transform: scale(0.94);
+  transform: scale3d(0.92, 0.92, 1);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .am-preview-btn.active img {
@@ -2379,18 +2383,48 @@
   animation: aero-spinner-fade 1s ease-in-out infinite;
 }
 
-.am-preview-play-btn .aero-spinner rect:nth-child(1) { animation-delay: 0s; }
-.am-preview-play-btn .aero-spinner rect:nth-child(2) { animation-delay: -0.875s; }
-.am-preview-play-btn .aero-spinner rect:nth-child(3) { animation-delay: -0.75s; }
-.am-preview-play-btn .aero-spinner rect:nth-child(4) { animation-delay: -0.625s; }
-.am-preview-play-btn .aero-spinner rect:nth-child(5) { animation-delay: -0.5s; }
-.am-preview-play-btn .aero-spinner rect:nth-child(6) { animation-delay: -0.375s; }
-.am-preview-play-btn .aero-spinner rect:nth-child(7) { animation-delay: -0.25s; }
-.am-preview-play-btn .aero-spinner rect:nth-child(8) { animation-delay: -0.125s; }
+.am-preview-play-btn .aero-spinner rect:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.am-preview-play-btn .aero-spinner rect:nth-child(2) {
+  animation-delay: -0.875s;
+}
+
+.am-preview-play-btn .aero-spinner rect:nth-child(3) {
+  animation-delay: -0.75s;
+}
+
+.am-preview-play-btn .aero-spinner rect:nth-child(4) {
+  animation-delay: -0.625s;
+}
+
+.am-preview-play-btn .aero-spinner rect:nth-child(5) {
+  animation-delay: -0.5s;
+}
+
+.am-preview-play-btn .aero-spinner rect:nth-child(6) {
+  animation-delay: -0.375s;
+}
+
+.am-preview-play-btn .aero-spinner rect:nth-child(7) {
+  animation-delay: -0.25s;
+}
+
+.am-preview-play-btn .aero-spinner rect:nth-child(8) {
+  animation-delay: -0.125s;
+}
 
 @keyframes aero-spinner-fade {
-  0%, 100% { opacity: 0.15; }
-  12.5% { opacity: 0.95; }
+
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+
+  12.5% {
+    opacity: 0.95;
+  }
 }
 
 .am-preview-controls-left .aero-player {
@@ -4066,6 +4100,7 @@
 }
 
 @media (max-width: 768px) {
+
   /* Hide the desktop centered circle avatar and ambient canvas blur on mobile */
   .am-artist-pc-hero-centered {
     display: none !important;

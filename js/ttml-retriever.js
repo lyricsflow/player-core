@@ -13,15 +13,15 @@ const SOURCE_LABELS = {
   lyricsplus: 'LyricsPlus',
   aml: 'Apple Music',
   spt: 'Spotify',
-  lyricsflow: 'Lyricsflow',
+  lyricsflow: 'LyricsFlow',
   spotify: 'Spotify',
   lrclib: 'LRCLIB',
   netease: 'Netease',
   musixmatch: 'Musixmatch',
   genius: 'Genius',
   apple: 'Apple Music',
-  lfcommunity: "Lyricsflow Community",
-  custom: "Lyricsflow Community",
+  lfcommunity: "LyricsFlow Community",
+  custom: "LyricsFlow Community",
 };
 
 /** Fetch from Better Lyrics API */
@@ -52,7 +52,7 @@ function resolveSourceLabel(source, sourceDisplayName) {
   if (sourceDisplayName?.trim()) return sourceDisplayName.trim();
   if (source && SOURCE_LABELS[source]) return SOURCE_LABELS[source];
   if (source?.trim()) return source.trim();
-  return 'Lyricsflow';
+  return 'LyricsFlow';
 }
 
 // ═══════════════════════════════════════════════
@@ -67,7 +67,7 @@ function normalizeText(text) {
     .trim();
 }
 
-/** Fetch from custom Lyricsflow Community API */
+/** Fetch from custom LyricsFlow Community API */
 async function fetchFromCustomAPI(songId) {
   try {
     const res = await fetch(`${CUSTOM_LYRICS_API}/lyrics/${songId}`);

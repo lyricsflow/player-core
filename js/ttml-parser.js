@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — TTML Parser
+ * LyricsFlow — TTML Parser
  * Exact port of ParseTTML.ts
  * Parses Apple Music-style TTML files into structured lyrics data.
  */
@@ -351,16 +351,16 @@ function parseParagraph(paragraph, div, body, oppositeAgents, transliterations, 
     }
     if (bgStartIdx !== -1 && text.endsWith(')')) {
       bgEndIdx = i;
-      
+
       const bgSyllables = leadSyllables.slice(bgStartIdx, bgEndIdx + 1);
-      
+
       // Clean parentheses from first and last syllables in the sequence
       if (bgSyllables.length > 0) {
         bgSyllables[0].Text = bgSyllables[0].Text.replace(/^\(/, '').trim();
         const last = bgSyllables[bgSyllables.length - 1];
         last.Text = last.Text.replace(/\)$/, '').trim();
       }
-      
+
       const filteredBg = bgSyllables.filter(s => s.Text);
       if (filteredBg.length > 0) {
         background.push({
@@ -369,10 +369,10 @@ function parseParagraph(paragraph, div, body, oppositeAgents, transliterations, 
           Syllables: filteredBg,
         });
       }
-      
+
       // Remove these syllables from leadSyllables
       leadSyllables.splice(bgStartIdx, bgEndIdx - bgStartIdx + 1);
-      
+
       // Adjust index to account for splice
       i = bgStartIdx - 1;
       bgStartIdx = -1;
@@ -550,7 +550,7 @@ export default function parseTTMLToLyrics(ttml) {
   const songwriters = parseSongwriters(tt);
   const oppositeAgents = parseAgents(tt);
   const { translations, transliterations, transliterationPieces, transliterationSyllables } = readITunesMetadata(tt);
-  
+
   // Explicitly check if the provider marked this as static/unsynced
   const isExplicitlyStatic = getAttr(tt, "itunes:timing", "timing") === "None";
 

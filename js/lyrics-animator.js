@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Lyrics Animator
+ * LyricsFlow — Lyrics Animator
  * Spring-physics animation engine for word-by-word gradient and scale animation.
  * Port of LyricsAnimator.ts
  */
@@ -97,6 +97,7 @@ const SimpleLyricsMode_LetterEffectsStrengthConfig = {
 };
 
 let _activeLineIndex = -1;
+let _lastActiveLineIdx = null;
 let _needsResumeScroll = false;
 
 // ── AMLL Spring Policy Constants (from base/spring.ts) ──
@@ -203,7 +204,7 @@ function tickPerLineY(now) {
   }
 }
 
-function setLineAnimTargets(arr, activeIndex) {
+function setLineAnimTargets(arr, activeIndex, activeIndices = [activeIndex]) {
   if (activeIndex < 0) return;
   _activeLineIndex = activeIndex;
 
@@ -224,10 +225,11 @@ function setLineAnimTargets(arr, activeIndex) {
 
   // Detect seek / interlude
   const isSeeking =
-    lastActiveLineIdx !== null &&
-    lastActiveLineIdx !== undefined &&
-    Math.abs(activeIndex - lastActiveLineIdx) > 1;
+    _lastActiveLineIdx !== null &&
+    _lastActiveLineIdx !== undefined &&
+    Math.abs(activeIndex - _lastActiveLineIdx) > 1;
   const isInterludeActive = !!arr[activeIndex]?.DotLine;
+  _lastActiveLineIdx = activeIndex;
 
   // Find interval between current and previous line
   let intervalMs;
@@ -241,10 +243,6 @@ function setLineAnimTargets(arr, activeIndex) {
 
   // Calculate AMLL spring policy
   const springPolicy = getPosYSpringPolicy(isSeeking, isInterludeActive, intervalMs);
-
-  // Visible window for blur computation
-  const lineTotal = (activeEl.offsetHeight || 60) + 25;
-  const visibleRange = Math.ceil(containerHeight / lineTotal) + 3;
 
   // Stagger calculation matching AMLL base/index.ts lines 811-840
   let delay = 0; // seconds
@@ -280,8 +278,10 @@ function setLineAnimTargets(arr, activeIndex) {
     }
 
     // AMLL stagger delay step: ONLY accumulate delay for lines visible on-screen (AMLL line 835)
-    const lineH = el.offsetHeight || 60;
-    const curPos = targetFocalTop + (el.offsetTop - activeOffsetTop);
+    // Avoid reading el.offsetHeight in a hot loop (causes forced synchronous reflow)
+    const lineH = line._cachedH || (line._cachedH = el.offsetHeight || 60);
+    const lineTop = line._cachedTop !== undefined ? line._cachedTop : (line._cachedTop = el.offsetTop);
+    const curPos = targetFocalTop + (lineTop - activeOffsetTop);
 
     if (curPos + lineH >= 0) {
       delay += baseDelay;
@@ -298,7 +298,6 @@ function setLineAnimTargets(arr, activeIndex) {
       if (isFocused) {
         blurPx = 0;
       } else if (line.BGLine || line.DotLine) {
-        // AMLL: interlude dots / bg vocal lines are never blurred
         blurPx = 0;
       } else {
         let effectiveIdx = i;
@@ -317,7 +316,12 @@ function setLineAnimTargets(arr, activeIndex) {
         blurPx = Math.min(5, Math.max(1.2, rawBlur));
       }
     }
-    el.style.setProperty('--blur-amount', `${blurPx.toFixed(1)}px`);
+    const blurStr = `${blurPx.toFixed(1)}px`;
+    if (line._lastBlurStr !== blurStr) {
+      el.style.setProperty('--blur-amount', blurStr);
+      el.style.setProperty('--BlurAmount', blurStr);
+      line._lastBlurStr = blurStr;
+    }
 
     line._baseY = targetTy;
   }
@@ -1318,8 +1322,11 @@ function animateSyllable(position, deltaTime) {
           `translate3d(0, calc(var(--DefaultLyricsSize) * ${curYOffset.toFixed(4)}), 0)`);
       }
 
+      const isRtlWord = word.HTMLElement?.closest('.rtl') || /[\u0600-\u06FF\u0750-\u077F]/.test(word.Text || '');
+      const isSplitWord = word.HTMLElement?.classList.contains('PartOfWord') || isRtlWord;
+
       if (!word.LetterGroup) {
-        if (fillX !== null && fillGeo) {
+        if (!isSplitWord && fillX !== null && fillGeo) {
           const it = fillGeo.items[wi];
           const gp = Math.max(-20, Math.min(120, ((fillX - it.left) / it.width) * 100));
           // Epsilon-gate: sub-0.05% frontier moves are invisible but each
@@ -1461,12 +1468,9 @@ function animateSyllable(position, deltaTime) {
 
         if (isPwActive) {
           targetScale = ScaleSpline.at(pct);
-          targetYOffset = isScrolling ? 0 : YOffsetSpline.at(pct);
+          targetYOffset = isScrolling ? 0 : YOffsetSpline.at(pct) * 1.5;
           targetGlow = GlowSpline.at(pct);
           targetGradientPos = -20 + 120 * pct;
-          if (isAML_lyrics) {
-            targetYOffset *= 1.5;
-          }
         } else if (isPwSung) {
           targetScale = ScaleSpline.at(1);
           targetYOffset = isScrolling ? 0 : YOffsetSpline.at(1);
@@ -1494,7 +1498,7 @@ function animateSyllable(position, deltaTime) {
         if (!Number.isFinite(pw._pwty) || Math.abs(curYOffset - pw._pwty) > 0.001) {
           pw._pwty = curYOffset;
           setStyleIfChanged(pwEl, "transform",
-            `translate3d(0, calc(var(--DefaultLyricsSize) * ${curYOffset.toFixed(4)} * 0.5), 0)`);
+            `translate3d(0, calc(var(--DefaultLyricsSize) * ${curYOffset.toFixed(4)} * 0.7), 0)`);
         }
 
         setStyleIfChanged(pwEl, "--pron-gradient-position", `${targetGradientPos.toFixed(2)}%`, 0.05);

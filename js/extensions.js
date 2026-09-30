@@ -1,5 +1,5 @@
 /**
- * Lyricsflow Extension System
+ * LyricsFlow Extension System
  * Handles loading and managing user extensions (zip files containing script.js and config.json)
  */
 
@@ -71,11 +71,11 @@ class ExtensionManager {
       }
 
       const zip = await window.JSZip.loadAsync(zipFile);
-      
+
       // Check for required files
       const configFile = zip.file('config.json');
       const scriptFile = zip.file('script.js');
-      
+
       if (!configFile || !scriptFile) {
         throw new Error('Zip file must contain config.json and script.js');
       }

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   Lyricsflow — Lyrics Styles
+   LyricsFlow — Lyrics Styles
    Ported from Lyrics/main.css + Lyrics/Mixed.css
    ═══════════════════════════════════════════════ */
 
@@ -89,7 +89,7 @@
    ═══════════════════════════════════════════════ */
 
 :root {
-  --Lyricsflow-LineSpacing: 0 1cqw 25px;
+  --LyricsFlow-LineSpacing: 0 1cqw 25px;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line {
@@ -220,18 +220,18 @@
 }
 
 /* ── Active State ── */
+/* Word-to-word (Syllable) lyrics: keep every line at full opacity,
+   active or not. Inactive lines are still differentiated by the blur. */
+#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer[data-lyrics-type="Syllable"] .line {
+  opacity: 1 !important;
+}
+
 #LyricsflowPage .LyricsContainer .LyricsContent .line.Active {
   opacity: 1;
   --BlurAmount: 0px !important;
   /*margin-top: 2.5cqw !important;
   margin-bottom: 2.5cqw !important;*/
   /* disgusting */
-}
-
-/* Word-to-word (Syllable) lyrics: keep every line at full opacity,
-   active or not. Inactive lines are still differentiated by the blur. */
-#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer[data-lyrics-type="Syllable"] .line {
-  opacity: 1 !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.Active .word,
@@ -351,19 +351,21 @@
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .word-group .word {
-  display: inline !important;
+  display: inline-block !important;
   margin: 0 !important;
   padding: 0 !important;
   letter-spacing: 0 !important;
+  vertical-align: baseline !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl :is(.word, .letterGroup).PartOfWord {
-  display: inline !important;
+  display: inline-block !important;
   transform-origin: left center;
   margin-inline-end: 0 !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
   letter-spacing: 0 !important;
+  vertical-align: baseline !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl :is(.word, .letterGroup).PartOfWord::after {
@@ -373,17 +375,19 @@
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl :is(.word, .letterGroup).PartOfWord+ :is(.word, .letterGroup) {
-  display: inline !important;
+  display: inline-block !important;
   transform-origin: center center;
   margin-inline-end: 0 !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
   letter-spacing: 0 !important;
+  vertical-align: baseline !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl :is(.word, .letterGroup).PartOfWord+ :is(.word, .letterGroup):not(.PartOfWord) {
   transform-origin: right center;
   margin-inline-end: 0.3ch;
+  vertical-align: baseline !important;
 }
 
 /* ═══════════════════════════════════════════════
@@ -480,7 +484,7 @@
   transition:
     scale 0.2s cubic-bezier(0.37, 0, 0.63, 1),
     opacity 0.2s cubic-bezier(0.37, 0, 0.63, 1) !important;
-  margin: var(--Lyricsflow-LineSpacing, 2cqw 0);
+  margin: var(--LyricsFlow-LineSpacing, 2cqw 0);
 }
 
 #LyricsflowPage .LyricsContainer .LyricsflowScrollContainer[data-lyrics-type="Line"] .line:not(.Active) {
@@ -517,7 +521,7 @@
    ═══════════════════════════════════════════════ */
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line:not(.musical-line) {
-  margin: var(--Lyricsflow-LineSpacing, 1cqw 0);
+  margin: var(--LyricsFlow-LineSpacing, 1cqw 0);
 }
 
 /* ═══════════════════════════════════════════════

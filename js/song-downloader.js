@@ -1,6 +1,6 @@
 /**
  * song-downloader.js
- * Comprehensive Download Suite for Wave / Lyricsflow:
+ * Comprehensive Download Suite for Wave / LyricsFlow:
  * - Direct Song & Full Album Downloads (Single tracks or .ZIP bundle)
  * - Dolby Atmos (M4A / MP4), Lossless ALAC (FLAC 24-bit / M4A), AAC (M4A / MP3)
  * - Parses spicyamll.online/song/:id, spicyamll.online/album/:id, Apple Music URLs, or Raw IDs
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
               i.removeAttribute('aria-current');
             }
           });
-          try { closeMenu(formatMenuEl); } catch (_) {}
+          try { closeMenu(formatMenuEl); } catch (_) { }
         }
       });
     }
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const genericMatch = u.pathname.match(/\/(\d+)(?:$|\?)/);
           if (genericMatch) return { type: 'song', id: genericMatch[1] };
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     if (/^\d+$/.test(clean)) {
@@ -242,13 +242,13 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Tracklist -->
         <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px; display: flex; flex-direction: column; gap: 6px;">
           ${tracks.map((tItem, idx) => {
-            const tAttr = tItem.attributes || {};
-            const tName = tAttr.name || `Track ${idx + 1}`;
-            const tId = tItem.id;
-            const tDurMs = tAttr.durationInMillis || 0;
-            const tDurStr = tDurMs ? `${Math.floor(tDurMs / 60000)}:${String(Math.floor((tDurMs % 60000) / 1000)).padStart(2, '0')}` : '';
+      const tAttr = tItem.attributes || {};
+      const tName = tAttr.name || `Track ${idx + 1}`;
+      const tId = tItem.id;
+      const tDurMs = tAttr.durationInMillis || 0;
+      const tDurStr = tDurMs ? `${Math.floor(tDurMs / 60000)}:${String(Math.floor((tDurMs % 60000) / 1000)).padStart(2, '0')}` : '';
 
-            return `
+      return `
               <div class="dl-album-track-row" data-id="${tId}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,0.02); transition: background 0.15s ease;">
                 <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0;">
                   <span style="font-size: 0.85rem; color: #8e8e93; font-weight: 600; width: 20px; text-align: right;">${idx + 1}</span>
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
               </div>
             `;
-          }).join('')}
+    }).join('')}
         </div>
       </div>
     `;

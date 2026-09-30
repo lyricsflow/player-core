@@ -1,4 +1,5 @@
 import { showToast } from './toast.js';
+import { aeroConfirm, aeroPrompt } from './aero-dialog.js';
 import { settingsManager, LYRICS_SOURCE_PROVIDER_DEFINITIONS } from "./settings-manager.js";
 import { EQ_BANDS, EQ_PRESETS } from "./equalizer-presets.js";
 import { generateTTML } from "./ttml-parser.js";
@@ -210,7 +211,8 @@ class SettingsUI {
     wrap.className = "aero-toggle";
     const input = document.createElement("input");
     input.type = "checkbox";
-    input.checked = settingsManager.get(key);
+    input.dataset.settingKey = key;
+    input.checked = !!settingsManager.get(key);
     input.onchange = () => {
       settingsManager.set(key, input.checked);
       if (callback) callback(input.checked);
@@ -219,7 +221,8 @@ class SettingsUI {
     track.className = "aero-toggle-track";
     wrap.appendChild(input);
     wrap.appendChild(track);
-    this.addRow(container, label, description, wrap);
+    const row = this.addRow(container, label, description, wrap);
+    return { row, input };
   }
 
   addInput(container, label, description, key, extraClass = "", hidden = false) {
@@ -323,7 +326,7 @@ class SettingsUI {
       if (!item || item.disabled) return;
       const val = item.getAttribute("data-value") || item.textContent.trim();
       applySelection(val, item.textContent.trim());
-      try { closeMenu(menu); } catch (_) {}
+      try { closeMenu(menu); } catch (_) { }
     });
 
     // Also listen to global document click in case AeroUI detaches menus to body
@@ -347,14 +350,43 @@ class SettingsUI {
     this.addInput(fontCard, "Font name / URL", "Specify local font name or web font stylesheet link.", "customFont", "font-input-row", !settingsManager.get("customFontEnabled"));
 
 
+    this.addGroup(container, "Lyrics Animation Style");
+    const animCard = this.createCard(container);
+
+    this.addToggle(
+      animCard,
+      "Spicy Lyrics Animations (Beta)",
+      "Enable bouncy spring physics, syllable scale-pop, and glowing letter splines (disables Apple Music sweep).",
+      "spicyLyricsAnimation",
+      (val) => {
+        if (val) {
+          const amlInput = animCard.querySelector('input[data-setting-key="amlLyricsAnimations"]');
+          if (amlInput) amlInput.checked = false;
+        }
+      }
+    );
+
+    this.addToggle(
+      animCard,
+      "Apple Music (AMLL) Lyrics Style",
+      "Enable Apple Music-style continuous karaoke gradient sweep and line floating (disables Spicy Lyrics).",
+      "amlLyricsAnimations",
+      (val) => {
+        if (val) {
+          const spicyInput = animCard.querySelector('input[data-setting-key="spicyLyricsAnimation"]');
+          if (spicyInput) spicyInput.checked = false;
+        }
+      }
+    );
+
+    this.addToggle(animCard, "AML Stagger Scrolling", "Make lyric lines scroll up smoothly with staggered spacing.", "amlAnimation");
+    this.addToggle(animCard, "Simple Lyrics Mode", "Use lightweight linear renderer for minimal GPU/CPU overhead.", "simpleLyricsMode");
+    this.addToggle(animCard, "Line Blur", "Blur lines further from the active line for depth effect.", "lineBlur");
+
     this.addGroup(container, "Lyrics Layout & Style");
     const lyricsStyleCard = this.createCard(container);
     this.addToggle(lyricsStyleCard, "Right Align Lyrics", "Align lyric lines to the right edge of the screen.", "rightAlignLyrics");
-    this.addToggle(lyricsStyleCard, "AML Lyrics Style", "Enable dynamic Apple Music-style lyrics animations.", "amlLyricsAnimations");
     this.addDropdown(lyricsStyleCard, "Meme Format Override", "Apply funny formatting to current lyrics.", "memeFormat", ["Off", "UPPERCASE", "lowercase", "Weeb (・`ω´・)", "Gibberish (Wenomechainsama)"]);
-    this.addToggle(lyricsStyleCard, "Simple Lyrics Mode", "Use a lighter, simplified renderer for lyrics rendering.", "simpleLyricsMode");
-    this.addToggle(lyricsStyleCard, "AML Stagger Scrolling", "Make lyric lines scroll up smoothly with staggered spacing.", "amlAnimation");
-    this.addToggle(lyricsStyleCard, "Line Blur", "Blur lines further from the active line.", "lineBlur");
 
     this.addGroup(container, "Credits & Info");
     const creditsCard = this.createCard(container);
@@ -517,7 +549,7 @@ class SettingsUI {
 
     contentScroll.innerHTML = `
       <div style="color: white; line-height: 1.7;">
-        <h1 style="color: white; margin-top: 0;">Lyricsflow Extension Guide</h1>
+        <h1 style="color: white; margin-top: 0;">LyricsFlow Extension Guide</h1>
         
         <h2 style="color: #ffffff;">Extension Structure</h2>
         <p>Every extension is a zip file with at least two files:</p>
@@ -685,7 +717,13 @@ my-extension.zip/
 
       const removeBtn = extCard.querySelector('button');
       removeBtn.onclick = async () => {
-        if (confirm('Are you sure you want to remove this extension?')) {
+        const confirmed = await aeroConfirm({
+          title: 'Remove Extension',
+          message: 'Are you sure you want to remove this extension?',
+          confirmText: 'Remove',
+          isDestructive: true
+        });
+        if (confirmed) {
           await extensionManager.deleteExtension(ext.id);
           this.renderExtensionsList(container);
         }
@@ -721,8 +759,15 @@ my-extension.zip/
       this.hide();
       window.dispatchEvent(new CustomEvent("lyricsflow-export-video"));
     };
-    this.addGroup(container, "Community & Support");
+    this.addGroup(container, "Community & Integration");
     const communityCard = this.createCard(container);
+    this.addToggle(communityCard, "Discord Rich Presence", "Display current playing track, artist, and album on your Discord profile.", "discordRpc", (enabled) => {
+      const api = window.wave || window.lyricsflow;
+      if (!enabled && api?.clearDiscordPresence) {
+        api.clearDiscordPresence();
+      }
+    });
+
     const discordBtn = document.createElement("a");
     discordBtn.className = "lf-btn lf-btn-accent";
     discordBtn.href = "https://discord.gg/VBU2BuqsC";
@@ -1007,9 +1052,15 @@ my-extension.zip/
 
         // Check for missing songwriters and offer to fetch!
         if (!parsedLyrics.SongWriters || parsedLyrics.SongWriters.length === 0) {
-          if (confirm("TTML has no songwriters! Would you like to fetch songwriters from Genius? You'll need to enter song title & artist.")) {
-            const title = prompt("Enter song title:");
-            const artist = prompt("Enter artist name:");
+          const fetchFromGenius = await aeroConfirm({
+            title: 'Genius Songwriters',
+            message: "TTML has no songwriters! Would you like to fetch songwriters from Genius? You'll need to enter song title & artist.",
+            confirmText: 'Fetch',
+            cancelText: 'Skip'
+          });
+          if (fetchFromGenius) {
+            const title = await aeroPrompt({ title: 'Song Title', placeholder: 'Enter song title' });
+            const artist = title ? await aeroPrompt({ title: 'Artist Name', placeholder: 'Enter artist name' }) : null;
             if (title && artist) {
               try {
                 status.textContent = "Fetching songwriters from Genius...";

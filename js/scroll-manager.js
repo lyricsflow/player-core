@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Scroll Manager
+ * LyricsFlow — Scroll Manager
  * Tracks user-initiated scrolling so auto-positioning (via --ty) can yield.
  */
 

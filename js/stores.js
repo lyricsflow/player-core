@@ -112,7 +112,7 @@ export function GetExpireStore(storeName, version, itemExpirationSettings, force
   }
   expireStoreRegistry.add(storeName);
 
-  const requestUrl = (itemName) => `/${itemName}`;
+  const requestUrl = (itemName) => `https://lyricsflow-cache.local/${encodeURIComponent(storeName)}/${encodeURIComponent(itemName)}`;
 
   const GetItem = async (itemName) => {
     if (forceNewData) return undefined;

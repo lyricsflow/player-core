@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Network Utilities
+ * LyricsFlow — Network Utilities
  * Provides a robust fetch implementation with proxy rotation and error handling.
  */
 

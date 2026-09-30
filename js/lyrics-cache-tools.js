@@ -19,7 +19,7 @@ export const RemoveCurrentLyrics_AllCaches = async (ui = false) => {
     if (ui) {
       showToast({ message: `Failed to remove lyrics cache.` });
     }
-    console.error("Lyricsflow Cache:", error);
+    console.error("LyricsFlow Cache:", error);
   }
 };
 
@@ -33,7 +33,7 @@ export const RemoveLyricsCache = async (ui = false) => {
     if (ui) {
       showToast({ message: `Failed to destroy Lyrics Cache.` });
     }
-    console.error("Lyricsflow Cache:", error);
+    console.error("LyricsFlow Cache:", error);
   }
 };
 
@@ -43,6 +43,6 @@ export const RemoveCurrentLyrics_StateCache = (ui = false) => {
       showToast({ message: "Lyrics cleared from internal state." });
     }
   } catch (error) {
-    console.error("Lyricsflow State:", error);
+    console.error("LyricsFlow State:", error);
   }
 };

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   Lyricsflow — Player Page
+   LyricsFlow — Player Page
    Ported from ContentBox.css + default.css
    ═══════════════════════════════════════════════ */
 
@@ -16,13 +16,12 @@
   display: none;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 769px) {
 
-  /* Top-Left Window Controls (Close & Mini Player) */
+  /* Top-Left Window Controls (macOS Traffic Lights) */
   .pc-top-left-bar {
     display: flex;
     align-items: center;
-    gap: 6px;
     position: fixed;
     top: 14px;
     left: 14px;
@@ -32,9 +31,15 @@
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid rgba(255, 255, 255, 0.22);
-    padding: 5px 8px;
+    padding: 6px 10px;
     border-radius: 999px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  }
+
+  .pc-top-left-bar .electron-window-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .pc-top-btn {
@@ -62,133 +67,465 @@
     background: rgba(255, 255, 255, 0.3);
   }
 
-  /* Encase AirPlay and Volume together inside unified frosted glass capsule */
-  .pc-top-right-bar {
+  /* ── Liquid Glass Top-Left / Top-Right Volume Capsule (Zero Jank Compositor-Only) ── */
+  .pc-top-volume-bar {
     display: flex;
     align-items: center;
-    gap: 5px;
     position: fixed;
     top: 14px;
-    right: 14px;
+    right: 18px;
     z-index: 100000;
     pointer-events: auto;
+    isolation: isolate;
+  }
+
+  .pc-volume-capsule {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.22);
     padding: 6px 14px;
     border-radius: 999px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    contain: paint;
+    will-change: transform;
+    transform: translateZ(0);
   }
 
   .pc-airplay-btn {
     background: transparent;
     border: none;
     cursor: pointer;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.9);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4px;
+    padding: 5px;
     border-radius: 50%;
-    transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+    will-change: transform;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease;
   }
 
   .pc-airplay-btn:hover {
     color: #fff;
-    background: rgba(255, 255, 255, 0.15);
-    transform: scale(1.08);
+    background: rgba(255, 255, 255, 0.18);
+    transform: scale3d(1.1, 1.1, 1);
   }
 
-  .pc-volume-group {
+  .pc-volume-slider-box {
     display: flex;
     align-items: center;
-    gap: 10px;
+    width: 130px;
   }
 
-  .pc-volume-slider {
+  /* AeroUI large slider styling */
+  .pc-aero-vol-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 110px;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.3);
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.28);
     border-radius: 999px;
     outline: none;
     cursor: pointer;
+    margin: 0;
+    padding: 0;
+    will-change: transform;
     transition: background 0.2s ease;
   }
 
-  .pc-volume-slider::-webkit-slider-thumb {
+  .pc-aero-vol-slider::-webkit-slider-runnable-track {
     -webkit-appearance: none;
     appearance: none;
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
+    height: 6px;
+    border-radius: 999px;
+    background: transparent;
+    border: none;
+  }
+
+  /* Pill-shaped volume slider head matching macOS/iOS control center */
+  .pc-aero-vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 12px;
+    border-radius: 999px;
     background: #ffffff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    margin-top: -3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
     cursor: pointer;
-    transition: transform 0.15s ease;
+    border: none;
+    will-change: transform;
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease;
   }
 
-  .pc-volume-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
+  .pc-aero-vol-slider::-webkit-slider-thumb:hover {
+    transform: scale3d(1.12, 1.15, 1);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
   }
 
-  .pc-volume-icon {
+  .pc-vol-speaker-icon {
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Apple Music Sing (Vocal Controller) Button & Liquid Capsule ── */
+  .pc-sing-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    margin-left: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   }
 
-  /* ── PC Bottom-Right Controls (Lyrics & Queue Glass Buttons) ── */
+  .pc-sing-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.24);
+    transform: scale(1.08);
+  }
+
+  .pc-sing-btn.active {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.32);
+    border-color: rgba(255, 255, 255, 0.45);
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.35);
+  }
+
+  .pc-sing-slider-capsule {
+    position: absolute;
+    top: 50px;
+    right: 0px;
+    width: 48px;
+    height: 165px;
+    background: rgba(30, 30, 35, 0.55);
+    backdrop-filter: blur(35px) saturate(190%);
+    -webkit-backdrop-filter: blur(35px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px) scale(0.95);
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .pc-sing-slider-capsule.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+  }
+
+  .pc-sing-slider-track {
+    position: relative;
+    width: 36px;
+    height: 148px;
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .pc-sing-slider-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 999px;
+    transition: height 0.05s ease-out;
+  }
+
+  .pc-sing-slider-thumb {
+    position: absolute;
+    bottom: 0%;
+    left: 50%;
+    transform: translate(-50%, 50%);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a1a1a;
+    pointer-events: none;
+    z-index: 2;
+    transition: bottom 0.05s ease-out;
+  }
+
+  .pc-sing-slider-thumb svg {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  }
+
+  /* ── PC Bottom-Right Liquid Glass Capsule Switcher (Zero-Jank 120 FPS) ── */
   .pc-bottom-right-bar {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     position: fixed;
-    bottom: 10px;
-    right: 10px;
+    bottom: 16px;
+    right: 18px;
     z-index: 100000;
     pointer-events: auto;
+    isolation: isolate;
   }
 
   .pc-dock-glass-btn {
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    color: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    color: rgba(255, 255, 255, 0.9);
     cursor: pointer;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    contain: paint;
+    will-change: transform, background, color;
+    transform: translateZ(0);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background 0.22s ease, color 0.22s ease;
   }
 
   .pc-dock-glass-btn:hover {
     background: rgba(255, 255, 255, 0.22);
-    border-color: rgba(255, 255, 255, 0.4);
-    color: #ffffff;
-    transform: scale(1.08);
+    transform: scale3d(1.08, 1.08, 1);
   }
 
+  /* Active illuminated state (e.g. Translation / Pronunciation enabled) */
   .pc-dock-glass-btn.active {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 255, 255, 0.6);
-    color: #ffffff;
-    box-shadow: 0 0 16px rgba(255, 255, 255, 0.3);
+    background: #ffffff !important;
+    color: #1a1a1c !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   }
 
-  /* Hide the mobile BottomBar completely on PC Desktop */
+  .pc-dock-glass-btn.active svg path {
+    fill: #1a1a1c !important;
+  }
+
+  /* Apple Music Liquid Capsule Switcher */
+  .pc-capsule-toggle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(32px) saturate(190%);
+    -webkit-backdrop-filter: blur(32px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 999px;
+    padding: 3px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+    contain: paint;
+    will-change: transform;
+    transform: translateZ(0);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  /* Sliding & Draggable pill thumb indicator */
+  .pc-capsule-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 44px;
+    height: 44px;
+    background: #ffffff;
+    border-radius: 999px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+    cursor: grab;
+    z-index: 1;
+    will-change: transform, box-shadow, opacity;
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+    transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .pc-capsule-thumb:active,
+  .pc-capsule-toggle.is-dragging .pc-capsule-thumb {
+    cursor: grabbing;
+  }
+
+  /* When neither view is open, pill thumb fades and shrinks smoothly */
+  .pc-capsule-toggle.none-active .pc-capsule-thumb {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.65);
+    pointer-events: none;
+  }
+
+  .pc-capsule-toggle.queue-active .pc-capsule-thumb {
+    transform: translate3d(44px, 0, 0) scale(1);
+  }
+
+  /* Popping up elevated bubble while dragging (matching Apple TV / iOS liquid glass pill) */
+  .pc-capsule-toggle.is-dragging .pc-capsule-thumb {
+    transition: none !important;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1.5px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.3);
+  }
+
+  .pc-capsule-item {
+    position: relative;
+    z-index: 2;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.85);
+    will-change: transform, color;
+    transition: color 0.25s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .pc-capsule-item img {
+    pointer-events: none;
+    transition: filter 0.25s ease;
+  }
+
+  .pc-capsule-item svg {
+    pointer-events: none;
+    transition: color 0.25s ease, fill 0.25s ease;
+  }
+
+  /* When lyrics is active over the white thumb pill, invert to dark */
+  .pc-capsule-toggle:not(.none-active) .pc-capsule-item#pc-btn-lyrics.active img {
+    filter: brightness(0) invert(0) !important;
+  }
+
+  /* When queue is active over the white thumb pill, invert to dark */
+  .pc-capsule-toggle:not(.none-active) .pc-capsule-item#pc-btn-queue.active {
+    color: #1a1a1c !important;
+  }
+
+  .pc-capsule-toggle.none-active .pc-capsule-item img {
+    filter: brightness(0) invert(1) !important;
+  }
+
+  .pc-capsule-toggle.none-active .pc-capsule-item {
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+
+  .pc-capsule-item:hover {
+    transform: scale3d(1.06, 1.06, 1);
+  }
+
+  /* Hide the mobile BottomBar completely on Tablets & Desktop */
   .BottomBar {
     display: none !important;
+  }
+}
+
+/* ── Tablet Specific Optimizations (769px to 1024px) ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* On tablets, avoid top header collisions: hide top volume bar */
+  .pc-top-volume-bar {
+    display: none !important;
+  }
+
+  /* Display clean inline volume slider inside NowBar */
+  #LyricsflowPage .ContentBox .NowBar .VolumeArea {
+    display: flex !important;
+  }
+
+  /* Optimize NowBar width on tablets for ample lyrics space */
+  #LyricsflowPage .ContentBox .NowBar {
+    width: clamp(320px, 40cqw, 420px) !important;
+  }
+
+  /* Hide electron window controls on tablets */
+  .electron-window-controls,
+  #player-window-controls {
+    display: none !important;
+  }
+}
+
+/* ── Desktop PC Specific (1025px and up) ── */
+@media (min-width: 1025px) {
+  .pc-top-volume-bar {
+    display: flex !important;
   }
 
   /* Hide the NowBar's duplicate volume slider on PC so it's exclusively in top right */
   #LyricsflowPage .ContentBox .NowBar .VolumeArea {
     display: none !important;
   }
+}
+
+/* ── Platform & Environment Scoping (Web vs Electron) ── */
+/* Default: Hide native electron window controls */
+.electron-window-controls,
+#player-window-controls {
+  display: none !important;
+}
+
+/* Strictly enable window controls on desktop Electron only */
+@media (min-width: 1025px) {
+  html.is-electron:not(.is-web) .electron-window-controls,
+  html.is-electron:not(.is-web) #player-window-controls {
+    display: flex !important;
+  }
+
+  html.is-electron:not(.is-web) .pc-top-left-bar {
+    display: flex !important;
+  }
+}
+
+/* When embedded in an iframe (e.g. drawer or editor), show sleek drawer-close button only */
+html.is-iframe .pc-top-left-bar,
+body.is-iframe .pc-top-left-bar {
+  display: flex !important;
+  top: 14px !important;
+  left: 14px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html.is-iframe .electron-window-controls,
+body.is-iframe .electron-window-controls,
+html.is-iframe #player-window-controls,
+body.is-iframe #player-window-controls,
+html.is-iframe #pc-btn-mini,
+body.is-iframe #pc-btn-mini {
+  display: none !important;
+}
+
+/* Standalone Web mode: No broken window controls */
+html.is-web:not(.is-iframe) .pc-top-left-bar,
+body.is-web:not(.is-iframe) .pc-top-left-bar {
+  display: none !important;
 }
 
 .top-volume-slider::-webkit-slider-thumb {
@@ -375,7 +712,14 @@
 .MetadataActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 4px;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 #LyricsflowPage .ContentBox .NowBar .Header .Metadata {
@@ -408,7 +752,7 @@
 }
 
 #LyricsflowPage .ContentBox .NowBar .Header .Metadata .Artists {
-  font-weight: 480;
+  font-weight: 500;
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.5);
   white-space: nowrap;
@@ -425,35 +769,67 @@
     width: 52px;
     height: 32px;
   }
+
+  .pc-top-volume-bar {
+    display: none !important;
+  }
 }
 
-.queue-button,
+.favorite-button,
 .options-button {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   flex-shrink: 0;
-  transition: background 0.2s, transform 0.2s;
-  border: none;
+  transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   cursor: pointer;
-  background: none;
-  /* Removed background */
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.queue-button:hover,
+.favorite-button:hover,
 .options-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.24);
+  transform: scale3d(1.08, 1.08, 1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-.queue-button svg,
+.favorite-button:active,
+.options-button:active {
+  transform: scale3d(0.94, 0.94, 1);
+}
+
+.favorite-button.active {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.3);
+}
+
+.favorite-button img {
+  width: 32px;
+  height: 32px;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
 .options-button svg {
   width: 18px;
   height: 18px;
+  opacity: 0.95;
+  fill: currentColor;
+}
+
+.options-button img {
+  width: 20px;
+  height: 20px;
+  opacity: 0.9;
 }
 
 /* ── Queue Panel (Apple Music Style) ── */
@@ -732,6 +1108,28 @@
   width: 100%;
 }
 
+/* Quality badge embedded inside the scrubber time-labels row (all UIs) */
+#LyricsflowPage .ContentBox .NowBar .Header .NowBarBottomWrapper .NowBarProgress .aero-elastic-labels .quality-badge-container {
+  position: static !important;
+  top: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+  width: auto !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  justify-content: flex-start !important;
+  z-index: auto !important;
+}
+
+.aero-elastic-labels .quality-badge {
+  background: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  gap: 4px !important;
+}
+
 .NowBarProgress .aero-elastic-label.progress-time {
   transform: none;
 }
@@ -753,7 +1151,7 @@
 }
 
 .NowBarControls #btn-play-pause {
-  --player-icon: 58px;
+  --player-icon: 42px;
 }
 
 /* AeroUI skip-label glyphs inside the prev/next buttons */
@@ -767,7 +1165,7 @@
 
   .NowBarControls #btn-backward .aero-skip,
   .NowBarControls #skip-forward .aero-skip {
-    --skip-size: 44px;
+    --skip-size: 34px;
   }
 }
 
@@ -777,6 +1175,10 @@
   justify-content: center;
   width: 100%;
   margin-bottom: 2cqh;
+}
+
+.quality-badge-container.hidden {
+  display: none !important;
 }
 
 .quality-badge {
@@ -790,28 +1192,6 @@
   letter-spacing: 0.05em;
   font-family: 'Inter', sans-serif;
   font-weight: 300;
-}
-
-/* Quality badge embedded inside the scrubber time-labels row */
-#LyricsflowPage .ContentBox .NowBar .Header .NowBarBottomWrapper .NowBarProgress .aero-elastic-labels .quality-badge-container {
-  position: static !important;
-  top: auto !important;
-  bottom: auto !important;
-  left: auto !important;
-  right: auto !important;
-  transform: none !important;
-  width: auto !important;
-  margin: 0 !important;
-  display: inline-flex !important;
-  justify-content: flex-start !important;
-  z-index: auto !important;
-}
-
-.aero-elastic-labels .quality-badge {
-  background: none !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  gap: 4px !important;
 }
 
 /* ── Controls Area ── */
@@ -1210,23 +1590,20 @@ body.is-rendering .NowBar {
   letter-spacing: 0.02em;
 }
 
-/* ── Settings Modal ── */
+/* ── macOS Golden Gate Liquid Glass Settings Modal ── */
 .LyricsflowSettingsOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  z-index: 1000;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .LyricsflowSettingsOverlay.active {
@@ -1235,20 +1612,25 @@ body.is-rendering .NowBar {
 }
 
 .LyricsflowSettingsContainer {
-  background: rgba(24, 24, 26, 0.78);
+  background: rgba(20, 20, 26, 0.68);
+  backdrop-filter: blur(52px) saturate(220%);
+  -webkit-backdrop-filter: blur(52px) saturate(220%);
   width: 90%;
-  max-width: 840px;
-  height: 600px;
+  max-width: 860px;
+  height: 620px;
   max-height: 85vh;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 
+    0 40px 100px -10px rgba(0, 0, 0, 0.75),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transform: scale(0.96) translateY(10px);
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform;
+  transform: scale(0.95) translateY(12px);
+  transition: transform 0.35s cubic-bezier(0.34, 1.35, 0.64, 1), opacity 0.3s ease;
+  will-change: transform, opacity;
 }
 
 .LyricsflowSettingsContainer.active {
@@ -1260,8 +1642,9 @@ body.is-rendering .NowBar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.01);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .LyricsflowSettingsHeader span {
@@ -1272,23 +1655,24 @@ body.is-rendering .NowBar {
 }
 
 .LyricsflowSettingsHeaderClose {
-  background: rgba(255, 255, 255, 0.06);
-  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .LyricsflowSettingsHeaderClose:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.16);
   color: #fff;
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
 .LyricsflowSettingsMainBody {
@@ -1300,14 +1684,14 @@ body.is-rendering .NowBar {
 
 /* Sidebar Styling */
 .LyricsflowSettingsSidebar {
-  width: 210px;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 16px 10px;
+  width: 215px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   overflow-y: auto;
-  background: rgba(255, 255, 255, 0.015);
+  background: rgba(255, 255, 255, 0.02);
   scrollbar-width: none;
 }
 
@@ -1318,14 +1702,14 @@ body.is-rendering .NowBar {
 .lf-sidebar-tab {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.65);
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border-radius: 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   font-family: inherit;
   font-size: 0.88rem;
   font-weight: 500;
@@ -1339,8 +1723,9 @@ body.is-rendering .NowBar {
 }
 
 .lf-sidebar-tab:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
+  transform: translateX(2px);
 }
 
 .lf-sidebar-tab:hover svg {
@@ -1348,7 +1733,8 @@ body.is-rendering .NowBar {
 }
 
 .lf-sidebar-tab.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 12px rgba(0, 0, 0, 0.2);
   color: #fff;
   font-weight: 600;
 }
@@ -1385,7 +1771,7 @@ body.is-rendering .NowBar {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.38);
+  color: rgba(255, 255, 255, 0.45);
   margin: 18px 0 8px 4px;
   font-weight: 600;
 }
@@ -1395,9 +1781,12 @@ body.is-rendering .NowBar {
 }
 
 .lf-settings-card {
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 24px rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
   margin-bottom: 20px;
   overflow: hidden;
 }
@@ -1406,8 +1795,8 @@ body.is-rendering .NowBar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 15px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   gap: 20px;
 }
 
@@ -1432,6 +1821,58 @@ body.is-rendering .NowBar {
   font-size: 0.76rem;
   color: rgba(255, 255, 255, 0.45);
   line-height: 1.35;
+}
+
+/* Cupertino / Golden Gate toggle styling */
+.aero-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 48px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.aero-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.aero-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 9999px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.aero-toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+.aero-toggle input:checked + .aero-toggle-track {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.4);
+}
+
+.aero-toggle input:checked + .aero-toggle-track::after {
+  transform: translateX(20px);
+  background: #111116;
 }
 
 /* ── UI Components ── */
@@ -2001,7 +2442,7 @@ body.is-rendering .NowBar {
   /* Album Art in Header */
   #LyricsflowPage .ContentBox .NowBar .Header .MediaBox {
     position: absolute !important;
-    top: calc(48px + env(safe-area-inset-top, 12px)) !important;
+    top: calc(67px + env(safe-area-inset-top, 12px)) !important;
     left: 24px !important;
     width: 48px !important;
     height: 48px !important;
@@ -2017,7 +2458,7 @@ body.is-rendering .NowBar {
   /* Metadata next to art */
   .MetadataRow {
     position: absolute !important;
-    top: calc(48px + env(safe-area-inset-top, 12px)) !important;
+    top: calc(67px + env(safe-area-inset-top, 12px)) !important;
     left: 86px !important;
     width: calc(100% - 110px) !important;
     display: flex !important;
@@ -2202,6 +2643,10 @@ body.is-rendering .NowBar {
     --elastic-track: rgba(255, 255, 255, 0.2);
     --elastic-fill-idle: rgba(255, 255, 255, 0.75);
     --elastic-fill-active: rgba(255, 255, 255, 0.75);
+  }
+
+  .NowBarProgress .aero-elastic-labels {
+    margin-top: 6px !important;
   }
 
   /* Dolby Atmos / Lossless Badge Centered Under Playback Bar */
@@ -2443,8 +2888,9 @@ body.is-rendering .NowBar {
     opacity: 0.65 !important;
   }
 
-  .BottomBar button:hover img,
-  .BottomBar button:hover svg {
+  .BottomBar button:hover svg,
+  .BottomBar button.active img,
+  .BottomBar button.active svg {
     opacity: 1 !important;
   }
 
@@ -2467,22 +2913,22 @@ body.is-rendering .NowBar {
   }
 
   #LyricsflowPage .ContentBox .NowBar .Header .MediaBox,
-  #LyricsflowPage .ContentBox .NowBar .Header .MediaBox .MediaImageContainer,
-  .MetadataRow,
+  #LyricsflowPage .ContentBox .NowBar .Header .MediaBox .MediaImageContainer {
+    will-change: transform;
+  }
+
+  .MetadataRow {
+    will-change: transform;
+  }
+
   .NowBarProgress,
   .NowBarControls,
   .VolumeArea,
   .quality-badge-container {
-    transition: top 0.6s cubic-bezier(0.25, 1, 0.2, 1),
-      left 0.6s cubic-bezier(0.25, 1, 0.2, 1),
-      width 0.6s cubic-bezier(0.25, 1, 0.2, 1),
-      height 0.6s cubic-bezier(0.25, 1, 0.2, 1),
-      bottom 0.6s cubic-bezier(0.25, 1, 0.2, 1),
-      transform 0.6s cubic-bezier(0.25, 1, 0.2, 1),
-      border-radius 0.6s cubic-bezier(0.25, 1, 0.2, 1),
-      box-shadow 0.6s cubic-bezier(0.25, 1, 0.2, 1),
-      opacity 0.6s cubic-bezier(0.25, 1, 0.2, 1) !important;
-    will-change: top, left, transform, width, height, opacity;
+    transition: opacity 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+      transform 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+      bottom 0.55s cubic-bezier(0.32, 0.72, 0, 1) !important;
+    will-change: transform, opacity, bottom;
   }
 
   /* Shield to prevent clicking on lyrics behind the bottom controls area when lyrics are active */
@@ -2652,15 +3098,14 @@ body.is-rendering .NowBar {
   }
 
   #LyricsflowPage .ContentBox .NowBar.centered .Header .Metadata .SongName {
-    font-size: 1.44rem !important;
-    font-weight: 580 !important;
+    font-size: 1.55rem !important;
+    font-weight: 800 !important;
     line-height: 1.25 !important;
-    opacity: 0.95 !important;
   }
 
   #LyricsflowPage .ContentBox .NowBar.centered .Header .Metadata .Artists {
-    font-size: 1.35rem !important;
-    font-weight: 400 !important;
+    font-size: 1.15rem !important;
+    font-weight: 500 !important;
     color: rgba(255, 255, 255, 0.6) !important;
     line-height: 1.25 !important;
     max-width: 250px !important;
@@ -2740,13 +3185,8 @@ body.is-rendering .NowBar {
 
   #LyricsflowPage .ContentBox .NowBar.centered~.BottomBar button img,
   #LyricsflowPage .ContentBox .NowBar.centered~.BottomBar button svg {
-    width: 26px !important;
-    height: 26px !important;
-  }
-
-  #LyricsflowPage .ContentBox .NowBar.centered~.BottomBar button#btn-airplay img {
-    width: 22px !important;
-    height: 22px !important;
+    width: 30px !important;
+    height: 30px !important;
   }
 
 
@@ -2943,60 +3383,26 @@ body.is-rendering .NowBar {
 
 /* ── Lyrics Container Hidden State (Apple Music Smooth Slide Down) ── */
 .LyricsContainer {
-  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.45s cubic-bezier(0.32, 0.72, 0, 1), transform 0.55s cubic-bezier(0.32, 0.72, 0, 1);
   transform: translateY(0);
 }
 
 .LyricsContainer.hidden {
   opacity: 0 !important;
   pointer-events: none;
-  transform: translateY(40px) scale(0.98);
+  transform: translateY(50px) scale(0.985);
 }
 
 /* ── NowBar Animations ── */
 #LyricsflowPage .ContentBox .NowBar {
-  transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: left 0.55s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 #LyricsflowPage .ContentBox .NowBar.centered {
   left: calc(50% - var(--NowBarWidth) / 2);
 }
 
-/* ── Favorite Button ── */
-.favorite-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s;
-}
 
-.favorite-button:hover {
-  transform: scale(1.1);
-}
-
-.favorite-button img,
-.options-button img {
-  width: 32px;
-  height: 32px;
-}
-
-.favorite-button img {
-  filter: brightness(0) invert(1);
-  opacity: 0.8;
-}
-
-.favorite-button:hover img {
-  opacity: 1;
-}
-
-.favorite-button.active img {
-  filter: none;
-  opacity: 1;
-}
 
 /* ── Cover Art Pause Scale Animation (Lyrics Mode Off) ── */
 #LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox:not(:has(.animated-art-video.loaded)) .MediaImageContainer {
@@ -3006,7 +3412,7 @@ body.is-rendering .NowBar {
 }
 
 #LyricsflowPage .ContentBox .NowBar.centered .Header .MediaBox:not(:has(.animated-art-video.loaded)) .MediaImageContainer.paused {
-  transform: scale(0.72) !important;
+  transform: scale(0.85) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
@@ -3019,7 +3425,7 @@ body.is-rendering .NowBar {
   }
 
   #LyricsflowPage .ContentBox .NowBar:not(.centered) .Header .MediaBox .MediaImageContainer.paused {
-    transform: scale(0.72) !important;
+    transform: scale(0.85) !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
   }
 }
@@ -3044,10 +3450,10 @@ body.is-rendering .NowBar {
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
-    transform: translateX(50px);
-    transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-      transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-      visibility 0.5s;
+    transform: translateX(40px);
+    transition: opacity 0.45s cubic-bezier(0.32, 0.72, 0, 1),
+      transform 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+      visibility 0.45s;
   }
 
   #LyricsflowPage .ContentBox .QueuePanel.active {
@@ -3097,12 +3503,12 @@ body.is-rendering .NowBar {
     opacity: 0 !important;
     pointer-events: none !important;
     visibility: hidden !important;
-    transform: translateY(30px) !important;
-    transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-      transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-      bottom 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-      height 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-      visibility 0.5s !important;
+    transform: translateY(32px) !important;
+    transition: opacity 0.45s cubic-bezier(0.32, 0.72, 0, 1),
+      transform 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+      bottom 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+      height 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+      visibility 0.45s !important;
   }
 
   #LyricsflowPage .ContentBox .QueuePanel.active {
@@ -3134,4 +3540,59 @@ body.is-rendering .NowBar {
 #LyricsflowPage:has(.QueuePanel.queue-immersive) .NowBarControls .playback-control.skip-forward {
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+/* ══════════════════════════════════════════════════
+   SPICY LYRICS ANIMATION ENGINE STYLES
+   Direct visual styles from spicy-lyrics/src/css/Lyrics/Mixed.css
+   ══════════════════════════════════════════════════ */
+body.is-spicy-lyrics #LyricsflowPage .LyricsContainer .LyricsContent .line {
+  transform: none !important; /* Disable AMLL per-line --ty shifting */
+  transition: opacity 0.2s cubic-bezier(0.61, 1, 0.88, 1);
+}
+
+body.is-spicy-lyrics .line .word,
+body.is-spicy-lyrics .line .letter {
+  cursor: pointer;
+  font-weight: 700 !important;
+  -webkit-text-fill-color: transparent !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  position: relative;
+  display: inline-block;
+  transform-origin: center center;
+  will-change: transform, opacity, scale;
+}
+
+body.is-spicy-lyrics .line.Active .word,
+body.is-spicy-lyrics .line.Active .letter {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.95) var(--gradient-position, -20%),
+    rgba(255, 255, 255, 0.4) calc(var(--gradient-position, -20%) + 20%)
+  ) !important;
+  text-shadow: 0 0 var(--text-shadow-blur-radius, 4px) rgba(255, 255, 255, var(--text-shadow-opacity, 0%)) !important;
+}
+
+body.is-spicy-lyrics .line.NotSung {
+  opacity: 0.51 !important;
+  text-shadow: 0 0 var(--BlurAmount, 0px) rgba(255, 255, 255, 0.4) !important;
+}
+
+body.is-spicy-lyrics .line.Sung {
+  opacity: 0.497 !important;
+  --gradient-position: 100% !important;
+  text-shadow: 0 0 var(--BlurAmount, 0px) rgba(255, 255, 255, 0.6) !important;
+}
+
+body.is-spicy-lyrics .line.NotSung .word,
+body.is-spicy-lyrics .line.NotSung .letter {
+  --gradient-position: -20% !important;
+  --text-shadow-opacity: 0% !important;
+  --text-shadow-blur-radius: 4px !important;
+}
+
+body.is-spicy-lyrics .line.Sung .word,
+body.is-spicy-lyrics .line.Sung .letter {
+  --gradient-position: 100% !important;
 }

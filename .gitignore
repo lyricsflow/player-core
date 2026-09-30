@@ -103,3 +103,8 @@ discord-bot/
 test.html
 serve.json
 icons/temp
+temp/
+*.m4a
+*.mp4
+*.zip
+*.tar

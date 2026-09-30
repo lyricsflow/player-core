@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Video Exporter (DOM Capture Version)
+ * LyricsFlow — Video Exporter (DOM Capture Version)
  * Captures the actual page DOM for picture-perfect lyric videos.
  */
 

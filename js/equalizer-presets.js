@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Equalizer Presets
+ * LyricsFlow — Equalizer Presets
  * Standard gain values for 10-band EQ.
  */
 

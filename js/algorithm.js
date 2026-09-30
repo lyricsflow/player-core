@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Smart Recommendation Algorithm
+ * LyricsFlow — Smart Recommendation Algorithm
  * Generates personalized "Top Picks for You", "Recently Played",
  * and 90 curated recommendations based on listening history.
  */

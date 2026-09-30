@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Metadata Parser
+ * LyricsFlow — Metadata Parser
  * Extracts ID3 tags (MP3) and FLAC/Vorbis metadata from audio files.
  * Supports: title, artist, album, album art (cover image).
  */
@@ -357,13 +357,13 @@ function isMP4(view) {
 function parseMP4(view) {
   const result = { title: '', artist: '', album: '', year: '', artUrl: null };
   const buffer = view.buffer;
-  
+
   // Walker function to find specific atoms
   function findAtom(start, end, path) {
     let offset = start;
     if (path.length === 0) return null;
     const target = path[0];
-    
+
     while (offset + 8 <= end) {
       const size = view.getUint32(offset);
       const type = String.fromCharCode(
@@ -381,7 +381,7 @@ function parseMP4(view) {
           return findAtom(innerOffset, offset + size, path.slice(1));
         }
       }
-      
+
       if (size <= 0) break;
       offset += size;
     }

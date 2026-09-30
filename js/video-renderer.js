@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Video Renderer
+ * LyricsFlow — Video Renderer
  * Implementation of a canvas-based rendering engine for exporting lyric videos.
  */
 

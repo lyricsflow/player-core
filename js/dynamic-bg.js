@@ -159,7 +159,7 @@ export function stopKawarp() {
 
 export function setKawarpPlaybackState(isPlaying) {
   if (_dybg) {
-    if (isPlaying) {
+    if (isPlaying && !document.hidden) {
       if (typeof _dybg.resume === 'function') {
         _dybg.resume();
       } else if (typeof _dybg.play === 'function') {
@@ -171,6 +171,19 @@ export function setKawarpPlaybackState(isPlaying) {
       }
     }
   }
+}
+
+// Automatically suspend dybg WebGL animation when the document is hidden to conserve GPU/CPU
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!_dybg) return;
+    if (document.hidden) {
+      if (typeof _dybg.pause === 'function') _dybg.pause();
+    } else {
+      if (typeof _dybg.resume === 'function') _dybg.resume();
+      else if (typeof _dybg.play === 'function') _dybg.play();
+    }
+  });
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — Genius Service
+ * LyricsFlow — Genius Service
  * Handles fetching songwriter credits, legal names, and plain-text lyrics from the Genius API.
  */
 

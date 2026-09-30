@@ -1,5 +1,5 @@
 /**
- * Lyricsflow — RTL Detection
+ * LyricsFlow — RTL Detection
  * Port of isRtl.ts
  */
 

@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════
-   Lyricsflow - Settings UI Styles
+   LyricsFlow - Settings UI Styles
    ══════════════════════════════════════════════════ */
 
 .LyricsflowSettingsOverlay {
@@ -170,6 +170,7 @@
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -273,15 +274,15 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
 }
 
-.lf-toggle input:checked + span {
+.lf-toggle input:checked+span {
   background-color: #ffffff;
 }
 
-.lf-toggle input:checked + span:before {
+.lf-toggle input:checked+span:before {
   background-color: #1c1c1e;
 }
 
-.lf-toggle input:checked + span:before {
+.lf-toggle input:checked+span:before {
   transform: translateX(21px);
 }
 
@@ -562,10 +563,10 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
-.am-macos-switch input:checked + .am-macos-slider {
+.am-macos-switch input:checked+.am-macos-slider {
   background-color: #fa586a;
 }
 
-.am-macos-switch input:checked + .am-macos-slider::before {
+.am-macos-switch input:checked+.am-macos-slider::before {
   transform: translateX(20px);
 }

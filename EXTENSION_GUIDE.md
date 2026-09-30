@@ -1,8 +1,9 @@
-# Lyricsflow Extension Guide
+# LyricsFlow Extension Guide
 
-Welcome to the Lyricsflow extension guide! This guide will teach you how to create your own extensions to enhance the player.
+Welcome to the LyricsFlow extension guide! This guide will teach you how to create your own extensions to enhance the player.
 
 ## Table of Contents
+
 1. [Extension Structure](#extension-structure)
 2. [API Reference](#api-reference)
 3. [Examples](#examples)
@@ -20,10 +21,11 @@ my-extension.zip/
 ```
 
 ### config.json
+
 This file describes your extension. Here's what's required:
 
 | Field | Type | Required? | Description |
-|-------|------|-----------|-------------|
+| ------- | ------ | ----------- | ------------- |
 | id | string | Yes | Unique identifier for your extension (no spaces, lowercase) |
 | name | string | Yes | Human-readable name |
 | version | string | Yes | Semantic version (e.g., "1.0.0") |
@@ -32,6 +34,7 @@ This file describes your extension. Here's what's required:
 | tags | string[] | No | Array of tags to categorize your extension |
 
 Example `config.json`:
+
 ```json
 {
   "id": "my-extension",
@@ -44,6 +47,7 @@ Example `config.json`:
 ```
 
 ### script.js
+
 This is where your extension logic lives. It has access to a special context with useful objects and functions.
 
 ---
@@ -53,18 +57,24 @@ This is where your extension logic lives. It has access to a special context wit
 When your `script.js` runs, it's executed with these parameters available:
 
 ### player
+
 The main audio player object. You can control playback, get the current track, etc.
 
 ### settingsManager
+
 The settings manager to read/write settings.
+
 - `settingsManager.get(key)`: Get a setting value
 - `settingsManager.set(key, value)`: Set a setting value
 
 ### getCurrentLyrics()
+
 A helper function to get the currently loaded lyrics object.
 
 ### downloadFile(content, filename, mimeType)
+
 A helper function to download files.
+
 - `content`: The file content (string or BlobPart)
 - `filename`: The filename for download
 - `mimeType`: Optional MIME type (defaults to "text/plain")
@@ -76,9 +86,11 @@ A helper function to download files.
 Here are several example extensions to help you get started!
 
 ### Example 1: Hello World
+
 A simple extension that logs messages to the console.
 
 `config.json`:
+
 ```json
 {
   "id": "hello-world",
@@ -91,6 +103,7 @@ A simple extension that logs messages to the console.
 ```
 
 `script.js`:
+
 ```javascript
 console.log('Hello from Hello World extension!');
 console.log('Player object:', player);
@@ -100,6 +113,7 @@ console.log('Settings manager:', settingsManager);
 ---
 
 ### Example 2: Lyrics Downloader
+
 Adds a button to download lyrics in TTML, plain text, or LRC format.
 
 See `extensions-examples/lyrics-downloader` for the full code!
@@ -107,9 +121,11 @@ See `extensions-examples/lyrics-downloader` for the full code!
 ---
 
 ### Example 3: Custom Lyrics Provider
+
 Adds a new lyrics provider that fetches lyrics from an external API.
 
 `config.json`:
+
 ```json
 {
   "id": "custom-lyrics-provider",
@@ -122,6 +138,7 @@ Adds a new lyrics provider that fetches lyrics from an external API.
 ```
 
 `script.js`:
+
 ```javascript
 console.log('Custom Lyrics Provider extension loaded!');
 
@@ -185,9 +202,11 @@ setInterval(addCustomLyricsButton, 1000);
 ---
 
 ### Example 4: Custom Background Changer
+
 Changes the background based on the current song's metadata.
 
 `config.json`:
+
 ```json
 {
   "id": "custom-background",
@@ -200,6 +219,7 @@ Changes the background based on the current song's metadata.
 ```
 
 `script.js`:
+
 ```javascript
 let lastSongId = null;
 
@@ -236,9 +256,11 @@ setInterval(checkSongChange, 500);
 ---
 
 ### Example 5: Lyrics Highlighter
+
 Adds a custom highlight effect to currently playing lyrics.
 
 `config.json`:
+
 ```json
 {
   "id": "lyrics-highlighter",
@@ -251,6 +273,7 @@ Adds a custom highlight effect to currently playing lyrics.
 ```
 
 `script.js`:
+
 ```javascript
 function addCustomStyles() {
   if (document.getElementById('lyrics-highlighter-styles')) return;
@@ -272,9 +295,11 @@ addCustomStyles();
 ---
 
 ### Example 6: Sleep Timer
+
 Adds a sleep timer to stop playback after a certain time.
 
 `config.json`:
+
 ```json
 {
   "id": "sleep-timer",
@@ -287,6 +312,7 @@ Adds a sleep timer to stop playback after a certain time.
 ```
 
 `script.js`:
+
 ```javascript
 let sleepTimerInterval = null;
 let remainingTime = 0;
@@ -440,9 +466,11 @@ setInterval(addSleepTimerButton, 1000);
 ---
 
 ### Example 7: Keyboard Shortcuts
+
 Adds custom keyboard shortcuts.
 
 `config.json`:
+
 ```json
 {
   "id": "keyboard-shortcuts",
@@ -455,6 +483,7 @@ Adds custom keyboard shortcuts.
 ```
 
 `script.js`:
+
 ```javascript
 document.addEventListener('keydown', (e) => {
   // Example: Press 'L' to toggle lyrics
@@ -482,6 +511,7 @@ console.log('Custom keyboard shortcuts loaded!');
 ---
 
 ## Packing Your Extension
+
 Once you've created your `config.json` and `script.js`, zip them together! Make sure the files are in the root of the zip (not inside a subfolder).
 
 Then you can install it in the player from the **Extensions** tab in settings!

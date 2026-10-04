@@ -8,7 +8,7 @@ exports.handler = async (event) => {
 
   // Add CORS headers for local development and production
   const allowedOrigins = [
-    'https://spicyamll.online'
+    'https://trylyricsflow.com'
   ];
   const origin = event.headers.origin || '';
   const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];

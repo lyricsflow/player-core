@@ -20,7 +20,7 @@ If you discover a security vulnerability in `player-core`, please report it resp
 
 Send an email to:
 
-📧 security@spicyamll.online
+📧 security@trylyricsflow.com
 
 Please include:
 

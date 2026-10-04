@@ -63,7 +63,7 @@ document.addEventListener('error', function (e) {
 }, true);
 import { previewPlayer } from './preview-player.js';
 
-const API_BASE = "https://api.spicyamll.online";
+const API_BASE = "https://api.trylyricsflow.com";
 
 function cleanArtworkUrl(url, w = 300, h = 300, format = null) {
   if (!url || typeof url !== 'string') return '';
@@ -2636,8 +2636,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const artUrl = data.artwork_url || data.artwork || (data.attributes && data.attributes.artwork ? resolveArtworkUrl(data.attributes.artwork, 600) : null) || '';
 
       // Target stream URL with gamdl mode:
-      // Music video: https://api.spicyamll.online/stream?url=https://music.apple.com/kz/music-video/<slug>/<id>&mode=gamdl&fallback=false&websupport=false
-      // Post video: https://api.spicyamll.online/stream?url=https://music.apple.com/kz/post/<id>&mode=gamdl&fallback=false&websupport=false
+      // Music video: https://api.trylyricsflow.com/stream?url=https://music.apple.com/kz/music-video/<slug>/<id>&mode=gamdl&fallback=false&websupport=false
+      // Post video: https://api.trylyricsflow.com/stream?url=https://music.apple.com/kz/post/<id>&mode=gamdl&fallback=false&websupport=false
       let videoUrl = data.video_url || data.preview_url || data.hls_url;
       if (appleStreamUrl) {
         videoUrl = `${API_BASE}/stream?url=${encodeURIComponent(appleStreamUrl)}&mode=gamdl&fallback=false&websupport=false`;
@@ -7383,7 +7383,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const endpoints = statusData.endpoints || {};
     const issues = statusData.issues || [];
-    const serverName = statusData.server || 'api.spicyamll.online';
+    const serverName = statusData.server || 'api.trylyricsflow.com';
     const timestamp = statusData.timestamp ? new Date(statusData.timestamp * 1000).toUTCString() : new Date().toUTCString();
 
     const lines = Object.entries(endpoints).map(([path, ep]) => {

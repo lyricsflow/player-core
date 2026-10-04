@@ -70,7 +70,7 @@
     sidebar.insertBefore(dragBar, sidebar.firstChild);
   }
 
-  // Handle deep link route events from main process (spicyamll.online and lyricsflow://)
+  // Handle deep link route events from main process (trylyricsflow.com and lyricsflow://)
   if (api.onNavigate) {
     api.onNavigate((targetPath) => {
       if (targetPath) {

@@ -52,7 +52,7 @@ LyricsFlow is a fast, web-based music player designed for beautiful synchronized
 
 No build tools or installations required — LyricsFlow runs directly in any modern web browser.
 
-1. Visit [spicyamll.online](https://spicyamll.online).
+1. Visit [trylyricsflow.com](https://trylyricsflow.com).
 2. Search for any song/artist or drop your local audio files.
 3. Enjoy high-fidelity playback with synchronized lyrics and dynamic artwork.
 

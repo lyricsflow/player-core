@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://spicyamll.online/sitemap.xml
+Sitemap: https://trylyricsflow.com/sitemap.xml

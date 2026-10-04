@@ -3,7 +3,7 @@
  * Comprehensive Download Suite for Wave / LyricsFlow:
  * - Direct Song & Full Album Downloads (Single tracks or .ZIP bundle)
  * - Dolby Atmos (M4A / MP4), Lossless ALAC (FLAC 24-bit / M4A), AAC (M4A / MP3)
- * - Parses spicyamll.online/song/:id, spicyamll.online/album/:id, Apple Music URLs, or Raw IDs
+ * - Parses trylyricsflow.com/song/:id, trylyricsflow.com/album/:id, Apple Music URLs, or Raw IDs
  * - Syllable-accurate TTML lyrics download & Spotiflac-style lyrics embedding
  * - High-Res Animated Artwork (.mp4) download
  */
@@ -12,7 +12,7 @@ import { robustFetch } from './network-utils.js';
 import { TTMLDownloader } from './ttml-downloader.js';
 import { initDropdowns, closeMenu } from 'https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js';
 
-const API_BASE = 'https://api.spicyamll.online';
+const API_BASE = 'https://api.trylyricsflow.com';
 
 document.addEventListener('DOMContentLoaded', () => {
   const inputEl = document.getElementById('dl-song-input');
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let type = 'song';
     let id = clean;
 
-    // Check spicyamll.online links
+    // Check trylyricsflow.com links
     const spicySongMatch = clean.match(/spicyamll\.online\/song\/(\d+)/i);
     if (spicySongMatch) return { type: 'song', id: spicySongMatch[1] };
 
@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const itemType = el.dataset.type;
           searchResultsEl.classList.add('hidden');
           if (itemType === 'album') {
-            inputEl.value = `https://spicyamll.online/album/${itemId}`;
+            inputEl.value = `https://trylyricsflow.com/album/${itemId}`;
             processDownload();
           } else {
             const trkTitle = el.querySelector('div[style*="font-weight: 600"]').textContent.replace('🎵 ', '').trim();

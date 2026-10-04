@@ -4,7 +4,7 @@
  * and 90 curated recommendations based on listening history.
  */
 
-const API_BASE = "https://api.spicyamll.online";
+const API_BASE = "https://api.trylyricsflow.com";
 
 function cleanArtUrl(url, w = 600, h = 600) {
   if (!url || typeof url !== 'string') return 'favicon.svg';

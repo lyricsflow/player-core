@@ -19,7 +19,7 @@ async function searchiTunes(query) {
   try {
     const encoded = encodeURIComponent(query);
     // Use LyricsFlow Server as a proxy for iTunes search to avoid CORS issues on Netlify
-    const res = await fetch(`https://api.spicyamll.online/search?term=${encoded}&types=albums&limit=5`);
+    const res = await fetch(`https://api.trylyricsflow.com/search?term=${encoded}&types=albums&limit=5`);
     if (!res.ok) return null;
 
     const data = await res.json();
@@ -63,7 +63,7 @@ export async function getAnimatedArtwork(artist, album, title, directAlbumId = n
 
   // Strategy 0: Direct album ID from Apple Music song metadata
   if (directAlbumId) {
-    const url = `https://api.spicyamll.online/animatedart?album=${directAlbumId}&quality=${quality}&aspect=${aspect}`;
+    const url = `https://api.trylyricsflow.com/animatedart?album=${directAlbumId}&quality=${quality}&aspect=${aspect}`;
     _artworkCache.set(cacheKey, url);
     try { sessionStorage.setItem(`lf_anim_art_${cacheKey}`, url); } catch (_) { }
     return url;
@@ -74,7 +74,7 @@ export async function getAnimatedArtwork(artist, album, title, directAlbumId = n
     console.log(`[AnimatedArt] Searching: "${artist} ${album}"`);
     const albumId = await searchiTunes(`${artist} ${album}`);
     if (albumId) {
-      const url = `https://api.spicyamll.online/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
+      const url = `https://api.trylyricsflow.com/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
       _artworkCache.set(cacheKey, url);
       try { sessionStorage.setItem(`lf_anim_art_${cacheKey}`, url); } catch (_) { }
       return url;
@@ -86,7 +86,7 @@ export async function getAnimatedArtwork(artist, album, title, directAlbumId = n
     console.log(`[AnimatedArt] Album search failed, trying: "${artist} ${title}"`);
     const albumId = await searchiTunes(`${artist} ${title}`);
     if (albumId) {
-      const url = `https://api.spicyamll.online/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
+      const url = `https://api.trylyricsflow.com/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
       _artworkCache.set(cacheKey, url);
       try { sessionStorage.setItem(`lf_anim_art_${cacheKey}`, url); } catch (_) { }
       return url;
@@ -98,7 +98,7 @@ export async function getAnimatedArtwork(artist, album, title, directAlbumId = n
     console.log(`[AnimatedArt] Trying artist-only search: "${artist}"`);
     const albumId = await searchiTunes(artist);
     if (albumId) {
-      const url = `https://api.spicyamll.online/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
+      const url = `https://api.trylyricsflow.com/animatedart?album=${albumId}&quality=${quality}&aspect=${aspect}`;
       _artworkCache.set(cacheKey, url);
       try { sessionStorage.setItem(`lf_anim_art_${cacheKey}`, url); } catch (_) { }
       return url;

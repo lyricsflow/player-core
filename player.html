@@ -1523,7 +1523,7 @@
 
       // Preload non-vocals audio for Apple Music Sing
       if (track.amTrackId) {
-        const apiBase = window.API_BASE || 'https://api.spicyamll.online';
+        const apiBase = window.API_BASE || 'https://api.trylyricsflow.com';
         _singAudio.src = `${apiBase}/stream?song=${track.amTrackId}&novocals=true&codec=aac`;
         _singAudio.currentTime = 0;
         _singAudio.load();
@@ -1537,7 +1537,7 @@
 
           let streamUrl = track.videoUrl;
           if (!streamUrl && track.amTrackId) {
-            const apiBase = window.API_BASE || 'https://api.spicyamll.online';
+            const apiBase = window.API_BASE || 'https://api.trylyricsflow.com';
             streamUrl = `${apiBase}/stream?url=${encodeURIComponent('https://music.apple.com/kz/music-video/' + track.amTrackId)}&mode=gamdl&fallback=false&websupport=false`;
           }
 
@@ -1696,7 +1696,7 @@
       if (!track.buffer && track.amTrackId) {
         showNotice(`⬇️ ${t('loading_download')}`);
         try {
-          const apiBase = window.API_BASE || 'https://api.spicyamll.online';
+          const apiBase = window.API_BASE || 'https://api.trylyricsflow.com';
 
           let enableAlac = true;
           let enableDolby = true;
@@ -1723,7 +1723,7 @@
               } catch (_) { }
 
               if (!catData) {
-                const catRes = await fetch(`https://api.spicyamll.online/v1/catalog/kz/songs/${track.amTrackId}?art[url]=f&extend=lyricsExcerpt,offers&fields[albums]=artistName,artistUrl,artwork,name,url&fields[artists]=name,url&format[resources]=map&include=albums,artists,credits,lyrics,music-videos&l=en-US&platform=web`);
+                const catRes = await fetch(`https://api.trylyricsflow.com/v1/catalog/kz/songs/${track.amTrackId}?art[url]=f&extend=lyricsExcerpt,offers&fields[albums]=artistName,artistUrl,artwork,name,url&fields[artists]=name,url&format[resources]=map&include=albums,artists,credits,lyrics,music-videos&l=en-US&platform=web`);
                 if (catRes.ok) {
                   catData = await catRes.json();
                   try { sessionStorage.setItem(cacheKey, JSON.stringify(catData)); } catch (_) { }
@@ -2107,7 +2107,7 @@
             if (!track || track.buffer || !track.amTrackId || track.isVideo || track.videoUrl) continue;
 
             console.log(`[Preloader] Background caching track ${idx + 1}/${currentQueue.length}: ${track.name}`);
-            const audioUrl = `https://api.spicyamll.online/download?song=${track.amTrackId}&l=${getCurrentLang()}`;
+            const audioUrl = `https://api.trylyricsflow.com/download?song=${track.amTrackId}&l=${getCurrentLang()}`;
             const response = await fetch(audioUrl);
             if (response.ok) {
               const buf = await response.arrayBuffer();

@@ -1373,7 +1373,7 @@ function renderCredits(data, container) {
 
     const badgeContainer = document.createElement("a");
     const cleanHandle = String(data.makerHandle || '').replace(/^@/, '');
-    badgeContainer.href = `https://spicyamll.online/${cleanHandle}`;
+    badgeContainer.href = `https://trylyricsflow.com/${cleanHandle}`;
     badgeContainer.classList.add("maker-link");
     badgeContainer.style.cssText = `
       display: flex;
@@ -1535,7 +1535,7 @@ function showUserProfileIframe(username) {
 
   const iframe = document.createElement("iframe");
   const safeUsername = encodeURIComponent(String(username || '').replace(/^@/, ''));
-  iframe.src = `https://api.spicyamll.online/user/@${safeUsername}`;
+  iframe.src = `https://api.trylyricsflow.com/user/@${safeUsername}`;
   iframe.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups");
   iframe.style.cssText = `
     width: 100%;

@@ -5,7 +5,7 @@ import { GetExpireStore } from './stores.js';
 
 export const LyricsStore = GetExpireStore("SL:lyrics", 1, { Duration: 3, Unit: "Days" });
 
-const CUSTOM_LYRICS_API = 'https://api.spicyamll.online/api/community';
+const CUSTOM_LYRICS_API = 'https://api.trylyricsflow.com/api/community';
 
 /** Source label mapping */
 const SOURCE_LABELS = {
@@ -79,7 +79,7 @@ async function fetchFromCustomAPI(songId) {
 
     // Pick latest or first community entry
     const entry = available[0];
-    const streamUrl = entry.stream_url.startsWith('http') ? entry.stream_url : `https://api.spicyamll.online${entry.stream_url}`;
+    const streamUrl = entry.stream_url.startsWith('http') ? entry.stream_url : `https://api.trylyricsflow.com${entry.stream_url}`;
     const ttmlRes = await fetch(streamUrl);
     if (!ttmlRes.ok) return null;
     const ttmlText = await ttmlRes.text();
@@ -188,7 +188,7 @@ async function fetchFromMusixmatch(songName, artistName, albumName, durationMs) 
       q_duration: durationSec
     });
 
-    const apiBase = window.API_BASE || 'https://api.spicyamll.online';
+    const apiBase = window.API_BASE || 'https://api.trylyricsflow.com';
     const res = await fetch(`${apiBase}/musixmatch?${params}`);
     if (!res.ok) return null;
 
@@ -706,7 +706,7 @@ async function fetchFromAppleMusic(songName, artistName, albumName, durationSec 
 
     if (trackId) {
       console.log(`[TTMLRetriever] Apple Music: Using track ID ${trackId}, fetching TTML...`);
-      apiRes = await proxiedFetch(`https://api.spicyamll.online/lyrics?song=${trackId}`, { skipProxy: true });
+      apiRes = await proxiedFetch(`https://api.trylyricsflow.com/lyrics?song=${trackId}`, { skipProxy: true });
     } else {
       console.log(`[TTMLRetriever] Apple Music: No track ID provided. Querying via text metadata metadata...`);
       const params = new URLSearchParams({
@@ -715,7 +715,7 @@ async function fetchFromAppleMusic(songName, artistName, albumName, durationSec 
         album: albumName || '',
         duration: String(Math.round(durationSec))
       });
-      apiRes = await proxiedFetch(`https://api.spicyamll.online/lyrics/get?${params}`, { skipProxy: true });
+      apiRes = await proxiedFetch(`https://api.trylyricsflow.com/lyrics/get?${params}`, { skipProxy: true });
     }
 
     if (!apiRes || !apiRes.ok) return null;

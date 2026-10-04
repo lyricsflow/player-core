@@ -115,11 +115,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let id = clean;
 
     // Check trylyricsflow.com links
-    const spicySongMatch = clean.match(/spicyamll\.online\/song\/(\d+)/i);
-    if (spicySongMatch) return { type: 'song', id: spicySongMatch[1] };
+    const trylyricsflowSongMatch = clean.match(/trylyricsflow\.com\/song\/(\d+)/i);
+    if (trylyricsflowSongMatch) return { type: 'song', id: trylyricsflowSongMatch[1] };
 
-    const spicyAlbumMatch = clean.match(/spicyamll\.online\/album\/(?:[^/]+\/)?(\d+)/i);
-    if (spicyAlbumMatch) return { type: 'album', id: spicyAlbumMatch[1] };
+    const trylyricsflowAlbumMatch = clean.match(/trylyricsflow\.com\/album\/(?:[^/]+\/)?(\d+)/i);
+    if (trylyricsflowAlbumMatch) return { type: 'album', id: trylyricsflowAlbumMatch[1] };
 
     // Check Apple Music links
     if (/^https?:\/\//i.test(clean)) {

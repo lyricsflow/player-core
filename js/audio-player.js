@@ -1,5 +1,30 @@
 import { EQ_BANDS } from './equalizer-presets.js';
 
+const kProducerBufferFrames = 1024;
+const kConsumerHz = 112.5;
+const kBlendWeight = [0.1, 0.2, 0.3, 0.4];
+const kLeakDecay = 0.99607;
+const kOnePoleAlpha = 0.5;
+const kAgcAttack = 0.3;
+const kAgcRelease = 0.01;
+const kAgcPeakFloor = 0.0005;
+const kAgcGainLo = 0.1;
+const kAgcGainHi = 30;
+const kLogFloor = 1e-6;
+const kLogScale = 1 / 6;
+const kLogOffset = -0.25;
+const kLogAnchorHz = 40;
+const kLogS9 = 5.321928;
+const kLogS8Shift = 0.886988;
+const kLogTopHz = 16000;
+const kBandPowerScale = 262144;
+
+function quinticSmoothstep(x) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  return x * x * x * (10 + x * (-15 + 6 * x));
+}
+
 /**
  * LyricsFlow — Audio Engine
  * Dual-channel Web Audio graph supporting equalizers and seamless transitions.
@@ -14,17 +39,28 @@ export default class AudioPlayer {
     // detection is independent of the user's output volume.
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 4096;
-    this.analyser.smoothingTimeConstant = 0.35;
-    this._freqData = new Uint8Array(this.analyser.frequencyBinCount);
+    this.analyser.smoothingTimeConstant = 0;
+    this.analyser.minDecibels = -140;
+    this.analyser.maxDecibels = 0;
+    this._freqData = new Float32Array(this.analyser.frequencyBinCount);
+    this._loudnessData = new Float32Array(this.analyser.fftSize);
 
-    // Beat detection (drives the background): Roblox-style — current
-    // loudness vs the rolling average of the last N frames.
-    this._pulse = 0;
+    this._agcPeak = 0;
+    this._bandPipe = [0, 0, 0, 0];
+    this._bandLeak = 0;
+    this._bandOut = 0;
+    this._producerAcc = 0;
     this._lastTime = 0;
 
-    this._loudnessData = new Uint8Array(this.analyser.fftSize);
-    this._loudHist = [];
-    this._loudHistMax = 25;
+    const sampleRate = this.audioContext.sampleRate;
+    const s8 = Math.log2(Math.min(sampleRate / 2, kLogTopHz)) / 6 - kLogS8Shift;
+    const edge1 = Math.pow(2, s8 + kLogS9);
+    const n = this.analyser.fftSize;
+    const maxBin = n / 2 - 1;
+    this._bandBinLo = Math.min(Math.max(Math.trunc((kLogAnchorHz * n) / sampleRate), 1), maxBin);
+    this._bandBinHi = Math.min(Math.max(Math.trunc((edge1 * n) / sampleRate), 1), maxBin);
+    if (this._bandBinHi <= this._bandBinLo) this._bandBinHi = this._bandBinLo + 1;
+    this._producerInterval = kProducerBufferFrames / sampleRate;
 
     // Channel A
     this.audioA = new Audio();
@@ -184,9 +220,8 @@ export default class AudioPlayer {
   setSource(url) {
     this._silenceChannel(this._inactiveAudio, this._inactiveGain);
     this._crossfadeTriggered = false;
-    this._pulse = 0;
     this._lastTime = 0;
-    this._loudHist.length = 0;
+    this._resetLoudness();
 
     this.activeGain.gain.cancelScheduledValues(this.audioContext.currentTime);
     this.activeGain.gain.setValueAtTime(1, this.audioContext.currentTime);
@@ -223,7 +258,6 @@ export default class AudioPlayer {
 
     this.currentChannel = this.currentChannel === 'A' ? 'B' : 'A';
     this._crossfadeTriggered = false;
-    this._loudHist.length = 0;
 
     nextAudio.play().catch(e => console.warn('Crossfade play failed:', e));
 
@@ -296,56 +330,77 @@ export default class AudioPlayer {
     return this.masterGain.gain.value;
   }
 
-  // Overall loudness (0..1), the equivalent of Roblox's PlaybackLoudness:
-  // plain RMS over the waveform from the pre-volume tap.
-  _loudness() {
-    this.analyser.getByteTimeDomainData(this._loudnessData);
-    let sum = 0;
-    for (let i = 0; i < this._loudnessData.length; i++) {
-      const v = (this._loudnessData[i] - 128) / 128;
-      sum += v * v;
-    }
-    return Math.sqrt(sum / this._loudnessData.length);
+  _resetLoudness() {
+    this._agcPeak = 0;
+    this._bandPipe[0] = 0;
+    this._bandPipe[1] = 0;
+    this._bandPipe[2] = 0;
+    this._bandPipe[3] = 0;
+    this._bandLeak = 0;
+    this._bandOut = 0;
+    this._producerAcc = 0;
   }
 
-  /**
-   * Beat level (0..1) driving the background.
-   *
-   * Same as the classic Roblox pattern: compare current loudness against the
-   * rolling average of the last ~30 frames — above average = beat. The punch
-   * scales with how far above the average we are, so hits pop harder than
-   * sustained loud sections, and quiet passages stay calm.
-   */
+  _measureBand() {
+    this.analyser.getFloatTimeDomainData(this._loudnessData);
+    let peak = this._agcPeak;
+    for (let i = 0; i < this._loudnessData.length; i++) {
+      const x = Math.abs(this._loudnessData[i]);
+      peak += (x > peak ? kAgcAttack : kAgcRelease) * (x - peak);
+    }
+    if (peak < kAgcPeakFloor) peak = kAgcPeakFloor;
+    this._agcPeak = peak;
+    const gain = Math.min(Math.max(0.5 / peak, kAgcGainLo), kAgcGainHi);
+
+    this.analyser.getFloatFrequencyData(this._freqData);
+    const gainDb = 20 * Math.log10(gain);
+    let sum = 0;
+    for (let i = this._bandBinLo; i < this._bandBinHi; i++) {
+      const db = this._freqData[i] + gainDb;
+      if (Number.isFinite(db)) sum += Math.pow(10, db / 10);
+    }
+    const v =
+      Math.log10(kLogFloor + sum * kBandPowerScale) * kLogScale + kLogOffset;
+    return v < 0 ? 0 : v > 1 ? 1 : v;
+  }
+
   getLowFreqLevel() {
-    const t = this.audioContext.currentTime;
-    const dt = this._lastTime ? Math.min(0.5, t - this._lastTime) : 0.016;
-    this._lastTime = t;
+    const now = performance.now() / 1000;
+    const dt = this._lastTime ? Math.min(0.5, now - this._lastTime) : 0.016;
+    this._lastTime = now;
 
-    // Freeze the release when playback stops so the effect dies out gently.
-    if (!this.isPlaying) {
-      this._pulse = (this._pulse || 0) * Math.exp(-Math.max(dt, 0.016) / 0.09);
-      return Math.max(0, this._pulse || 0);
+    const raw = this.isPlaying ? this._measureBand() : 0;
+
+    this._producerAcc += dt;
+    if (this._producerAcc >= this._producerInterval) {
+      this._producerAcc = 0;
+      const pipe = this._bandPipe;
+      pipe[3] = pipe[2];
+      pipe[2] = pipe[1];
+      pipe[1] = pipe[0];
+      pipe[0] = raw;
     }
 
-    const level = this._loudness();
+    const steps = dt * kConsumerHz;
+    const pipe = this._bandPipe;
+    const blend =
+      kBlendWeight[0] * pipe[0] +
+      kBlendWeight[1] * pipe[1] +
+      kBlendWeight[2] * pipe[2] +
+      kBlendWeight[3] * pipe[3];
+    this._bandLeak = Math.max(blend, this._bandLeak * Math.pow(kLeakDecay, steps));
+    const alpha = 1 - Math.pow(1 - kOnePoleAlpha, steps);
+    const out = this._bandOut + alpha * (this._bandLeak - this._bandOut);
+    this._bandOut = out < 0 ? 0 : out > 1 ? 1 : out;
+    const published = quinticSmoothstep(this._bandOut);
 
-    // Rolling average of recent loudness (the "is this frame louder than
-    // usual?" baseline).
-    const hist = this._loudHist;
-    hist.push(level);
-    if (hist.length > this._loudHistMax) hist.shift();
-    let avg = 0;
-    for (let i = 0; i < hist.length; i++) avg += hist[i];
-    avg /= hist.length || 1;
-
-    if (level > avg && level > 0.04) {
-      const excess = (level - avg) / (avg + 0.02);
-      this._pulse = Math.max(this._pulse, Math.min(1, 0.45 + excess * 0.9));
-    }
-
-    // Fast release so it visibly pops then breathes back between beats.
-    this._pulse *= Math.exp(-dt / 0.09);
-    return Math.max(0, Math.min(1, this._pulse));
+    window.__lyricsflowLoudness = {
+      raw,
+      leak: this._bandLeak,
+      out: this._bandOut,
+      published,
+    };
+    return published;
   }
 
   static formatTime(ms, negative = false) {

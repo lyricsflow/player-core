@@ -1,5 +1,17 @@
 import dybg from 'https://nurislamaibekuly.github.io/dybg/dybg.js';
 
+const PULSE_GAIN_DEFAULT = 0.35;
+let pulseGain = PULSE_GAIN_DEFAULT;
+try {
+  const override = parseFloat(localStorage.getItem('lyricsflowPulseGain'));
+  if (override >= 0 && Number.isFinite(override)) pulseGain = override;
+} catch (e) {}
+
+const VOLUME_TAU = 0.05;
+const VOLUME_MAX_DT = 0.1;
+let backdropVolume = 0;
+let volumeClock = -1;
+
 let _dybg = null;
 let _videoUpdateTimer = null;
 
@@ -85,7 +97,7 @@ export async function applyLegacyBackground(bgContainer, img) {
 
   // Configure parameters for active fluid animation (optimized for screen share & high refresh rates)
   if (typeof _dybg.setFlowSpeed === 'function') {
-    _dybg.setFlowSpeed(0.5);
+    _dybg.setFlowSpeed(0.2);
   }
   if (typeof _dybg.setRenderScale === 'function') {
     _dybg.setRenderScale(0.25);
@@ -155,6 +167,8 @@ export function stopKawarp() {
     }
     _dybg = null;
   }
+  backdropVolume = 0;
+  volumeClock = -1;
 }
 
 export function setKawarpPlaybackState(isPlaying) {
@@ -186,20 +200,32 @@ if (typeof document !== 'undefined') {
   });
 }
 
-/**
- * Drive the dybg low-frequency volume effect (bass-reactive twist/zoom).
- * @param {number} level01 Normalized beat envelope 0..1 from
- *   AudioPlayer.getLowFreqLevel(). Fall back to 0 when no tape is running.
- *
- * NOTE: dybg scales this by 1/10 internally. Tuned so each detected kick
- * lands a strong, clean pump (~0.39 max feed) without slamming like the old
- * undifferentiated blob.
- */
 export function setKawarpVolume(level01) {
-  if (_dybg && typeof _dybg.setLowFreqVolume === 'function') {
-    const raw = Math.max(0, Math.min(0.6, level01 || 0));
-    _dybg.setLowFreqVolume(raw * 0.65);
+  const dbg = (window.__lyricsflowLoudness = window.__lyricsflowLoudness || {});
+  if (!_dybg || typeof _dybg.setLowFreqVolume !== 'function') {
+    backdropVolume = 0;
+    volumeClock = -1;
+    dbg.volume = 0;
+    return;
   }
+
+  const now = performance.now() / 1000;
+  const target = !(level01 > 0) ? 0 : Math.min(level01 * pulseGain, 0.5);
+
+  if (volumeClock < 0) {
+    volumeClock = now;
+    backdropVolume = target;
+  } else {
+    const dt = Math.min(VOLUME_MAX_DT, Math.max(0, now - volumeClock));
+    volumeClock = now;
+    if (dt > 0) {
+      const k = 1 - Math.exp(-dt / VOLUME_TAU);
+      backdropVolume += (target - backdropVolume) * k;
+    }
+  }
+
+  dbg.volume = backdropVolume;
+  _dybg.setLowFreqVolume(backdropVolume * 10);
 }
 
 /**

@@ -639,6 +639,59 @@ function getAMLProgress(key, position, startTime, endTime) {
   return Math.max(0, Math.min(1, (position - startTime) / duration));
 }
 
+const AML_WORD_FADE_WIDTH = 0.5;
+
+function generateAMLFadeGradient(fadeRatio) {
+  const totalAspect = 2 + fadeRatio;
+  const halfFadePercent = (fadeRatio / totalAspect) * 50;
+  const leftPercent = 50 - halfFadePercent;
+  const rightPercent = 50 + halfFadePercent;
+  const image = `linear-gradient(to right, rgb(0 0 0 / var(--bright-mask-alpha, 1)) ${leftPercent}%, rgb(0 0 0 / var(--dark-mask-alpha, 0.4)) ${rightPercent}%)`;
+  return [image, totalAspect];
+}
+
+function applyAmlWordMask(word) {
+  const el = word.HTMLElement;
+  if (!el) return;
+  const w = Math.max(el.offsetWidth, 1);
+  const h = Math.max(el.offsetHeight, 1);
+  const fadeWidth = h * AML_WORD_FADE_WIDTH;
+  const fadeRatio = fadeWidth / w;
+  const [maskImage, totalAspect] = generateAMLFadeGradient(fadeRatio);
+  const maskSize = `${totalAspect * 100}% 100%`;
+  const duration = Math.max(Math.abs(word.EndTime - word.StartTime), 1);
+  const speed = w / duration;
+  const startPos = -w - fadeWidth / 2;
+  const minOffset = -w - fadeWidth;
+
+  el.style.setProperty("mask-image", maskImage);
+  el.style.setProperty("-webkit-mask-image", maskImage);
+  el.style.setProperty("mask-repeat", "no-repeat");
+  el.style.setProperty("-webkit-mask-repeat", "no-repeat");
+  el.style.setProperty("mask-size", maskSize);
+  el.style.setProperty("-webkit-mask-size", maskSize);
+
+  word._amlMask = { w, h, speed, startPos, minOffset };
+}
+
+function clearAmlWordMask(word) {
+  const el = word.HTMLElement;
+  if (el) {
+    ["mask", "-webkit-mask"].forEach((p) => {
+      el.style.removeProperty(`${p}-image`);
+      el.style.removeProperty(`${p}-repeat`);
+      el.style.removeProperty(`${p}-size`);
+      el.style.removeProperty(`${p}-position`);
+    });
+    const cached = _styleCache.get(el);
+    if (cached) {
+      cached.delete("mask-position");
+      cached.delete("-webkit-mask-position");
+    }
+  }
+  word._amlMask = undefined;
+}
+
 function ensureEmphasisAnims(word, wi, leadLength) {
   if (word._empInit) return;
   word._empInit = true;
@@ -1037,14 +1090,6 @@ function animateSyllable(position, deltaTime) {
       const isDot = word.Dot;
 
       if (isAML_lyrics) {
-        const pct = getAMLProgress(word.HTMLElement, position, word.StartTime, word.EndTime);
-
-        if (!word._fadeInfo) {
-          word._fadeInfo = { w: Math.max(word.HTMLElement.offsetWidth, 1), h: Math.max(word.HTMLElement.offsetHeight, 1) };
-        }
-        const fadePct = ((word._fadeInfo.h * 0.5) / word._fadeInfo.w) * 100;
-        const targetGradientPos = -fadePct + (100 + fadePct) * pct;
-
         if (settingsManager.get("hardwareAccelerationHack") && !word._gpuPromoted) {
           promoteToGPU(word.HTMLElement);
           word._gpuPromoted = true;
@@ -1061,9 +1106,20 @@ function animateSyllable(position, deltaTime) {
         setStyleIfChanged(word.HTMLElement, "transform", `translate3d(0, ${yOffset.toFixed(2)}px, 0)`);
         setStyleIfChanged(word.HTMLElement, "--text-shadow-blur-radius", "0px");
         setStyleIfChanged(word.HTMLElement, "--text-shadow-opacity", "0%");
+        setStyleIfChanged(word.HTMLElement, "--gradient-position", "100%");
 
-        setStyleIfChanged(word.HTMLElement, "--gradient-position", `${targetGradientPos.toFixed(2)}%`);
-        setStyleIfChanged(word.HTMLElement, "--gradient-fade-width", `${fadePct.toFixed(2)}%`);
+        if (lineActive) {
+          if (!word._amlMask) applyAmlWordMask(word);
+          if (word._amlMask) {
+            const m = word._amlMask;
+            let pos = m.startPos + (position - word.StartTime) * m.speed;
+            pos = Math.max(m.minOffset, Math.min(0, pos));
+            setStyleIfChanged(word.HTMLElement, "mask-position", `${pos.toFixed(2)}px 0px`);
+            setStyleIfChanged(word.HTMLElement, "-webkit-mask-position", `${pos.toFixed(2)}px 0px`);
+          }
+        } else if (word._amlMask) {
+          clearAmlWordMask(word);
+        }
 
         // AMLL initFloatAnimation — every word gently rises while being sung
         if (word.HTMLElement && !word._floatAnim) {
@@ -1110,13 +1166,6 @@ function animateSyllable(position, deltaTime) {
 
         if (word.Letters) {
           word.Letters.forEach(letter => {
-            const letterPct = getAMLProgress(letter.HTMLElement, position, letter.StartTime, letter.EndTime);
-
-            if (!letter._fadeInfo) {
-              letter._fadeInfo = { w: Math.max(letter.HTMLElement.offsetWidth, 1), h: Math.max(letter.HTMLElement.offsetHeight, 1) };
-            }
-            const lFadePct = ((letter._fadeInfo.h * 0.5) / letter._fadeInfo.w) * 100;
-            const letterGradientPos = -lFadePct + (100 + lFadePct) * letterPct;
             const letterActive = position >= letter.StartTime && position <= letter.EndTime;
             const letterSung = position > letter.EndTime;
 
@@ -1136,9 +1185,7 @@ function animateSyllable(position, deltaTime) {
             setStyleIfChanged(letter.HTMLElement, "transform", `translate3d(0, ${letterY.toFixed(2)}px, 0)`);
             setStyleIfChanged(letter.HTMLElement, "--text-shadow-blur-radius", "0px");
             setStyleIfChanged(letter.HTMLElement, "--text-shadow-opacity", "0%");
-
-            setStyleIfChanged(letter.HTMLElement, "--gradient-position", `${letterGradientPos.toFixed(2)}%`);
-            setStyleIfChanged(letter.HTMLElement, "--gradient-fade-width", `${lFadePct.toFixed(2)}%`);
+            setStyleIfChanged(letter.HTMLElement, "--gradient-position", "100%");
           });
         }
 
@@ -1446,72 +1493,25 @@ function animateSyllable(position, deltaTime) {
 
     // Pronunciation words karaoke animation (AML lyrics physics & animation)
     if (line.PronunciationWords && line.PronunciationWords.length > 0) {
-      const isScrolling = isUserScrolling();
       for (let pwi = 0; pwi < line.PronunciationWords.length; pwi++) {
         const pw = line.PronunciationWords[pwi];
         const pwEl = pw.HTMLElement;
         if (!pwEl) continue;
 
-        if (!pw.AnimatorStore) {
-          pw.AnimatorStore = createWordSprings();
-          pw.AnimatorStore.Scale.SetGoal(ScaleSpline.at(0), true);
-          pw.AnimatorStore.YOffset.SetGoal(YOffsetSpline.at(0), true);
-          pw.AnimatorStore.Glow.SetGoal(GlowSpline.at(0), true);
-          promoteToGPU(pwEl);
-        }
-
         const isPwActive = position >= pw.StartTime && position <= pw.EndTime;
         const isPwSung = position > pw.EndTime;
         const pct = getProgressPercentage(position, pw.StartTime, pw.EndTime);
 
-        let targetScale, targetYOffset, targetGlow, targetGradientPos;
-
+        let targetGradientPos;
         if (isPwActive) {
-          targetScale = ScaleSpline.at(pct);
-          targetYOffset = isScrolling ? 0 : YOffsetSpline.at(pct) * 1.5;
-          targetGlow = GlowSpline.at(pct);
           targetGradientPos = -20 + 120 * pct;
         } else if (isPwSung) {
-          targetScale = ScaleSpline.at(1);
-          targetYOffset = isScrolling ? 0 : YOffsetSpline.at(1);
-          targetGlow = GlowSpline.at(1);
           targetGradientPos = 100;
         } else {
-          targetScale = ScaleSpline.at(0);
-          targetYOffset = isScrolling ? 0 : YOffsetSpline.at(0);
-          targetGlow = GlowSpline.at(0);
           targetGradientPos = -20;
         }
 
-        pw.AnimatorStore.Scale.SetGoal(targetScale);
-        pw.AnimatorStore.YOffset.SetGoal(targetYOffset);
-        pw.AnimatorStore.Glow.SetGoal(targetGlow);
-
-        const curScale = pw.AnimatorStore.Scale.Step(deltaTime);
-        const curYOffset = pw.AnimatorStore.YOffset.Step(deltaTime);
-        const curGlow = pw.AnimatorStore.Glow.Step(deltaTime);
-
-        if (!Number.isFinite(pw._pwsc) || Math.abs(curScale - pw._pwsc) > 0.0006) {
-          pw._pwsc = curScale;
-          setStyleIfChanged(pwEl, "scale", `${curScale.toFixed(4)}`);
-        }
-        if (!Number.isFinite(pw._pwty) || Math.abs(curYOffset - pw._pwty) > 0.001) {
-          pw._pwty = curYOffset;
-          setStyleIfChanged(pwEl, "transform",
-            `translate3d(0, calc(var(--DefaultLyricsSize) * ${curYOffset.toFixed(4)} * 0.7), 0)`);
-        }
-
         setStyleIfChanged(pwEl, "--pron-gradient-position", `${targetGradientPos.toFixed(2)}%`, 0.05);
-        setStyleIfChanged(pwEl, "--text-shadow-blur-radius",
-          `${(3.2 + 2.0 * curGlow).toFixed(2)}px`, 0.1);
-        setStyleIfChanged(pwEl, "--text-shadow-opacity",
-          `${(curGlow * LetterGlowMultiplier_Opacity * 0.28).toFixed(2)}%`, 0.5);
-
-        if (isPwActive && !pwEl.classList.contains("active")) {
-          pwEl.classList.add("active");
-        } else if (!isPwActive && pwEl.classList.contains("active")) {
-          pwEl.classList.remove("active");
-        }
       }
     }
   }

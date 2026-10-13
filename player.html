@@ -150,23 +150,14 @@
           rgba(255, 255, 255, 0.45) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      transform-origin: center bottom;
-      transition: text-shadow 0.15s ease;
-      text-shadow: 0 0 var(--text-shadow-blur-radius, 4px) rgba(255, 255, 255, var(--text-shadow-opacity, 0%));
     }
 
     #LyricsflowPage .LyricsContainer .LyricsContent .line.NotSung .line-pronunciation .pron-word {
       --pron-gradient-position: -20%;
-      text-shadow: none;
     }
 
     #LyricsflowPage .LyricsContainer .LyricsContent .line.Sung .line-pronunciation .pron-word {
       --pron-gradient-position: 100%;
-      text-shadow: none;
-    }
-
-    #LyricsflowPage .LyricsContainer .LyricsContent .line .line-pronunciation .pron-word.active {
-      text-shadow: 0 0 var(--text-shadow-blur-radius, 8px) rgba(255, 255, 255, var(--text-shadow-opacity, 30%));
     }
 
     /* Subtext animation synchronization with line status */
@@ -537,10 +528,6 @@
     .LyricsContainer.crossfading {
       transition: opacity calc(var(--crossfade-duration, 3s) * 0.4) ease;
       opacity: 0.15;
-    }
-
-    .LyricsContainer {
-      transition: opacity 0.35s ease;
     }
 
     /* ── LyricsFlow Editor Embed Mode: Pure Centered Lyrics ── */

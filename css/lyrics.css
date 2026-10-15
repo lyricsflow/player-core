@@ -173,6 +173,24 @@
   transition: filter 0.35s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 
+#LyricsflowPage .LyricsContainer .LyricsContent .line::before {
+  content: "";
+  position: absolute;
+  inset: 0 -0.5em;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  pointer-events: none;
+  z-index: -1;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .line:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
 #LyricsflowPage .LyricsContainer .LyricsContent .line .word,
 #LyricsflowPage .LyricsContainer .LyricsContent .line .letter,
 #LyricsflowPage .LyricsContainer .LyricsContent .line.static {
@@ -852,6 +870,12 @@
    ═══════════════════════════════════════════════ */
 
 #LyricsflowPage .LyricsContainer .LyricsContent.HideLineBlur .line {
+  --blur-amount: 0px !important;
+  --BlurAmount: 0px !important;
+  filter: none !important;
+}
+
+#LyricsflowPage .LyricsContainer:hover .LyricsContent .line {
   --blur-amount: 0px !important;
   --BlurAmount: 0px !important;
   filter: none !important;

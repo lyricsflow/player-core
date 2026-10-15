@@ -8,7 +8,7 @@ import { TTMLDownloader } from './ttml-downloader.js';
 import isRtl from './is-rtl.js';
 import { escapeHTML } from './security-utils.js';
 import { t, getCurrentLang, setLanguage, applyDOMTranslations, formatLocalizedDate, formatLocalizedYear } from './i18n.js';
-import { checkFirstTimeSetup, getUserProfile, openProfileSettingsModal, updateProfileUI } from './user-profile.js';
+import { checkFirstTimeSetup, getUserProfile, openProfileSettingsModal, updateProfileUI, enforceAuthLock, isUserAuthenticated } from './user-profile.js';
 import { hasListenedSongs, generateTopPicks, getRecentlyPlayed10, generate90Recommendations } from './algorithm.js';
 import {
   addSongToLibrary,
@@ -63,7 +63,15 @@ document.addEventListener('error', function (e) {
 }, true);
 import { previewPlayer } from './preview-player.js';
 
-const API_BASE = "https://api.trylyricsflow.com";
+const isLocalEnv = typeof window !== 'undefined' && (
+  ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
+  window.location.protocol === 'file:' ||
+  (navigator.userAgent && navigator.userAgent.includes('Electron'))
+);
+const API_BASE = (typeof window !== 'undefined' && (window.API_BASE || localStorage.getItem('lyricsflow_api_base') || (isLocalEnv ? 'https://api.trylyricsflow.com' : 'https://api.trylyricsflow.com'))) || 'https://api.trylyricsflow.com';
+if (typeof window !== 'undefined') {
+  window.API_BASE = API_BASE;
+}
 
 function cleanArtworkUrl(url, w = 300, h = 300, format = null) {
   if (!url || typeof url !== 'string') return '';
@@ -183,6 +191,8 @@ async function playHlsStream(videoEl, streamUrl, { autoplay = true, isMuted = fa
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Enforce mandatory unbypassable auth lock immediately
+  enforceAuthLock();
   // First-time setup assistant check & Profile init
   checkFirstTimeSetup();
   updateProfileUI();
@@ -734,7 +744,117 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pageId === 'playlists') renderPlaylistsPage();
     if (pageId === 'songs') renderFavoritesPage();
     if (pageId === 'recent') renderRecentPage();
+
+    // Update Mobile Liquid Glass View Icon
+    updateLiquidDockViewIcon(pageId);
   }
+
+  // ── Mobile Liquid Glass Dock View & Scroll Controls ──
+  const VIEW_ICONS = {
+    home: '<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />',
+    new: '<path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z" />',
+    listen: '<path d="M12 1a9 9 0 0 0-9 9c0 3.82 2.38 7.08 5.74 8.37.13.05.26-.04.26-.18v-1.74c0-.12-.08-.22-.19-.26A7.004 7.004 0 0 1 5 10a7 7 0 1 1 14 0c0 2.82-1.67 5.25-4.07 6.36-.11.05-.18.15-.18.27v1.57c0 .15.13.25.27.2 3.26-1.34 5.56-4.54 5.56-8.27a9 9 0 0 0-9-9zm-3.2 6.8a4.5 4.5 0 0 0 0 6.4.25.25 0 0 0 .35 0l1.06-1.06a.25.25 0 0 0 0-.35 2.5 2.5 0 0 1 0-3.54.25.25 0 0 0 0-.35l-1.06-1.06a.25.25 0 0 0-.35 0zm6.4 0a.25.25 0 0 0-.35 0l-1.06 1.06a.25.25 0 0 0 0 .35 2.5 2.5 0 0 1 0 3.54.25.25 0 0 0 0 .35l1.06 1.06a.25.25 0 0 0 .35 0 4.5 4.5 0 0 0 0-6.4zM12 9a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />',
+    'download-song': '<path fill-rule="evenodd" clip-rule="evenodd" d="M50 2C23.49 2 2 23.49 2 50s21.49 48 48 48 48-21.49 48-48S76.51 2 50 2zm0 10c20.987 0 38 17.013 38 38S70.987 88 50 88 12 70.987 12 50 29.013 12 50 12z" /><path d="M46 28a4 4 0 0 1 8 0v37.343l13.172-13.171a4 4 0 1 1 5.656 5.656l-20 20a4 4 0 0 1-5.656 0l-20-20a4 4 0 1 1 5.656-5.656L46 65.343V28z" />',
+    'library-hub': '<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />',
+    upload: '<path d="M50 24.172a4 4 0 0 1 2.828 1.171l20 20a4 4 0 0 1-5.656 5.657L54 37.828V72a4 4 0 1 1-8 0V37.828L32.828 51a4 4 0 0 1-5.656-5.657l20-20A4 4 0 0 1 50 24.172z" />',
+    playlists: '<path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />'
+  };
+
+  let _activePageId = 'home';
+  function updateLiquidDockViewIcon(pageId) {
+    _activePageId = pageId || _activePageId;
+    const svgEl = document.getElementById('am-liquid-view-svg');
+    if (svgEl) {
+      svgEl.innerHTML = VIEW_ICONS[pageId] || VIEW_ICONS.home;
+    }
+  }
+
+  // Scroll Detection for Collapsing/Expanding Mobile Dock
+  const liquidDock = document.getElementById('mobile-bottom-nav');
+  let _lastScrollY = 0;
+  let _scrollTicking = false;
+
+  function initMobileDockScroll() {
+    const scrollContainer = document.querySelector('.am-main') || window;
+    const getScrollTop = () => scrollContainer === window ? (window.pageYOffset || document.documentElement.scrollTop) : scrollContainer.scrollTop;
+
+    scrollContainer.addEventListener('scroll', () => {
+      if (!_scrollTicking) {
+        requestAnimationFrame(() => {
+          const currentY = getScrollTop();
+          const diff = currentY - _lastScrollY;
+
+          if (liquidDock && window.innerWidth <= 900) {
+            // Scroll down past 40px -> collapse into mini player view
+            if (diff > 8 && currentY > 40) {
+              liquidDock.classList.add('collapsed');
+            } else if (diff < -8 || currentY <= 30) {
+              // Scroll up -> expand back to full navigation bar
+              liquidDock.classList.remove('collapsed');
+            }
+          }
+
+          _lastScrollY = Math.max(0, currentY);
+          _scrollTicking = false;
+        });
+        _scrollTicking = true;
+      }
+    }, { passive: true });
+  }
+  initMobileDockScroll();
+
+  // Click on View Icon in collapsed pill expands back to full nav
+  const viewIconBtn = document.getElementById('am-liquid-view-icon-btn');
+  if (viewIconBtn) {
+    viewIconBtn.addEventListener('click', () => {
+      if (liquidDock) liquidDock.classList.remove('collapsed');
+    });
+  }
+
+  // Sync track information to mobile liquid bar
+  window.addEventListener('lyricsflow-track-change', (e) => {
+    const track = e.detail;
+    if (!track) return;
+    const artEl = document.getElementById('am-liquid-track-art');
+    const titleEl = document.getElementById('am-liquid-track-title');
+    const artistEl = document.getElementById('am-liquid-track-artist');
+    if (artEl && (track.artworkUrl100 || track.artUrl)) {
+      artEl.src = cleanArtworkUrl(track.artworkUrl100 || track.artUrl, 100, 100);
+    }
+    if (titleEl) titleEl.textContent = track.trackName || track.name || 'Now Playing';
+    if (artistEl) artistEl.textContent = track.artistName || track.artist || 'LyricsFlow';
+  });
+
+  // Track info click opens full player drawer
+  const trackInfoCapsule = document.getElementById('am-liquid-track-info');
+  if (trackInfoCapsule) {
+    trackInfoCapsule.addEventListener('click', (e) => {
+      if (e.target.closest('#am-liquid-play-btn')) return;
+      if (window.openPlayerDrawer) window.openPlayerDrawer();
+      else if (window.previewPlayer?.openFullScreenPlayer) window.previewPlayer.openFullScreenPlayer();
+    });
+  }
+
+  // Mobile Liquid Play/Pause button
+  const liquidPlayBtn = document.getElementById('am-liquid-play-btn');
+  const liquidPlaySvg = document.getElementById('am-liquid-play-svg');
+  if (liquidPlayBtn) {
+    liquidPlayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (window.previewPlayer) {
+        window.previewPlayer.togglePlayPause();
+      }
+    });
+  }
+
+  window.addEventListener('lyricsflow-playback-state', (e) => {
+    const isPlaying = e.detail?.playing;
+    if (liquidPlaySvg) {
+      liquidPlaySvg.innerHTML = isPlaying
+        ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'
+        : '<path d="M8 5v14l11-7z"/>';
+    }
+  });
 
   // Attach nav item clicks
   navItems.forEach(item => {
@@ -744,6 +864,20 @@ document.addEventListener('DOMContentLoaded', () => {
   mobNavBtns.forEach(btn => {
     btn.addEventListener('click', () => switchPage(btn.dataset.page));
   });
+
+  const mobNavSearch = document.getElementById('mob-nav-search');
+  if (mobNavSearch) {
+    mobNavSearch.addEventListener('click', () => {
+      switchPage('listen');
+      const catalogSearch = document.getElementById('catalog-search');
+      if (catalogSearch) {
+        setTimeout(() => {
+          catalogSearch.focus();
+          catalogSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 80);
+      }
+    });
+  }
 
   // Library Hub Pill clicks
   document.querySelectorAll('.am-hub-pill-btn').forEach(pill => {
@@ -1998,11 +2132,11 @@ document.addEventListener('DOMContentLoaded', () => {
       categoriesGrid.innerHTML = categories.map(cat => {
         const attr = cat.attributes || {};
         const rawUrl = attr.artwork?.url || '';
-        const artUrl = rawUrl ? cleanArtworkUrl(rawUrl, 480, 270) : '';
+        const artUrl = rawUrl ? cleanArtworkUrl(rawUrl, 520, "293sr", "webp") : '';
 
         return `
           <div class="am-category-card animate-fade" data-curator="${cat.id}">
-            ${artUrl ? `<img src="${cleanArtworkUrl(artUrl)}" class="am-category-bg" loading="lazy" referrerpolicy="no-referrer" alt="" onerror="this.style.display='none'">` : ''}
+            ${artUrl ? `<img src="${artUrl}" class="am-category-bg" loading="lazy" referrerpolicy="no-referrer" alt="" onerror="this.style.display='none'">` : ''}
             <div class="am-category-title">${escapeHTML(attr.name || t('nav_search'))}</div>
           </div>
         `;
@@ -2657,6 +2791,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isVideo: true,
         videoUrl: videoUrl,
         amTrackId: String(vidId || ''),
+        song_id: data.song_id || null,
+        ttml: data.ttml || '__AUTO_FETCH__',
         duration: data.duration || 0
       };
 
@@ -5032,6 +5168,11 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('[upload.js] Failed to pre-seed queue for player:', e);
     }
 
+    if (!isUserAuthenticated()) {
+      enforceAuthLock();
+      return;
+    }
+
     const trackObj = {
       id: songId,
       title: finalTitle,
@@ -5904,7 +6045,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── URL Routing for /album, /artist, /label, /playlist, /curator, /video, /search, /home, /song ──
   function checkUrlRouting() {
-    const rawHash = (window.location.hash || '').replace(/^#\/?/, '');
+    // If the hash contains an OAuth token or callback, ignore it completely here (handled by handleOAuthCallback)
+    const rawHashText = window.location.hash || '';
+    if (rawHashText.includes('access_token=') || rawHashText.includes('error=')) {
+      return false;
+    }
+
+    const rawHash = rawHashText.replace(/^#\/?/, '');
     const [hashPath, hashQuery] = rawHash.split('?');
 
     // Prefer hash route if present; otherwise fall back to pathname
@@ -6071,9 +6218,9 @@ document.addEventListener('DOMContentLoaded', () => {
       showSongView(pathMatch[1], '', { skipUrlSync: true });
       return true;
     }
-    const numMatch = (window.location.hash || '').match(/\d{5,}/);
-    if (numMatch) {
-      showSongView(numMatch[0], '', { skipUrlSync: true });
+    const rawHashClean = (window.location.hash || '').replace(/^#\/?/, '').trim();
+    if (/^\d{5,}$/.test(rawHashClean)) {
+      showSongView(rawHashClean, '', { skipUrlSync: true });
       return true;
     }
 
@@ -6793,7 +6940,31 @@ document.addEventListener('DOMContentLoaded', () => {
   async function renderRecentPage() {
     const recentGrid = document.getElementById('recent-tracks-grid');
     if (!recentGrid) return;
-    const recentTracks = JSON.parse(localStorage.getItem('lyricsflow_recent_tracks') || '[]');
+    let recentTracks = [];
+    try {
+      const res = await fetch(`${API_BASE}/v1/me/recently-played?limit=50`, { credentials: 'include' });
+      if (res.ok) {
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          recentTracks = rows.map(r => ({
+            id: r.song_id,
+            trackId: r.song_id,
+            amTrackId: r.song_id,
+            title: r.title,
+            name: r.title,
+            artist: r.artist,
+            artistName: r.artist,
+            artUrl: r.artwork_url,
+            artworkUrl100: r.artwork_url
+          }));
+        }
+      }
+    } catch (_) { }
+
+    if (!recentTracks.length) {
+      recentTracks = JSON.parse(localStorage.getItem('lyricsflow_recent_tracks') || '[]');
+    }
+
     if (!recentTracks.length) {
       recentGrid.innerHTML = `<div class="am-error-msg">${t('recent_empty')}</div>`;
     } else {
@@ -7357,6 +7528,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (recent.length > 50) recent.pop();
     localStorage.setItem('lyricsflow_recent_tracks', JSON.stringify(recent));
     syncHomeNavVisibility();
+
+    // Sync to backend /v1/me/recently-played with cookie session
+    try {
+      fetch(`${API_BASE}/v1/me/recently-played`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          song_id: normalized.id,
+          title: normalized.title,
+          artist: normalized.artist,
+          artwork_url: normalized.artUrl
+        })
+      }).catch(() => { });
+    } catch (_) { }
   }
 
   // ── System Health & Terminal Status Dialog ──

@@ -131,8 +131,14 @@ function readITunesMetadata(root) {
   const transliterations = new Map();
   const transliterationPieces = new Map();
   const transliterationSyllables = new Map();
+  let isAutoPronunciation = false;
 
   for (const node of findElements(root, "itunesmetadata")) {
+    for (const tlNode of findElements(node, "transliteration", "transliterations")) {
+      if (getAttr(tlNode, "automaticallyCreated") === "true") {
+        isAutoPronunciation = true;
+      }
+    }
     for (const text of findElements(node, "text")) {
       const key = getAttr(text, "for");
       if (!key) continue;
@@ -143,6 +149,9 @@ function readITunesMetadata(root) {
         translations.set(key, textValue);
       }
       if (parent === "transliterations" || parent === "transliteration") {
+        if (getAttr(text.parentElement, "automaticallyCreated") === "true") {
+          isAutoPronunciation = true;
+        }
         if (textValue) transliterations.set(key, textValue);
         const pieces = Array.from(text.children)
           .filter(c => c.tagName === "span")
@@ -163,7 +172,7 @@ function readITunesMetadata(root) {
       }
     }
   }
-  return { translations, transliterations, transliterationPieces, transliterationSyllables };
+  return { translations, transliterations, transliterationPieces, transliterationSyllables, isAutoPronunciation };
 }
 
 export function parseSongwriterString(text) {
@@ -536,20 +545,62 @@ function buildStaticLyrics(lines, songwriters, language) {
  * @returns {object} Parsed lyrics object with Type, Content, etc.
  */
 export default function parseTTMLToLyrics(ttml) {
-  const doc = new DOMParser().parseFromString(ttml, "text/xml");
-  const parserError = doc.querySelector("parsererror");
+  if (!ttml || typeof ttml !== "string") return null;
+
+  let cleanTtml = ttml.trim();
+
+  // Strip wrapping quotes if JSON-stringified
+  if ((cleanTtml.startsWith('"') && cleanTtml.endsWith('"')) || (cleanTtml.startsWith("'") && cleanTtml.endsWith("'"))) {
+    try {
+      cleanTtml = JSON.parse(cleanTtml);
+    } catch (_) {
+      cleanTtml = cleanTtml.slice(1, -1);
+    }
+  }
+
+  // Unescape backslash-escaped quotes and newlines
+  if (cleanTtml.includes('\\"') || cleanTtml.includes("\\'") || cleanTtml.includes('\\n')) {
+    cleanTtml = cleanTtml
+      .replace(/\\"/g, '"')
+      .replace(/\\'/g, "'")
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t');
+  }
+
+  // Strip any leading BOM or unexpected prefix before <tt
+  const ttIndex = cleanTtml.indexOf("<tt");
+  if (ttIndex > 0) {
+    cleanTtml = cleanTtml.slice(ttIndex);
+  }
+
+  let doc = new DOMParser().parseFromString(cleanTtml, "text/xml");
+  let parserError = doc.querySelector("parsererror");
+
+  // Fallback: try parsing with text/html if strict XML parser had a syntax error
+  if (parserError) {
+    try {
+      const htmlDoc = new DOMParser().parseFromString(cleanTtml, "text/html");
+      const ttCandidate = htmlDoc.querySelector("tt");
+      if (ttCandidate) {
+        doc = htmlDoc;
+        parserError = null;
+      }
+    } catch (_) {}
+  }
+
   if (parserError) {
     throw new Error(parserError.textContent?.trim() || "Invalid TTML");
   }
 
-  const tt = doc.documentElement;
-  if (!tt || tt.tagName !== "tt") {
+  const tt = doc.querySelector("tt") || doc.documentElement;
+  if (!tt || (tt.tagName.toLowerCase() !== "tt" && tt.localName?.toLowerCase() !== "tt")) {
     throw new Error("Invalid TTML: missing <tt> root element");
   }
 
   const songwriters = parseSongwriters(tt);
   const oppositeAgents = parseAgents(tt);
-  const { translations, transliterations, transliterationPieces, transliterationSyllables } = readITunesMetadata(tt);
+  const { translations, transliterations, transliterationPieces, transliterationSyllables, isAutoPronunciation } = readITunesMetadata(tt);
 
   // Explicitly check if the provider marked this as static/unsynced
   const isExplicitlyStatic = getAttr(tt, "itunes:timing", "timing") === "None";
@@ -587,11 +638,17 @@ export default function parseTTMLToLyrics(ttml) {
   const hasSyllableTimings = parsedLines.some(l => l.leadSyllables.length > 0);
   const hasLineTimings = parsedLines.some(l => l.startTime > 0 || l.endTime > 0);
 
+  let result;
   if (!isExplicitlyStatic) {
-    if (hasSyllableTimings) return buildSyllableLyrics(parsedLines, songwriters, language);
-    if (hasLineTimings) return buildLineLyrics(parsedLines, songwriters, language);
+    if (hasSyllableTimings) result = buildSyllableLyrics(parsedLines, songwriters, language);
+    else if (hasLineTimings) result = buildLineLyrics(parsedLines, songwriters, language);
   }
-  return buildStaticLyrics(parsedLines, songwriters, language);
+  if (!result) result = buildStaticLyrics(parsedLines, songwriters, language);
+
+  if (isAutoPronunciation) {
+    result.isAutoPronunciation = true;
+  }
+  return result;
 }
 
 /**

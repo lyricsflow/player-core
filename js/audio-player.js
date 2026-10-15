@@ -214,6 +214,25 @@ export default class AudioPlayer {
   }
 
   /**
+   * Preload the next track's audio on the inactive channel so that
+   * crossfading starts instantaneously without network latency.
+   */
+  preloadNext(url) {
+    if (!url) return;
+    const nextAudio = this._inactiveAudio;
+    const nextGain = this._inactiveGain;
+
+    nextGain.gain.cancelScheduledValues(this.audioContext.currentTime);
+    nextGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+
+    if (nextAudio.src !== url) {
+      nextAudio.src = url;
+      nextAudio.preload = 'auto';
+      nextAudio.load();
+    }
+  }
+
+  /**
    * Sets new source URL on the active channel and fully tears down inactive
    * channel state to release decoder buffers and prevent split-second playbacks.
    */
@@ -245,16 +264,17 @@ export default class AudioPlayer {
     const prevGain = this.activeGain;
     const prevAudio = this.audio;
 
-    nextAudio.pause();
-    nextAudio.removeAttribute('src');
-    nextAudio.load();
+    const alreadyLoaded = (nextAudio.src === url || nextAudio.currentSrc === url) && nextAudio.readyState >= 2;
+
+    if (!alreadyLoaded) {
+      nextAudio.pause();
+      nextAudio.src = url;
+      nextAudio.load();
+    }
 
     nextGain.gain.cancelScheduledValues(now);
     nextGain.gain.setValueAtTime(0, now);
     nextGain.gain.linearRampToValueAtTime(1, now + dur);
-
-    nextAudio.src = url;
-    nextAudio.load();
 
     this.currentChannel = this.currentChannel === 'A' ? 'B' : 'A';
     this._crossfadeTriggered = false;

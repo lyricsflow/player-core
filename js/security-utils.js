@@ -19,30 +19,42 @@ export function escapeHTML(str) {
 }
 
 /**
- * Sanitizes and formats an artwork URL safely to prevent XSS / CSS injection,
- * and forces maximum quality 1200x1200bb.jpg across the entire player.
+ * Sanitizes and formats an artwork URL safely to prevent XSS / CSS injection.
+ * Supports custom width, height, and format tokens (e.g. 520x293sr.webp),
+ * defaulting to 1200x1200bb.jpg for album/song artwork.
  * @param {string} url - Artwork URL
- * @param {number} [w=1200] - Desired width (forced min 1200)
- * @param {number} [h=1200] - Desired height (forced min 1200)
- * @returns {string} Sanitized high-res URL
+ * @param {number|string} [w=1200] - Desired width
+ * @param {number|string} [h=1200] - Desired height / aspect ratio code (e.g. '293sr')
+ * @param {string} [format='jpg'] - File extension (e.g. 'webp', 'jpg')
+ * @returns {string} Sanitized formatted URL
  */
-export function cleanArtworkUrl(url, w = 1200, h = 1200) {
+export function cleanArtworkUrl(url, w = 1200, h = 1200, format = null) {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
   // Disallow javascript:, vbscript:, and non-image data URIs
   if (/^(javascript|vbscript|data:(?!image\/))/i.test(trimmed)) {
     return '';
   }
-  const targetW = Math.max(1200, Number(w) || 1200);
-  const targetH = Math.max(1200, Number(h) || 1200);
+
+  const isCustomSpec = typeof h === 'string' && (h.includes('sr') || h.includes('bb') || h.includes('bf'));
+  const targetW = String(w || 1200);
+  const targetH = isCustomSpec ? String(h) : String(h || 1200);
+  const targetFormat = format || (isCustomSpec ? 'webp' : 'jpg');
+
   let cleaned = trimmed
-    .replace('{w}', String(targetW))
-    .replace('{h}', String(targetH))
+    .replace('{w}', targetW)
+    .replace('{h}', targetH)
     .replace('{c}', '')
-    .replace('{f}', 'jpg');
-  if (/\/\d+x\d+bb\./.test(cleaned)) {
+    .replace('{f}', targetFormat);
+
+  if (isCustomSpec) {
+    if (/\/\d+x\d+(?:bb|sr|bf)\.[a-zA-Z0-9]+/.test(cleaned)) {
+      cleaned = cleaned.replace(/\/\d+x\d+(?:bb|sr|bf)\.[a-zA-Z0-9]+/, `/${targetW}x${targetH}.${targetFormat}`);
+    }
+  } else if (/\/\d+x\d+bb\./.test(cleaned)) {
     cleaned = cleaned.replace(/\/\d+x\d+bb\./, `/${targetW}x${targetH}bb.`);
   }
+
   if (!/^(https?:|data:image\/|blob:)/i.test(cleaned) && !cleaned.startsWith('/') && !cleaned.startsWith('favicon.') && !cleaned.startsWith('icons/')) {
     return '';
   }

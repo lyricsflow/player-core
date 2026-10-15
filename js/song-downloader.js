@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const itemType = el.dataset.type;
           searchResultsEl.classList.add('hidden');
           if (itemType === 'album') {
-            inputEl.value = `https://trylyricsflow.com/album/${itemId}`;
+            inputEl.value = `https://trylyricsflow.com//album/${itemId}`;
             processDownload();
           } else {
             const trkTitle = el.querySelector('div[style*="font-weight: 600"]').textContent.replace('🎵 ', '').trim();

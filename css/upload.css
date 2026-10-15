@@ -337,6 +337,8 @@
   pointer-events: none;
   filter: blur(100px);
   opacity: 0.3;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .am-glow {
@@ -344,6 +346,8 @@
   border-radius: 50%;
   mix-blend-mode: screen;
   animation: amGlowMove 25s infinite alternate ease-in-out;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .am-glow-1 {
@@ -393,7 +397,7 @@
 .am-content {
   position: relative;
   z-index: 1;
-  padding: 36px clamp(24px, 4vw, 56px);
+  padding: 14px clamp(20px, 3.5vw, 48px) 36px;
   max-width: 100%;
   box-sizing: border-box;
   animation: amFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);

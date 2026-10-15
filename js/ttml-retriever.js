@@ -5,7 +5,7 @@ import { GetExpireStore } from './stores.js';
 
 export const LyricsStore = GetExpireStore("SL:lyrics", 1, { Duration: 3, Unit: "Days" });
 
-const CUSTOM_LYRICS_API = 'https://api.trylyricsflow.com/api/community';
+const CUSTOM_LYRICS_API = (window.API_BASE || 'https://api.trylyricsflow.com') + '/api/community';
 
 /** Source label mapping */
 const SOURCE_LABELS = {
@@ -704,9 +704,10 @@ async function fetchFromAppleMusic(songName, artistName, albumName, durationSec 
   try {
     let apiRes;
 
+    const apiBase = window.API_BASE || 'https://api.trylyricsflow.com';
     if (trackId) {
       console.log(`[TTMLRetriever] Apple Music: Using track ID ${trackId}, fetching TTML...`);
-      apiRes = await proxiedFetch(`https://api.trylyricsflow.com/lyrics?song=${trackId}`, { skipProxy: true });
+      apiRes = await proxiedFetch(`${apiBase}/lyrics?song=${trackId}`, { skipProxy: true });
     } else {
       console.log(`[TTMLRetriever] Apple Music: No track ID provided. Querying via text metadata metadata...`);
       const params = new URLSearchParams({
@@ -715,7 +716,7 @@ async function fetchFromAppleMusic(songName, artistName, albumName, durationSec 
         album: albumName || '',
         duration: String(Math.round(durationSec))
       });
-      apiRes = await proxiedFetch(`https://api.trylyricsflow.com/lyrics/get?${params}`, { skipProxy: true });
+      apiRes = await proxiedFetch(`${apiBase}/lyrics/get?${params}`, { skipProxy: true });
     }
 
     if (!apiRes || !apiRes.ok) return null;
@@ -784,7 +785,22 @@ export async function retrieveTTML(songName, artistName, albumName, durationSec 
   for (const providerId of activeOrder) {
     providerPromises[providerId] = (async () => {
       try {
-        if (providerId === "lyricsflow" || providerId === "genius") return null;
+        if (providerId === "genius") return null;
+        if (providerId === "lyricsflow") {
+          if (finalSongId) {
+            const communityRes = await fetchFromCustomAPI(finalSongId);
+            if (communityRes) return communityRes;
+          }
+          const lfRes = await fetchFromAppleMusic(songName, artistName, albumName, durationSec, finalSongId);
+          if (lfRes) {
+            return {
+              ...lfRes,
+              source: 'lyricsflow',
+              sourceDisplayName: 'LyricsFlow'
+            };
+          }
+          return null;
+        }
         if (providerId === "apple" || providerId === "aml") return await fetchFromAppleMusic(songName, artistName, albumName, durationSec, finalSongId);
         if (providerId === "betterlyrics") return await fetchFromBetterLyrics(songName, artistName);
         if (providerId === "musixmatch") return await fetchFromMusixmatch(songName, artistName, albumName, durationSec * 1000);

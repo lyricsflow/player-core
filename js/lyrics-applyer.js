@@ -8,7 +8,7 @@ import isRtl from './is-rtl.js';
 import { settingsManager } from './settings-manager.js';
 import { gibberishify, weebify, uppercase, lowercase } from './text-transformers.js';
 
-const LYRICS_BETWEEN_SHOW = 3;
+const LYRICS_BETWEEN_SHOW = 2;
 const INTERLUDE_EARLIER_BY = 0;
 
 function transformText(text) {
@@ -265,8 +265,11 @@ export function applySyllableLyrics(data, lyricsContentEl) {
   }
 
   // Leading interlude dots
-  if (data.StartTime >= LYRICS_BETWEEN_SHOW) {
-    createMusicalLine(container, 0, convertTime(data.StartTime + INTERLUDE_EARLIER_BY),
+  const firstStartTime = (data.StartTime !== undefined && data.StartTime !== null)
+    ? data.StartTime
+    : (data.Content?.[0]?.Lead?.StartTime ?? data.Content?.[0]?.StartTime ?? 0);
+  if (firstStartTime >= LYRICS_BETWEEN_SHOW) {
+    createMusicalLine(container, 0, convertTime(firstStartTime + INTERLUDE_EARLIER_BY),
       data.Content[0]?.OppositeAligned, "Syllable");
   }
 
@@ -1084,11 +1087,14 @@ export function applySyllableLyrics(data, lyricsContentEl) {
     }
 
     // Interlude dots between lines
-    if (arr[index + 1] && arr[index + 1].Lead.StartTime - line.Lead.EndTime >= LYRICS_BETWEEN_SHOW) {
+    const nextLine = arr[index + 1];
+    const nextStart = nextLine ? (nextLine.Lead?.StartTime ?? nextLine.StartTime ?? 0) : 0;
+    const curEnd = line.Lead?.EndTime ?? line.EndTime ?? 0;
+    if (nextLine && nextStart - curEnd >= LYRICS_BETWEEN_SHOW) {
       createMusicalLine(container,
-        convertTime(line.Lead.EndTime),
-        convertTime(arr[index + 1].Lead.StartTime + INTERLUDE_EARLIER_BY),
-        arr[index + 1].OppositeAligned, "Syllable");
+        convertTime(curEnd),
+        convertTime(nextStart + INTERLUDE_EARLIER_BY),
+        nextLine.OppositeAligned, "Syllable");
     }
   });
 
@@ -1334,6 +1340,19 @@ function renderCredits(data, container) {
     creditsContainer.appendChild(songwriters);
   }
 
+  if (data.isAutoPronunciation) {
+    const autoPron = document.createElement("div");
+    autoPron.classList.add("CreditLine", "AutoPronunciationNotice");
+    autoPron.textContent = "Automatically created Pronunciation";
+    autoPron.style.cssText = `
+      font-size: 0.8rem;
+      opacity: 0.6;
+      margin-top: 4px;
+      font-weight: 500;
+    `;
+    creditsContainer.appendChild(autoPron);
+  }
+
   if (hasMaker) {
     const makerSection = document.createElement("div");
     makerSection.classList.add("MakerSection");
@@ -1373,7 +1392,7 @@ function renderCredits(data, container) {
 
     const badgeContainer = document.createElement("a");
     const cleanHandle = String(data.makerHandle || '').replace(/^@/, '');
-    badgeContainer.href = `https://trylyricsflow.com/${cleanHandle}`;
+    badgeContainer.href = `https://trylyricsflow.com//${cleanHandle}`;
     badgeContainer.classList.add("maker-link");
     badgeContainer.style.cssText = `
       display: flex;

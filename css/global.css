@@ -85,6 +85,7 @@
 
 html {
   font-size: 16px;
+  font-family: 'SF Pro Display', 'SF Pro', 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans', 'SF Arabic', 'Noto Sans Georgian', 'Vazirmatn', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -98,7 +99,7 @@ body {
   padding: 0;
   background: #1c1c1e;
   color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', 'PingFang SC', 'Hiragino Sans', 'SF Arabic', Inter, "Noto Sans Georgian", "Vazirmatn", sans-serif;
+  font-family: 'SF Pro Display', 'SF Pro', 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans', 'SF Arabic', 'Noto Sans Georgian', 'Vazirmatn', sans-serif;
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -109,6 +110,11 @@ body {
   height: 100dvh;
   width: 100vw;
   user-select: none;
+}
+
+h1, h2, h3, h4, h5, h6,
+.am-hero-title, .am-search-section-title, .am-hub-pill-btn {
+  font-family: 'SF Pro Display', 'SF Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 img,
@@ -122,7 +128,7 @@ a {
 }
 
 button {
-  font-family: inherit;
+  font-family: 'SF Pro Display', 'SF Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   cursor: pointer;
   border: none;
   background: none;
@@ -130,7 +136,7 @@ button {
 }
 
 input {
-  font-family: inherit;
+  font-family: 'SF Pro Display', 'SF Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* ── CSS Custom Properties ── */

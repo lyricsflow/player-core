@@ -1,10 +1,10 @@
 /**
- * LyricsFlow — Smart Recommendation Algorithm
- * Generates personalized "Top Picks for You", "Recently Played",
- * and 90 curated recommendations based on listening history.
+ * LyricsFlow — Apple Music Style Multi-Shelf Recommendation Engine
+ * Fetches Editorial Playlists, Stations, Heavy Rotation, and Categorized Shelves.
  */
 
 const API_BASE = "https://api.trylyricsflow.com";
+const DEFAULT_STOREFRONT = "us";
 
 function cleanArtUrl(url, w = 600, h = 600) {
   if (!url || typeof url !== 'string') return 'favicon.svg';
@@ -34,117 +34,6 @@ export function hasListenedSongs() {
 }
 
 /**
- * Generates the "Top Picks for You" mix:
- * 1. The latest song listened by the user
- * 2. 10 mixed items (songs, albums, artists) from similar / listened artists
- */
-export async function generateTopPicks() {
-  const history = getListeningHistory();
-  if (history.length === 0) return [];
-
-  const latestSong = history[0];
-  const picks = [];
-
-  // 1. Latest song
-  picks.push({
-    type: 'song',
-    isLatest: true,
-    id: latestSong.trackId || latestSong.id || latestSong.amTrackId,
-    title: latestSong.trackName || latestSong.name || latestSong.title || 'Latest Track',
-    subtitle: latestSong.artistName || latestSong.artist || 'Unknown Artist',
-    album: latestSong.collectionName || latestSong.album || '',
-    artUrl: (latestSong.artworkUrl100 || latestSong.artUrl || 'favicon.svg').replace('100x100', '600x600'),
-    raw: latestSong
-  });
-
-  // Extract unique artists from history
-  const artistNames = [...new Set(history.map(t => t.artistName || t.artist).filter(Boolean))];
-  const targetArtists = artistNames.slice(0, 4);
-
-  // Fetch songs/albums/artists for these artists to create a 10-item mix
-  const mixItems = [];
-
-  try {
-    const fetchPromises = targetArtists.map(async (artName) => {
-      try {
-        const res = await fetch(`${API_BASE}/search?term=${encodeURIComponent(artName)}&limit=15`);
-        if (!res.ok) return null;
-        const data = await res.json();
-        const results = data.results || {};
-        const songs = results.songs?.data || [];
-        const albums = results.albums?.data || [];
-        const artists = results.artists?.data || [];
-        return { songs, albums, artists };
-      } catch (e) {
-        return null;
-      }
-    });
-
-    const results = (await Promise.all(fetchPromises)).filter(Boolean);
-
-    // Collect candidates
-    results.forEach(res => {
-      // Add artists
-      (res.artists || []).forEach(art => {
-        const attr = art.attributes || {};
-        mixItems.push({
-          type: 'artist',
-          id: art.id,
-          title: attr.name || 'Artist',
-          subtitle: 'Artist',
-          artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
-          raw: art
-        });
-      });
-
-      // Add albums
-      (res.albums || []).forEach(alb => {
-        const attr = alb.attributes || {};
-        mixItems.push({
-          type: 'album',
-          id: alb.id,
-          title: attr.name || 'Album',
-          subtitle: attr.artistName || 'Artist',
-          artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
-          raw: alb
-        });
-      });
-
-      // Add songs (not the exact latest song)
-      (res.songs || []).forEach(s => {
-        if (s.id !== latestSong.trackId && s.id !== latestSong.id) {
-          const attr = s.attributes || {};
-          mixItems.push({
-            type: 'song',
-            id: s.id,
-            title: attr.name || 'Song',
-            subtitle: attr.artistName || 'Artist',
-            album: attr.albumName || '',
-            artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
-            raw: s
-          });
-        }
-      });
-    });
-
-    // Shuffle and pick 10 items
-    const shuffled = mixItems.sort(() => 0.5 - Math.random());
-    const seen = new Set();
-    for (const item of shuffled) {
-      if (!seen.has(item.id) && item.id !== latestSong.trackId && item.id !== latestSong.id) {
-        seen.add(item.id);
-        picks.push(item);
-        if (picks.length >= 11) break; // 1 latest + 10 mix
-      }
-    }
-  } catch (e) {
-    console.error('[Algorithm] Error building Top Picks mix:', e);
-  }
-
-  return picks;
-}
-
-/**
  * Returns up to 10 recently played songs (latest to oldest)
  */
 export function getRecentlyPlayed10() {
@@ -160,50 +49,148 @@ export function getRecentlyPlayed10() {
 }
 
 /**
- * Generates 90 recommendations combining similar artists' songs,
- * albums, and songs from recently listened artists not yet heard.
+ * 1. "Top Picks for You" / "Playlists Made for You" Shelf
+ * Fetches Apple Music browse recommendations and editorial groupings.
  */
-export async function generate90Recommendations() {
+export async function generateTopPicks(storefront = DEFAULT_STOREFRONT) {
+  try {
+    const res = await fetch(`${API_BASE}/v1/catalog/${storefront}/recommendations?name=search-landing`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    
+    const rawResults = data.results || {};
+    const items = [];
+
+    Object.keys(rawResults).forEach(key => {
+      const group = rawResults[key];
+      (group.data || []).forEach(item => {
+        const attr = item.attributes || {};
+        items.push({
+          type: item.type || 'playlist',
+          id: item.id,
+          title: attr.name || 'Curated Mix',
+          subtitle: attr.curatorName || attr.description || 'Apple Music',
+          artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
+          raw: item
+        });
+      });
+    });
+
+    return items.slice(0, 10);
+  } catch (e) {
+    console.error('[Algorithm] Failed to fetch top picks shelves:', e);
+    return [];
+  }
+}
+
+/**
+ * 2. "Stations for You" Shelf
+ * Generates artist-driven and discovery station blocks based on listening history.
+ */
+export async function generateStationsForYou(storefront = DEFAULT_STOREFRONT) {
+  const history = getListeningHistory();
+  const artistNames = [...new Set(history.map(t => t.artistName || t.artist).filter(Boolean))];
+  const targetArtists = artistNames.slice(0, 5);
+
+  if (targetArtists.length === 0) {
+    targetArtists.push('Hits', 'Pop', 'Discovery');
+  }
+
+  const stations = [];
+
+  try {
+    const promises = targetArtists.map(async (artName) => {
+      const res = await fetch(`${API_BASE}/v1/catalog/${storefront}/search?term=${encodeURIComponent(artName)}&types=stations,artists&limit=3`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.results || {};
+    });
+
+    const results = (await Promise.all(promises)).filter(Boolean);
+
+    results.forEach(res => {
+      (res.stations?.data || []).forEach(station => {
+        const attr = station.attributes || {};
+        stations.push({
+          type: 'station',
+          id: station.id,
+          title: attr.name || 'Station',
+          subtitle: attr.editorialNotes?.standard || 'Custom Radio Station',
+          artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
+          raw: station
+        });
+      });
+    });
+  } catch (e) {
+    console.error('[Algorithm] Error building stations shelf:', e);
+  }
+
+  return stations;
+}
+
+/**
+ * 3. Categorized Era / Genre Shelves (e.g., "2000s", "More Like Yeezus")
+ */
+export async function generateCategoryShelf(query, storefront = DEFAULT_STOREFRONT, limit = 10) {
+  try {
+    const res = await fetch(`${API_BASE}/v1/catalog/${storefront}/search?term=${encodeURIComponent(query)}&types=albums,songs,playlists&limit=${limit}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const results = data.results || {};
+    
+    const shelfItems = [];
+    const pool = [...(results.albums?.data || []), ...(results.playlists?.data || [])];
+    
+    pool.forEach(item => {
+      const attr = item.attributes || {};
+      shelfItems.push({
+        type: item.type,
+        id: item.id,
+        title: attr.name || query,
+        subtitle: attr.artistName || attr.curatorName || '',
+        artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
+        raw: item
+      });
+    });
+
+    return shelfItems;
+  } catch (e) {
+    console.error(`[Algorithm] Failed shelf generation for query: ${query}`, e);
+    return [];
+  }
+}
+
+/**
+ * 4. Full 90 Recommendation Batch (Heavy Rotation & Discovery Mix)
+ */
+export async function generate90Recommendations(storefront = DEFAULT_STOREFRONT) {
   const history = getListeningHistory();
   const listenedIds = new Set(history.map(t => String(t.trackId || t.id || t.amTrackId)));
   const artistNames = [...new Set(history.map(t => t.artistName || t.artist).filter(Boolean))];
+  const queries = artistNames.slice(0, 6);
+  if (queries.length === 0) queries.push('Top Hits', 'R&B', 'Hip-Hop', 'Pop');
 
-  const targetSearchQueries = artistNames.slice(0, 8);
-  if (targetSearchQueries.length === 0) {
-    targetSearchQueries.push('Hits', 'Pop', 'Rock', 'Electronic');
-  }
-
-  const allRecommendations = [];
+  const allItems = [];
 
   try {
-    // 1. Fetch recommendations from Search queries for listened artists
-    const fetchPromises = targetSearchQueries.map(async (query) => {
-      try {
-        const res = await fetch(`${API_BASE}/search?term=${encodeURIComponent(query)}&limit=25`);
-        if (!res.ok) return null;
-        return await res.json();
-      } catch {
-        return null;
-      }
-    });
+    const searchPromises = queries.map(q => 
+      fetch(`${API_BASE}/v1/catalog/${storefront}/search?term=${encodeURIComponent(q)}&types=songs,albums&limit=25`)
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null)
+    );
 
-    // 2. Also fetch curated landing recommendations
-    const curatedPromise = fetch(`${API_BASE}/recommendations?name=search-landing`)
+    const chartsPromise = fetch(`${API_BASE}/v1/catalog/${storefront}/charts`)
       .then(r => r.ok ? r.json() : null)
       .catch(() => null);
 
-    const [searchResults, curated] = await Promise.all([
-      Promise.all(fetchPromises),
-      curatedPromise
-    ]);
+    const [charts, ...searchRes] = await Promise.all([chartsPromise, ...searchPromises]);
 
-    // Process search results
-    searchResults.filter(Boolean).forEach(data => {
-      const results = data.results || {};
-      (results.songs?.data || []).forEach(s => {
+    searchRes.filter(Boolean).forEach(data => {
+      const res = data.results || {};
+      (res.songs?.data || []).forEach(s => {
         if (!listenedIds.has(String(s.id))) {
           const attr = s.attributes || {};
-          allRecommendations.push({
+          allItems.push({
             type: 'song',
             id: s.id,
             title: attr.name || 'Song',
@@ -214,48 +201,41 @@ export async function generate90Recommendations() {
           });
         }
       });
-
-      (results.albums?.data || []).forEach(a => {
-        const attr = a.attributes || {};
-        allRecommendations.push({
-          type: 'album',
-          id: a.id,
-          title: attr.name || 'Album',
-          subtitle: attr.artistName || 'Artist',
-          artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
-          raw: a
-        });
-      });
-
-      (results.artists?.data || []).forEach(ar => {
-        const attr = ar.attributes || {};
-        allRecommendations.push({
-          type: 'artist',
-          id: ar.id,
-          title: attr.name || 'Artist',
-          subtitle: 'Artist',
-          artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
-          raw: ar
-        });
-      });
     });
 
-    // Deduplicate and trim to exactly 90
+    if (charts && charts.results?.songs) {
+      charts.results.songs.forEach(group => {
+        (group.data || []).forEach(s => {
+          if (!listenedIds.has(String(s.id))) {
+            const attr = s.attributes || {};
+            allItems.push({
+              type: 'song',
+              id: s.id,
+              title: attr.name || 'Chart Song',
+              subtitle: attr.artistName || 'Artist',
+              artUrl: cleanArtUrl(attr.artwork?.url, 600, 600),
+              raw: s
+            });
+          }
+        });
+      });
+    }
+
     const seen = new Set();
-    const uniqueList = [];
-    const shuffled = allRecommendations.sort(() => 0.5 - Math.random());
+    const finalRecommendations = [];
+    const shuffled = allItems.sort(() => 0.5 - Math.random());
 
     for (const item of shuffled) {
       if (!seen.has(String(item.id))) {
         seen.add(String(item.id));
-        uniqueList.push(item);
-        if (uniqueList.length >= 90) break;
+        finalRecommendations.push(item);
+        if (finalRecommendations.length >= 90) break;
       }
     }
 
-    return uniqueList;
+    return finalRecommendations;
   } catch (e) {
-    console.error('[Algorithm] Failed generating 90 recommendations:', e);
-    return allRecommendations.slice(0, 90);
+    console.error('[Algorithm] Failed 90 recommendations generation:', e);
+    return [];
   }
 }

@@ -5,15 +5,195 @@
 
 (function () {
   const isElectron = !!(window.wave || window.lyricsflow);
-  if (!isElectron) return;
+
+  if (!isElectron) {
+    // Web & Mobile fallback bridge for window.wave and window.lyricsflow
+    const getApiBase = () => {
+      if (typeof window !== 'undefined' && window.API_BASE) return window.API_BASE;
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('lyricsflow_api_base');
+        if (stored) return stored;
+      }
+      return 'https://api.trylyricsflow.com';
+    };
+
+    let lastSentPresence = 0;
+    let lastSentState = {
+      trackId: null,
+      isPlaying: null,
+      posSec: 0,
+      durSec: 0,
+      timestamp: 0
+    };
+
+    const webBridge = {
+      platform: 'web',
+      isWeb: true,
+      windowControls(action) {
+        if (action === 'maximize') {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen?.().catch(() => { });
+          } else {
+            document.exitFullscreen?.().catch(() => { });
+          }
+        } else if (action === 'minimize' || action === 'close') {
+          const drawer = document.getElementById('player-drawer');
+          if (drawer) {
+            drawer.classList.remove('open');
+            document.body.classList.remove('player-drawer-open');
+          }
+        }
+      },
+      onMaximizeChange(callback) {
+        document.addEventListener('fullscreenchange', () => {
+          callback(!!document.fullscreenElement);
+        });
+      },
+      async updateDiscordPresence(data) {
+        if (!data || !data.title) return;
+        // 1. Expose standard DOM attributes for PreMiD and browser extensions
+        try {
+          if (data.title) document.body.setAttribute('data-track-title', data.title);
+          if (data.artist) document.body.setAttribute('data-track-artist', data.artist);
+          if (data.album) document.body.setAttribute('data-track-album', data.album);
+          if (data.artUrl) document.body.setAttribute('data-track-art', data.artUrl);
+          document.body.setAttribute('data-is-playing', data.isPlaying ? 'true' : 'false');
+          if (data.duration) document.body.setAttribute('data-track-duration', String(data.duration));
+          if (data.position !== undefined) document.body.setAttribute('data-track-position', String(data.position));
+        } catch (_) { }
+
+        // 2. Intelligent rate limiting and drift detection (7-second heartbeat, immediate on drag/play/pause/track change)
+        const now = Date.now();
+        const posSec = Math.max(0, Math.floor(data.position || 0));
+        const durSec = Math.max(0, Math.floor(data.duration || 0));
+        const isPlaying = Boolean(data.isPlaying);
+        const trackId = String(data.songId || data.title || '').trim();
+
+        const isTrackChange = lastSentState.trackId !== trackId;
+        const isPlayStateChange = lastSentState.isPlaying !== isPlaying;
+
+        let isSeekOrDrift = false;
+        if (!isTrackChange && !isPlayStateChange && lastSentState.timestamp > 0) {
+          const elapsedSec = (now - lastSentState.timestamp) / 1000;
+          const expectedPosSec = lastSentState.isPlaying ? (lastSentState.posSec + elapsedSec) : lastSentState.posSec;
+          // Trigger immediate update if user dragged slider or playback drifted by more than 2 seconds
+          if (Math.abs(posSec - expectedPosSec) > 2.0) {
+            isSeekOrDrift = true;
+          }
+        }
+
+        const isHeartbeatDue = (now - lastSentPresence) >= 7000;
+        const isForced = Boolean(data._force);
+
+        // Immediate dispatch if track changed, play/pause toggled, dragged slider, or explicit force
+        const shouldSend = isForced || isTrackChange || isPlayStateChange || isSeekOrDrift || (isPlaying && isHeartbeatDue);
+
+        // If paused and already sent paused state, prevent duplicate network spam
+        if (!isPlaying && !isPlayStateChange && !isTrackChange && !isForced) {
+          return;
+        }
+
+        if (!shouldSend) {
+          return;
+        }
+
+        lastSentPresence = now;
+        lastSentState = {
+          trackId,
+          isPlaying,
+          posSec,
+          durSec,
+          timestamp: now
+        };
+
+        try {
+          await fetch(`${getApiBase()}/v1/rpc/presence`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              title: data.title,
+              artist: data.artist || 'Unknown Artist',
+              album: data.album || '',
+              artUrl: data.artUrl || '',
+              songId: data.songId || null,
+              audioQuality: data.audioQuality || '',
+              position: posSec,
+              duration: durSec,
+              isPlaying: isPlaying
+            })
+          });
+        } catch (_) { }
+      },
+      async clearDiscordPresence() {
+        lastSentPresence = 0;
+        lastSentState = {
+          trackId: null,
+          isPlaying: null,
+          posSec: 0,
+          durSec: 0,
+          timestamp: 0
+        };
+        try {
+          document.body.removeAttribute('data-track-title');
+          document.body.removeAttribute('data-track-artist');
+          document.body.setAttribute('data-is-playing', 'false');
+          await fetch(`${getApiBase()}/v1/rpc/clear`, {
+            method: 'POST',
+            credentials: 'include'
+          });
+        } catch (_) { }
+      },
+      openMiniPlayer() {
+        const drawer = document.getElementById('player-drawer');
+        if (drawer) drawer.classList.add('mini-mode');
+      },
+      closeMiniPlayer() {
+        const drawer = document.getElementById('player-drawer');
+        if (drawer) drawer.classList.remove('mini-mode');
+      },
+      sendMiniState(state) {
+        window.dispatchEvent(new CustomEvent('lyricsflow-web-ministate', { detail: state }));
+      },
+      onMiniState(callback) {
+        window.addEventListener('lyricsflow-web-ministate', (e) => callback(e.detail));
+      },
+      sendMiniAction(command, data) {
+        const drawerIframe = document.getElementById('player-drawer-iframe');
+        if (drawerIframe && drawerIframe.contentWindow) {
+          drawerIframe.contentWindow.postMessage({ action: command, ...(data || {}) }, '*');
+        }
+      },
+      onMiniAction(callback) {
+        window.addEventListener('message', (e) => {
+          if (e.data && e.data.action) {
+            callback({ command: e.data.action, data: e.data });
+          }
+        });
+      },
+      onNavigate(callback) {
+        window.addEventListener('popstate', () => callback(window.location.pathname));
+      },
+      onOpenAudioFile(callback) {
+        window.addEventListener('lyricsflow-open-audio-file', (e) => callback(e.detail));
+      }
+    };
+
+    window.wave = webBridge;
+    window.lyricsflow = webBridge;
+  }
 
   const api = window.wave || window.lyricsflow;
   const platform = api.platform || (navigator.userAgent.includes('Windows') ? 'win32' : 'darwin');
 
-  document.documentElement.classList.add('is-electron');
-  document.body.classList.add(`platform-${platform}`);
-  if (api.win10) {
-    document.body.classList.add('platform-win10');
+  if (isElectron) {
+    document.documentElement.classList.add('is-electron');
+    document.body.classList.add(`platform-${platform}`);
+    if (api.win10) {
+      document.body.classList.add('platform-win10');
+    }
+  } else {
+    document.documentElement.classList.add('is-web-platform');
   }
 
   function setupControls() {

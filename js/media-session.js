@@ -77,19 +77,32 @@ export class MediaSessionManager {
       pos = this.player.audio.currentTime;
     }
 
+    const isDiscordRpcEnabled = () => {
+      try {
+        if (localStorage.getItem('lyricsflow_discord_rpc') === 'false') return false;
+        const sm = window.lyricsflowSettingsManager;
+        if (sm && sm.get && sm.get('discordRpc') === false) return false;
+      } catch (_) {}
+      return true;
+    };
+
     if (window.wave?.updateDiscordPresence || window.lyricsflow?.updateDiscordPresence) {
       const api = window.wave || window.lyricsflow;
-      api.updateDiscordPresence({
-        title,
-        artist,
-        album,
-        artUrl,
-        songId: this._currentSongId,
-        audioQuality: this._currentAudioQuality || null,
-        position: pos,
-        duration: dur,
-        isPlaying: this.player ? this.player.isPlaying : false
-      });
+      if (!isDiscordRpcEnabled()) {
+        if (api?.clearDiscordPresence) api.clearDiscordPresence();
+      } else {
+        api.updateDiscordPresence({
+          title,
+          artist,
+          album,
+          artUrl,
+          songId: this._currentSongId,
+          audioQuality: this._currentAudioQuality || null,
+          position: pos,
+          duration: dur,
+          isPlaying: this.player ? this.player.isPlaying : false
+        });
+      }
     }
 
     if (!('mediaSession' in navigator)) return;
@@ -114,24 +127,60 @@ export class MediaSessionManager {
       pos = this.player.audio.currentTime;
     }
 
+    const isDiscordRpcEnabled = () => {
+      try {
+        if (localStorage.getItem('lyricsflow_discord_rpc') === 'false') return false;
+        const sm = window.lyricsflowSettingsManager;
+        if (sm && sm.get && sm.get('discordRpc') === false) return false;
+      } catch (_) {}
+      return true;
+    };
+
     if (window.wave?.updateDiscordPresence || window.lyricsflow?.updateDiscordPresence) {
       const api = window.wave || window.lyricsflow;
-      api.updateDiscordPresence({
-        title: this._currentTitle || '',
-        artist: this._currentArtist || '',
-        album: this._currentAlbum || '',
-        artUrl: this._currentArtUrl || '',
-        songId: this._currentSongId,
-        audioQuality: this._currentAudioQuality || null,
-        position: pos,
-        duration: dur,
-        isPlaying: state === 'playing'
-      });
+      if (!isDiscordRpcEnabled()) {
+        if (api?.clearDiscordPresence) api.clearDiscordPresence();
+      } else {
+        api.updateDiscordPresence({
+          title: this._currentTitle || '',
+          artist: this._currentArtist || '',
+          album: this._currentAlbum || '',
+          artUrl: this._currentArtUrl || '',
+          songId: this._currentSongId,
+          audioQuality: this._currentAudioQuality || null,
+          position: pos,
+          duration: dur,
+          isPlaying: state === 'playing'
+        });
+      }
     }
 
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = state; // 'playing' or 'paused'
+      if ('setPositionState' in navigator.mediaSession && Number.isFinite(dur) && dur > 0) {
+        try {
+          const safePos = Math.max(0, Math.min(pos, dur));
+          navigator.mediaSession.setPositionState({
+            duration: dur,
+            playbackRate: state === 'playing' ? 1.0 : 0.0,
+            position: safePos
+          });
+        } catch (_) {}
+      }
     }
+  }
+
+  updatePosition(curSeconds, durSeconds) {
+    if (!('mediaSession' in navigator) || !('setPositionState' in navigator.mediaSession)) return;
+    if (!Number.isFinite(durSeconds) || durSeconds <= 0) return;
+    try {
+      const safePos = Math.max(0, Math.min(curSeconds, durSeconds));
+      navigator.mediaSession.setPositionState({
+        duration: durSeconds,
+        playbackRate: this.player ? (this.player.isPlaying ? 1.0 : 0.0) : 1.0,
+        position: safePos
+      });
+    } catch (_) {}
   }
 
   /**

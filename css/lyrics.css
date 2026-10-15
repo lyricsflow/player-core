@@ -37,10 +37,39 @@
   width: 100%;
   font-size: var(--DefaultLyricsSize) !important;
   font-weight: 700;
-  scrollbar-width: none;
+  scrollbar-width: thin;
   scrollbar-color: transparent transparent;
   z-index: 9;
+  transition: scrollbar-color 0.3s ease;
+}
 
+#LyricsflowPage .LyricsContainer .LyricsContent:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.38) transparent;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  transition: background 0.25s ease;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent {
   --ImageMask: linear-gradient(180deg,
       transparent 0,
       transparent 16px,
@@ -101,31 +130,69 @@
   transform: translate3d(0, var(--ty, 0px), 0) scale(var(--line-scale, 0.98));
   transform-origin: left center;
   margin-bottom: clamp(14px, 0.45em, 32px) !important;
-  padding: 0.25em 0 !important;
+  padding: 0.28em 0.7em !important;
+  border-radius: 18px;
+  position: relative;
   transition:
-    opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    filter 0.35s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   font-size: var(--font-size) !important;
 }
 
+#LyricsflowPage .LyricsContainer .LyricsContent .line::before {
+  content: "";
+  position: absolute;
+  inset: -2px -8px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  z-index: -1;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .line:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .line.tap-pop {
+  animation: lineTapPop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+}
+
+@keyframes lineTapPop {
+  0% { transform: translate3d(0, var(--ty, 0px), 0) scale(calc(var(--line-scale, 1) * 0.96)); }
+  50% { transform: translate3d(0, var(--ty, 0px), 0) scale(calc(var(--line-scale, 1) * 1.03)); }
+  100% { transform: translate3d(0, var(--ty, 0px), 0) scale(var(--line-scale, 1)); }
+}
+
 #LyricsflowPage .LyricsContainer .LyricsContent:has(.line:hover) .line {
-  filter: none !important;
-  transition: filter 0s, opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1) !important;
+  filter: blur(0px) !important;
+  transition: filter 0.35s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line .word,
 #LyricsflowPage .LyricsContainer .LyricsContent .line .letter,
-#LyricsflowPage .LyricsContainer .LyricsContent .line {
+#LyricsflowPage .LyricsContainer .LyricsContent .line.static {
   cursor: pointer;
   font-weight: 700;
   -webkit-text-fill-color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  background-image: linear-gradient(var(--gradient-degrees, 90deg),
+      rgba(255, 255, 255, var(--gradient-alpha, 0.9)) var(--gradient-position, -20%),
+      rgba(255, 255, 255, var(--gradient-alpha-end, 0.35)) calc(var(--gradient-position, -20%) + var(--gradient-fade-width, 20%) + var(--gradient-offset, 0%)));
   position: relative;
   white-space: pre-wrap;
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
-  text-rendering: optimizeLegibility !important;
+  text-rendering: geometricPrecision !important;
   font-synthesis: none !important;
+  font-variant-ligatures: normal !important;
+  font-feature-settings: "liga" 1, "calt" 1, "kern" 1 !important;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.38));
 }
 
 /* GPU-promote only active and nearby lines to avoid 500+ compositing layers */
@@ -153,13 +220,13 @@
   --DefaultLyricsScale: 1.0;
   --DefaultEmphasisLyricsScale: 1.0;
   --line-scale: 0.98;
-  --Vocal-NotSung-opacity: 0.51;
+  --Vocal-NotSung-opacity: 0.38;
   --Vocal-Active-opacity: 1;
-  --Vocal-Sung-opacity: 0.497;
-  --Vocal-Hover-opacity: 1;
-  --gradient-degrees: 180deg !important;
-  --gradient-alpha: 1 !important;
-  --gradient-alpha-end: 0.4 !important;
+  --Vocal-Sung-opacity: 0.38;
+  --Vocal-Hover-opacity: 0.85;
+  --gradient-degrees: 90deg;
+  --gradient-alpha: 0.9;
+  --gradient-alpha-end: 0.35;
   letter-spacing: 0;
   --lyrics-line-height: 1.1818181818;
   line-height: var(--lyrics-line-height) !important;
@@ -170,48 +237,40 @@
 /* ── Active Line ── */
 #LyricsflowPage .LyricsContainer .LyricsContent .line.Active {
   --line-scale: 1;
-  opacity: 1;
+  opacity: 1 !important;
+  --gradient-alpha: 1 !important;
+  --gradient-alpha-end: 0.45 !important;
   transition: none;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.Active .word,
 #LyricsflowPage .LyricsContainer .LyricsContent .line.Active .letter,
 #LyricsflowPage .LyricsContainer .LyricsContent .line.static {
-  background-image: linear-gradient(var(--gradient-degrees),
-      color-mix(in srgb, rgba(var(--ArtworkGlowColor, 255, 255, 255), var(--gradient-alpha)) 7%, rgba(255, 255, 255, var(--gradient-alpha))) var(--gradient-position),
-      color-mix(in srgb, rgba(var(--ArtworkGlowColor, 255, 255, 255), var(--gradient-alpha-end)) 7%, rgba(255, 255, 255, var(--gradient-alpha-end))) calc(var(--gradient-position) + var(--gradient-fade-width, 20%) + var(--gradient-offset)));
+  background-image: linear-gradient(var(--gradient-degrees, 90deg),
+      rgba(255, 255, 255, var(--gradient-alpha, 1)) var(--gradient-position, -20%),
+      rgba(255, 255, 255, var(--gradient-alpha-end, 0.45)) calc(var(--gradient-position, -20%) + var(--gradient-fade-width, 20%) + var(--gradient-offset, 0%)));
 }
 
 /* ── NotSung State ── */
-#LyricsflowPage .LyricsContainer .LyricsContent .line.NotSung,
-#LyricsflowPage .LyricsContainer .LyricsContent .line.NotSung .word,
-#LyricsflowPage .LyricsContainer .LyricsContent .line.NotSung .letter {
-  text-shadow: 0 0 var(--BlurAmount, 0) rgba(var(--gradient-color), var(--gradient-color), var(--gradient-color), calc(var(--gradient-alpha-end) * 0.55));
-}
-
 #LyricsflowPage .LyricsContainer .LyricsContent .line.NotSung {
   opacity: var(--Vocal-NotSung-opacity);
   --gradient-position: -20% !important;
+  text-shadow: 0 0 var(--BlurAmount, 0) rgba(var(--gradient-color), var(--gradient-color), var(--gradient-color), calc(var(--gradient-alpha-end) * 0.55));
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.NotSung .word,
 #LyricsflowPage .LyricsContainer .LyricsContent .line.NotSung .letter {
-  --text-shadow-blur-radius: 4px !important;
-  --text-shadow-opacity: -30% !important;
+  --text-shadow-blur-radius: 0px !important;
+  --text-shadow-opacity: 0% !important;
   --gradient-position: -20% !important;
 }
 
 /* ── Sung State ── */
 #LyricsflowPage .LyricsContainer .LyricsContent .line.Sung,
-#LyricsflowPage .LyricsContainer .LyricsContent .line.Sung .word,
-#LyricsflowPage .LyricsContainer .LyricsContent .line.Sung .letter,
 #LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer[data-lyrics-type="Static"] .line {
-  text-shadow: 0 0 var(--BlurAmount, 0) color-mix(in srgb, rgba(var(--ArtworkGlowColor, 255, 255, 255), calc(var(--gradient-alpha) * 0.55)) 15%, rgba(255, 255, 255, calc(var(--gradient-alpha) * 0.55)));
-}
-
-#LyricsflowPage .LyricsContainer .LyricsContent .line.Sung {
   opacity: var(--Vocal-Sung-opacity);
   --gradient-position: 100% !important;
+  text-shadow: 0 0 var(--BlurAmount, 0) color-mix(in srgb, rgba(var(--ArtworkGlowColor, 255, 255, 255), calc(var(--gradient-alpha) * 0.55)) 15%, rgba(255, 255, 255, calc(var(--gradient-alpha) * 0.55)));
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.Sung .word,
@@ -219,11 +278,28 @@
   --gradient-position: 100% !important;
 }
 
+/* RTL line and word gradient direction: 270deg sweeps right-to-left */
+#LyricsflowPage .LyricsContainer .LyricsContent .line.rtl,
+#LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .word,
+#LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .letter,
+#LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .word-group {
+  --gradient-degrees: 270deg !important;
+  font-variant-ligatures: normal !important;
+  font-feature-settings: "liga" 1, "calt" 1, "kern" 1 !important;
+  letter-spacing: normal !important;
+}
+
 /* ── Active State ── */
-/* Word-to-word (Syllable) lyrics: keep every line at full opacity,
-   active or not. Inactive lines are still differentiated by the blur. */
-#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer[data-lyrics-type="Syllable"] .line {
+#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer[data-lyrics-type="Syllable"] .line.Active {
   opacity: 1 !important;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer[data-lyrics-type="Syllable"] .line:not(.Active) {
+  opacity: 0.38 !important;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .LyricsflowScrollContainer[data-lyrics-type="Syllable"] .line:not(.Active):hover {
+  opacity: 0.85 !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.Active {
@@ -337,7 +413,7 @@
 #LyricsflowPage .LyricsContainer .LyricsContent .line.rtl .word-group {
   --gradient-degrees: -90deg !important;
   transform-origin: center center;
-  font-weight: 1000 !important;
+  font-weight: 900 !important;
   vertical-align: baseline !important;
   font-variant-ligatures: normal;
   font-feature-settings: "liga" 1, "calt" 1, "kern" 1;
@@ -529,39 +605,77 @@
    ═══════════════════════════════════════════════ */
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.musical-line {
-  transition: transform 0.14s var(--stagger-delay, 0s), opacity 0.14s var(--stagger-delay, 0s) !important;
   position: relative;
-  transform-origin: center center !important;
-  z-index: -1;
-  line-height: 0 !important;
+  transform-origin: left center !important;
+  display: flex !important;
+  align-items: center;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
   margin: 0 !important;
+  padding: 0 0.7em !important;
+  z-index: 1;
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              padding 0.35s ease,
+              opacity 0.35s ease;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.musical-line .dotGroup {
-  --dot-gap: clamp(0.08em, 0.5cqw, 0.45em);
-  display: flex;
+  --dot-gap: clamp(8px, 0.8cqw, 18px);
+  display: inline-flex;
   flex-direction: row;
+  align-items: center;
   gap: var(--dot-gap);
-  scale: 0;
-  opacity: 0;
   transform-origin: left center;
-  will-change: scale, opacity;
+  transform: scale(0.6);
+  opacity: 0;
+  will-change: transform, scale, opacity;
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.musical-line .dotGroup .dot {
-  --font-size: calc(var(--DefaultLyricsSize) * 1.5);
-  --opacity-size: 0.35;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--DefaultLyricsSize) * 1.8) !important;
+  line-height: 1 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
   border-radius: 50%;
-  scale: 1.1;
-  font-size: var(--font-size) !important;
-  opacity: var(--opacity-size);
-  --gradient-position: 100%;
+  user-select: none;
+  pointer-events: none;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.musical-line.Active {
-  z-index: -1;
-  margin: -1.3cqw 0 !important;
-  line-height: var(--lyrics-line-height) !important;
+  max-height: calc(var(--DefaultLyricsSize) * 2.4);
+  padding: 0.28em 0.7em !important;
+  margin-top: clamp(8px, 0.3em, 20px) !important;
+  margin-bottom: clamp(14px, 0.45em, 32px) !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .line.musical-line.Active .dotGroup {
+  transform: scale(1);
+  opacity: 1;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .line.musical-line.OppositeAligned,
+#LyricsflowPage .LyricsContainer .LyricsContent .line.musical-line.rtl {
+  justify-content: flex-end;
+  transform-origin: right center !important;
+}
+
+#LyricsflowPage .LyricsContainer .LyricsContent .line.musical-line.OppositeAligned .dotGroup,
+#LyricsflowPage .LyricsContainer .LyricsContent .line.musical-line.rtl .dotGroup {
+  transform-origin: right center;
 }
 
 /* ═══════════════════════════════════════════════
@@ -608,19 +722,23 @@
 #LyricsflowPage .LyricsContainer .LyricsContent .line .bg-wrapper.active {
   opacity: 0.75;
   pointer-events: auto;
+  overflow: visible !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.bg-line {
   display: block !important;
   width: 100% !important;
   margin: 0.3em 0 0 0 !important;
-  padding: 0 !important;
+  padding: 0 0 0.25em 0 !important;
+  line-height: 1.35 !important;
   text-align: inherit !important;
   transform: none !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line .bg-wrapper.top .line.bg-line {
   margin: 0 0 0.3em 0 !important;
+  padding: 0.25em 0 0 0 !important;
+  line-height: 1.35 !important;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.bg-line,

@@ -1300,8 +1300,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 16px 28px 0;
-  margin-bottom: -10px;
+  padding: 6px 24px 0;
+  margin-bottom: -4px;
   position: relative;
   z-index: 100;
 }
@@ -1847,61 +1847,215 @@
 
 /* ══════════════════════════════════════════════════
    MOBILE BOTTOM NAVIGATION BAR
+/* ══════════════════════════════════════════════════
+   MOBILE FLOATING LIQUID GLASS NAVIGATION DOCK
    ══════════════════════════════════════════════════ */
-.am-mobile-bottom-nav {
+.am-mobile-liquid-dock {
   display: none;
 }
 
 @media (max-width: 900px) {
-  .am-mobile-bottom-nav {
+  .am-mobile-liquid-dock {
     display: flex;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 62px;
-    background: rgba(18, 18, 20, 0.88);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    z-index: 2000;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: 14px;
+    right: 14px;
+    z-index: 2500;
     align-items: center;
+    gap: 10px;
+    pointer-events: none;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  }
+
+  .am-mobile-liquid-dock * {
+    pointer-events: auto;
+  }
+
+  /* Shared Liquid Glass Pill Styling */
+  .am-liquid-pill {
+    background: rgba(28, 28, 30, 0.76);
+    backdrop-filter: blur(36px) saturate(210%);
+    -webkit-backdrop-filter: blur(36px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    transition: all 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Full Navigation Pill */
+  .am-liquid-nav-pill {
+    flex: 1;
+    padding: 3px 6px;
     justify-content: space-around;
-    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .am-mobile-liquid-dock.collapsed .am-liquid-nav-pill {
+    display: none;
   }
 
   .am-mob-nav-btn {
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.6);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 2px;
     flex: 1;
     height: 100%;
+    border-radius: 999px;
     cursor: pointer;
-    transition: color 0.2s ease, transform 0.15s ease;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .am-mob-nav-btn svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .am-mob-nav-btn span {
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .am-mob-nav-btn.am-mob-active {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ff3b5c;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .am-mob-nav-btn.am-mob-active svg {
+    transform: scale(1.08);
+  }
+
+  /* Collapsed Mini-Player Pill */
+  .am-liquid-collapsed-capsule {
+    flex: 1;
+    display: none;
+    padding: 0 12px 0 6px;
+    gap: 10px;
+  }
+
+  .am-mobile-liquid-dock.collapsed .am-liquid-collapsed-capsule {
+    display: flex;
+  }
+
+  .am-liquid-view-icon-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .am-liquid-view-icon-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .am-liquid-track-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .am-liquid-track-art {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #222;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  }
+
+  .am-liquid-track-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .am-liquid-track-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+  }
+
+  .am-liquid-track-artist {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+
+  .am-liquid-play-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .am-liquid-play-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Standalone Floating Search Button (Pill or Circle) */
+  .am-liquid-search-btn {
+    width: 54px;
+    height: 54px;
+    padding: 0;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  .am-liquid-search-btn svg {
     width: 22px;
     height: 22px;
   }
 
-  .am-mob-nav-btn span {
-    font-size: 0.72rem;
-    font-weight: 600;
+  .am-liquid-search-btn.am-mob-active {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.3);
   }
 
-  .am-mob-nav-btn.am-mob-active {
-    color: #ffffff;
-  }
-
-  /* Padding at bottom of main content on mobile for the fixed nav */
+  /* Padding at bottom of main content on mobile for the floating dock */
   .am-content {
-    padding-bottom: 90px !important;
+    padding-bottom: 96px !important;
   }
 }
 
@@ -2672,12 +2826,7 @@
 
 @media (max-width: 900px) {
   .am-preview-mini-player {
-    left: 10px;
-    right: 10px;
-    bottom: 70px;
-    max-width: none;
-    border-radius: 14px;
-    z-index: 1950;
+    display: none !important;
   }
 
   .am-preview-shuffle-btn,

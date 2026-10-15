@@ -361,7 +361,13 @@ export class PreviewPlayer {
     if (this.airplayBtn) {
       this.airplayBtn.onclick = (e) => {
         e.stopPropagation();
-        if (window.WebKitPlaybackTargetAvailabilityEvent) {
+        const popup = document.getElementById('airplay-popup');
+        const btnAirplay = document.getElementById('btn-airplay');
+        if (btnAirplay) {
+          btnAirplay.click();
+        } else if (popup) {
+          popup.style.display = 'flex';
+        } else if (this.audio?.webkitShowPlaybackTargetPicker) {
           this.audio.webkitShowPlaybackTargetPicker();
         } else {
           showToast('AirPlay / Output selection');
@@ -493,9 +499,9 @@ export class PreviewPlayer {
             this._setProgressUI(position, durMs);
           }
 
-          // Throttle real-time position dispatch to Discord RPC every 1.5s
+          // Throttle real-time position dispatch to Discord RPC every 7s (Discord tracks progress internally)
           const now = Date.now();
-          if (now - this._lastDiscordSyncTime > 1500) {
+          if (now - this._lastDiscordSyncTime > 7000) {
             this._lastDiscordSyncTime = now;
             this._syncPresenceWithRealPosition(position / 1000, durMs / 1000);
           }
@@ -519,8 +525,10 @@ export class PreviewPlayer {
     });
   }
 
-  _syncPresenceWithRealPosition(posSec, durSec) {
-    if (settingsManager && settingsManager.get("discordRpc") === false) {
+  _syncPresenceWithRealPosition(posSec, durSec, force = false) {
+    const isRpcDisabled = (settingsManager && settingsManager.get("discordRpc") === false) ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('lyricsflow_discord_rpc') === 'false');
+    if (isRpcDisabled) {
       const api = window.wave || window.lyricsflow;
       if (api?.clearDiscordPresence) {
         api.clearDiscordPresence();
@@ -541,7 +549,8 @@ export class PreviewPlayer {
         audioQuality,
         position: posSec,
         duration: durSec,
-        isPlaying: this.isPlaying
+        isPlaying: this.isPlaying,
+        _force: force
       });
     }
   }
@@ -636,6 +645,17 @@ export class PreviewPlayer {
           this.container.setAttribute('data-duration', (dur * 1000).toString());
         }
       }
+
+      if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && Number.isFinite(dur) && dur > 0) {
+        try {
+          const safePos = Math.max(0, Math.min(cur, dur));
+          navigator.mediaSession.setPositionState({
+            duration: dur,
+            playbackRate: this.isPlaying ? 1.0 : 0.0,
+            position: safePos
+          });
+        } catch (_) {}
+      }
     });
 
     this.audio.addEventListener('error', (err) => {
@@ -709,7 +729,7 @@ export class PreviewPlayer {
   _updateMediaSessionMetadata(track) {
     const durSec = parseFloat(this.container?.getAttribute('data-duration') || '0') / 1000 || (this.audio?.duration || 0);
     const posSec = parseFloat(this.container?.getAttribute('data-position') || '0') / 1000 || (this.audio?.currentTime || 0);
-    this._syncPresenceWithRealPosition(posSec, durSec);
+    this._syncPresenceWithRealPosition(posSec, durSec, true);
 
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -728,7 +748,7 @@ export class PreviewPlayer {
   _updateMediaSessionState(state) {
     const durSec = parseFloat(this.container?.getAttribute('data-duration') || '0') / 1000 || (this.audio?.duration || 0);
     const posSec = parseFloat(this.container?.getAttribute('data-position') || '0') / 1000 || (this.audio?.currentTime || 0);
-    this._syncPresenceWithRealPosition(posSec, durSec);
+    this._syncPresenceWithRealPosition(posSec, durSec, true);
 
     if (!('mediaSession' in navigator)) return;
     if (['none', 'paused', 'playing'].includes(state)) {
@@ -780,7 +800,7 @@ export class PreviewPlayer {
     }
     const targetDur = durMs > 0 ? durMs : (this.audio.duration * 1000 || positionMs);
     if (targetDur > 0) this._setProgressUI(positionMs, targetDur);
-    this._syncPresenceWithRealPosition(positionMs / 1000, targetDur / 1000);
+    this._syncPresenceWithRealPosition(positionMs / 1000, targetDur / 1000, true);
   }
 
   _setProgressUI(positionMs, durationMs) {

@@ -1003,33 +1003,66 @@
         </div>
       </div>
 
-      <!-- ═══ Mobile Bottom Navigation Bar ═══ -->
-      <nav class="am-mobile-bottom-nav" id="mobile-bottom-nav">
-        <button class="am-mob-nav-btn hidden" data-page="home" id="mob-nav-home">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+      <!-- ═══ Mobile Liquid Glass Floating Navigation Dock ═══ -->
+      <nav class="am-mobile-liquid-dock" id="mobile-bottom-nav">
+        <!-- Expanded Full Navigation State -->
+        <div class="am-liquid-pill am-liquid-nav-pill" id="am-liquid-nav-pill">
+          <button class="am-mob-nav-btn" data-page="home" id="mob-nav-home" title="Home">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+            </svg>
+            <span>Home</span>
+          </button>
+          <button class="am-mob-nav-btn" data-page="new" id="mob-nav-new" title="New">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z" />
+            </svg>
+            <span>New</span>
+          </button>
+          <button class="am-mob-nav-btn" data-page="download-song" id="mob-nav-download" title="Download">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor">
+              <path fill-rule="evenodd" clip-rule="evenodd"
+                d="M50 2C23.49 2 2 23.49 2 50s21.49 48 48 48 48-21.49 48-48S76.51 2 50 2zm0 10c20.987 0 38 17.013 38 38S70.987 88 50 88 12 70.987 12 50 29.013 12 50 12z" />
+              <path
+                d="M46 28a4 4 0 0 1 8 0v37.343l13.172-13.171a4 4 0 1 1 5.656 5.656l-20 20a4 4 0 0 1-5.656 0l-20-20a4 4 0 1 1 5.656-5.656L46 65.343V28z" />
+            </svg>
+            <span>Download</span>
+          </button>
+          <button class="am-mob-nav-btn" data-page="library-hub" id="mob-nav-library" title="Library">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+            </svg>
+            <span>Library</span>
+          </button>
+        </div>
+
+        <!-- Collapsed Mini-Player View State (Shown on scroll down) -->
+        <div class="am-liquid-pill am-liquid-collapsed-capsule" id="am-liquid-collapsed-capsule">
+          <button class="am-liquid-view-icon-btn" id="am-liquid-view-icon-btn" title="Current View">
+            <svg id="am-liquid-view-svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+            </svg>
+          </button>
+          <div class="am-liquid-track-info" id="am-liquid-track-info">
+            <img class="am-liquid-track-art" id="am-liquid-track-art" src="favicon.svg" alt="Art" />
+            <div class="am-liquid-track-text">
+              <div class="am-liquid-track-title" id="am-liquid-track-title">Not Playing</div>
+              <div class="am-liquid-track-artist" id="am-liquid-track-artist">LyricsFlow</div>
+            </div>
+            <button class="am-liquid-play-btn" id="am-liquid-play-btn" title="Play/Pause">
+              <svg id="am-liquid-play-svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Standalone Search Floating Button (Always on right) -->
+        <button class="am-liquid-pill am-liquid-search-btn" data-page="listen" id="mob-nav-search" title="Search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16" y2="16"></line>
           </svg>
-          <span data-i18n="nav_home">Home</span>
-        </button>
-        <button class="am-mob-nav-btn am-mob-active" data-page="listen" id="mob-nav-search">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-          </svg>
-          <span data-i18n="nav_search">Search</span>
-        </button>
-        <button class="am-mob-nav-btn" data-page="library-hub" id="mob-nav-library">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
-          </svg>
-          <span data-i18n="nav_library">Library</span>
-        </button>
-        <button class="am-mob-nav-btn" data-page="upload" id="mob-nav-upload">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-          </svg>
-          <span data-i18n="nav_upload">Upload</span>
         </button>
       </nav>
     </main>

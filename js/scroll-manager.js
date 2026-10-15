@@ -2,6 +2,7 @@
  * LyricsFlow — Scroll Manager
  * Tracks user-initiated scrolling so auto-positioning (via --ty) can yield.
  */
+import { forceLyricsScroll } from './lyrics-animator.js';
 
 let userScrollTimeout = null;
 let userIsScrolling = false;
@@ -35,7 +36,7 @@ export function scrollToActiveLine(_lyricsContent, _force = false) {
 }
 
 export function queueForceScroll() {
-  // Lines handle their own positioning — no-op
+  forceLyricsScroll();
 }
 
 export function resetScrollManager() {

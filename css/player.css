@@ -328,6 +328,116 @@
     fill: #1a1a1c !important;
   }
 
+  /* ── Apple Music Sing Widget & Vertical Liquid Glass Capsule ── */
+  .pc-sing-widget {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pc-sing-btn {
+    position: relative;
+  }
+
+  .pc-sing-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+    filter: brightness(0) invert(1);
+    transition: filter 0.22s ease, transform 0.22s ease;
+  }
+
+  .pc-sing-btn.active .pc-sing-icon {
+    filter: brightness(0);
+    /* Black icon on white active button */
+  }
+
+  /* Minimized by default vertical liquid glass capsule popover */
+  .pc-sing-capsule {
+    position: absolute;
+    bottom: calc(100% + 14px);
+    left: 50%;
+    transform: translateX(-50%) translateY(14px) scale(0.9);
+    width: 52px;
+    height: 196px;
+    background: rgba(30, 30, 34, 0.45);
+    backdrop-filter: blur(40px) saturate(210%);
+    -webkit-backdrop-filter: blur(40px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    padding: 6px;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+      visibility 0.3s;
+    z-index: 100001;
+  }
+
+  .pc-sing-capsule.active {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+
+  /* Vertical slider track */
+  .pc-sing-slider-track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    overflow: hidden;
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  /* Bottom-up fill with pure Apple white glow */
+  .pc-sing-slider-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.95), #ffffff);
+    border-radius: 999px;
+    box-shadow: 0 -2px 14px rgba(255, 255, 255, 0.4);
+    transition: height 0.05s ease-out;
+  }
+
+  /* Thumb with micro vocal icon that rides with the fill */
+  .pc-sing-slider-thumb {
+    position: absolute;
+    bottom: 0%;
+    left: 50%;
+    transform: translate(-50%, 50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    transition: bottom 0.05s ease-out;
+  }
+
+  .pc-sing-thumb-icon {
+    width: 18px;
+    height: 18px;
+    display: block;
+    filter: brightness(0);
+  }
+
   /* Apple Music Liquid Capsule Switcher */
   .pc-capsule-toggle {
     position: relative;
@@ -449,6 +559,7 @@
 
 /* ── Tablet Specific Optimizations (769px to 1024px) ── */
 @media (min-width: 769px) and (max-width: 1024px) {
+
   /* On tablets, avoid top header collisions: hide top volume bar */
   .pc-top-volume-bar {
     display: none !important;
@@ -492,6 +603,7 @@
 
 /* Strictly enable window controls on desktop Electron only */
 @media (min-width: 1025px) {
+
   html.is-electron:not(.is-web) .electron-window-controls,
   html.is-electron:not(.is-web) #player-window-controls {
     display: flex !important;
@@ -712,14 +824,51 @@ body.is-web:not(.is-iframe) .pc-top-left-bar {
 .MetadataActions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.MetadataActions .favorite-button,
+.MetadataActions .options-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  padding: 4px;
-  border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+
+
+
+.MetadataActions .favorite-button svg {
+  width: 35px;
+  height: 36px;
+}
+
+.MetadataActions .options-button svg {
+  width: 25px;
+  height: 25px;
+  fill: #ffffff !important;
+  color: #ffffff !important;
+  display: block;
+}
+
+.MetadataActions .options-button svg circle {
+  fill: #ffffff !important;
+  opacity: 1 !important;
 }
 
 #LyricsflowPage .ContentBox .NowBar .Header .Metadata {
@@ -748,7 +897,7 @@ body.is-web:not(.is-iframe) .pc-top-left-bar {
 }
 
 #LyricsflowPage .ContentBox .NowBar .Header .Metadata .SongName.rtl {
-  font-weight: 1000 !important;
+  font-weight: 900 !important;
 }
 
 #LyricsflowPage .ContentBox .NowBar .Header .Metadata .Artists {
@@ -761,7 +910,7 @@ body.is-web:not(.is-iframe) .pc-top-left-bar {
 }
 
 #LyricsflowPage .ContentBox .NowBar .Header .Metadata .Artists.rtl {
-  font-weight: 1000 !important;
+  font-weight: 900 !important;
 }
 
 @media (max-width: 768px) {
@@ -777,126 +926,233 @@ body.is-web:not(.is-iframe) .pc-top-left-bar {
 
 .favorite-button,
 .options-button {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   flex-shrink: 0;
-  transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
 }
 
 .favorite-button:hover,
 .options-button:hover {
-  background: rgba(255, 255, 255, 0.24);
-  transform: scale3d(1.08, 1.08, 1);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: scale(1.06);
 }
 
 .favorite-button:active,
 .options-button:active {
-  transform: scale3d(0.94, 0.94, 1);
+  transform: scale(0.94);
 }
 
 .favorite-button.active {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.22) !important;
 }
 
-.favorite-button img {
-  width: 32px;
-  height: 32px;
-  filter: none !important;
-  opacity: 1 !important;
+.favorite-button .favorite-icon,
+.favorite-button svg {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 .options-button svg {
   width: 18px;
   height: 18px;
   opacity: 0.95;
-  fill: currentColor;
+  fill: #ffffff;
 }
 
 .options-button img {
   width: 20px;
   height: 20px;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 /* ── Queue Panel (Apple Music Style) ── */
 .QueuePanel {
   position: fixed;
-  right: -400px;
+  right: -420px;
   top: 0;
-  width: 380px;
+  width: 390px;
   height: 100%;
-  background: rgba(20, 20, 20, 0.85);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  background: rgba(28, 28, 30, 0.88);
+  backdrop-filter: blur(48px) saturate(190%);
+  -webkit-backdrop-filter: blur(48px) saturate(190%);
   z-index: 1000;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -12px 0 48px rgba(0, 0, 0, 0.55);
   display: flex;
   flex-direction: column;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .QueuePanel.active {
-  transform: translateX(-400px);
+  transform: translateX(-420px);
 }
 
-.QueueHeader {
-  padding: 30px 24px 20px;
+/* AutoPlay & AutoMix segmented header bar */
+.QueuePillHeader {
+  padding: 24px 20px 14px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-}
-
-.QueueHeader h3 {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.02em;
-}
-
-.QueueActions {
-  display: flex;
-  align-items: center;
   gap: 12px;
 }
 
-#queue-clear {
-  background: transparent;
-  border: none;
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.9rem;
-  cursor: pointer;
+.QueuePillBar {
+  display: flex;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 3px;
+  flex: 1;
+  gap: 4px;
 }
 
-#queue-close {
-  background: rgba(255, 255, 255, 0.1);
+.queue-mode-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
   border: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  color: #fff;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease;
+}
+
+.queue-mode-pill img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1);
+}
+
+.queue-mode-pill.active {
+  background: rgba(255, 255, 255, 0.95);
+  color: #111;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.queue-mode-pill.active img {
+  filter: brightness(0);
+}
+
+.queue-filter-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  width: 
+  
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.15s ease;
+}
+
+.queue-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: scale(1.05);
+}
+
+.queue-filter-btn img {
+  width: 45px;
+  height: 17px;
+  filter: brightness(0) invert(1);
+}
+
+.queue-filter-popup {
+  position: absolute;
+  top: 54px;
+  right: 18px;
+  z-index: 100;
+  background: rgba(38, 38, 42, 0.88);
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
+  border: 0.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(0, 0, 0, 0.3);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  user-select: none;
+  animation: amMenuPop 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.queue-filter-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.queue-filter-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.queue-filter-item.active {
+  color: #ff375f;
+  font-weight: 600;
+}
+
+.QueueSectionHeader {
+  padding: 14px 20px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.QueueSectionTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.QueueSectionSubtitle {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+}
+
+.queue-clear-btn {
+  background: transparent;
+  border: none;
+  color: #fa586a;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.queue-clear-btn:hover {
+  opacity: 0.75;
 }
 
 .QueueList {
   flex: 1;
   overflow-y: auto;
-  padding: 0 16px 40px;
+  padding: 4px 14px 40px;
   scrollbar-width: none;
 }
 
@@ -907,11 +1163,11 @@ body.is-web:not(.is-iframe) .pc-top-left-bar {
 .player-queue-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px;
-  border-radius: 12px;
+  gap: 14px;
+  padding: 8px 10px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s;
 }
 
 .player-queue-item:hover {
@@ -919,13 +1175,22 @@ body.is-web:not(.is-iframe) .pc-top-left-bar {
 }
 
 .player-queue-item.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
 }
 
-.player-queue-item.dragging {
-  opacity: 0.5;
-  background: var(--apple-red-glass);
-  transform: scale(0.98);
+.player-queue-item .item-options-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.1rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.player-queue-item .item-options-btn:hover {
+  color: #fff;
 }
 
 .player-queue-item .drag-handle {
@@ -1621,7 +1886,7 @@ body.is-rendering .NowBar {
   max-height: 85vh;
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 
+  box-shadow:
     0 40px 100px -10px rgba(0, 0, 0, 0.75),
     inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
@@ -1864,13 +2129,13 @@ body.is-rendering .NowBar {
   transition: transform 0.25s cubic-bezier(0.34, 1.45, 0.64, 1);
 }
 
-.aero-toggle input:checked + .aero-toggle-track {
+.aero-toggle input:checked+.aero-toggle-track {
   background: rgba(255, 255, 255, 0.95);
   border-color: rgba(255, 255, 255, 0.95);
   box-shadow: 0 0 16px rgba(255, 255, 255, 0.4);
 }
 
-.aero-toggle input:checked + .aero-toggle-track::after {
+.aero-toggle input:checked+.aero-toggle-track::after {
   transform: translateX(20px);
   background: #111116;
 }
@@ -3381,16 +3646,18 @@ body.is-rendering .NowBar {
   background: #e5e5e5;
 }
 
-/* ── Lyrics Container Hidden State (Apple Music Smooth Slide Down) ── */
+/* ── Lyrics Container Hidden State (Sine-Out Scale + Fade) ── */
 .LyricsContainer {
-  transition: opacity 0.45s cubic-bezier(0.32, 0.72, 0, 1), transform 0.55s cubic-bezier(0.32, 0.72, 0, 1);
-  transform: translateY(0);
+  transition: opacity 0.3s cubic-bezier(0.39, 0.575, 0.565, 1), transform 0.3s cubic-bezier(0.39, 0.575, 0.565, 1);
+  transform: scale(1);
 }
 
-.LyricsContainer.hidden {
+
+#LyricsflowPage .LyricsContainer.hidden {
+  display: flex !important;
+  pointer-events: none !important;
   opacity: 0 !important;
-  pointer-events: none;
-  transform: translateY(50px) scale(0.985);
+  transform: scale(0.95);
 }
 
 /* ── NowBar Animations ── */
@@ -3457,6 +3724,8 @@ body.is-rendering .NowBar {
   }
 
   #LyricsflowPage .ContentBox .QueuePanel.active {
+    top: 71px;
+
     opacity: 1;
     pointer-events: auto;
     visibility: visible;
@@ -3547,7 +3816,8 @@ body.is-rendering .NowBar {
    Direct visual styles from spicy-lyrics/src/css/Lyrics/Mixed.css
    ══════════════════════════════════════════════════ */
 body.is-spicy-lyrics #LyricsflowPage .LyricsContainer .LyricsContent .line {
-  transform: none !important; /* Disable AMLL per-line --ty shifting */
+  transform: none !important;
+  /* Disable AMLL per-line --ty shifting */
   transition: opacity 0.2s cubic-bezier(0.61, 1, 0.88, 1);
 }
 
@@ -3564,14 +3834,136 @@ body.is-spicy-lyrics .line .letter {
   will-change: transform, opacity, scale;
 }
 
-body.is-spicy-lyrics .line.Active .word,
-body.is-spicy-lyrics .line.Active .letter {
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.95) var(--gradient-position, -20%),
-    rgba(255, 255, 255, 0.4) calc(var(--gradient-position, -20%) + 20%)
-  ) !important;
-  text-shadow: 0 0 var(--text-shadow-blur-radius, 4px) rgba(255, 255, 255, var(--text-shadow-opacity, 0%)) !important;
+/* ── Apple Music "LISTEN ON" Card & Device Selector ── */
+.apple-listen-on-card {
+  background: rgba(36, 36, 42, 0.78);
+  backdrop-filter: blur(45px) saturate(210%);
+  -webkit-backdrop-filter: blur(45px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  width: 320px;
+  max-width: 90vw;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  padding: 18px 16px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  user-select: none;
+  animation: appleListenOnPop 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes appleListenOnPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.listen-on-header {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8e8e93;
+  padding: 0 4px;
+}
+
+.listen-on-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.listen-on-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  background: transparent;
+  transition: background 0.15s ease, transform 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.listen-on-item:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.listen-on-item:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.listen-on-item.active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.listen-on-item .device-icon {
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.listen-on-item.active .device-icon {
+  color: #fc576b;
+}
+
+.device-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.device-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.device-subtitle {
+  font-size: 0.76rem;
+  color: #8e8e93;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listen-on-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 6px;
+}
+
+.listen-on-close {
+  margin-top: 4px;
+  height: 38px;
+  border-radius: 980px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.listen-on-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.listen-on-close:active {
+  transform: scale(0.97);
 }
 
 body.is-spicy-lyrics .line.NotSung {
@@ -3595,4 +3987,207 @@ body.is-spicy-lyrics .line.NotSung .letter {
 body.is-spicy-lyrics .line.Sung .word,
 body.is-spicy-lyrics .line.Sung .letter {
   --gradient-position: 100% !important;
+}
+
+/* ══════════════════════════════════════════════════
+   PROGRESS BAR TIME DIGIT RUFFLE / SCRAMBLE
+   ══════════════════════════════════════════════════ */
+.progress-time {
+  display: inline-flex !important;
+  align-items: center;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.digit-ruffle-slot {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  height: 1.15em;
+  vertical-align: middle;
+}
+
+.digit-ruffle-slot span {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+.digit-ruffle-slot.sliding-down span {
+  animation: digitSlideDown 0.18s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+@keyframes digitSlideDown {
+  0% {
+    transform: translateY(-40%);
+    opacity: 0.3;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   LYRIC SHARE CARD MODAL (Apple Music / LyricsBlossom)
+   ══════════════════════════════════════════════════ */
+.lyric-share-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.lyric-share-modal.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lyric-share-card-container {
+  width: 480px;
+  max-width: 94vw;
+  max-height: 88vh;
+  background: rgba(28, 28, 30, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 28px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: scale(0.92);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lyric-share-modal.active .lyric-share-card-container {
+  transform: scale(1);
+}
+
+.lyric-share-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lyric-share-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.lyric-share-close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  transition: background 0.15s ease;
+}
+
+.lyric-share-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lyric-share-lines-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 38vh;
+}
+
+.lyric-share-line-item {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lyric-share-line-item.selected {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+/* Generated Image Card Preview */
+.lyric-share-preview-wrap {
+  padding: 12px 18px;
+  display: flex;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.lyric-share-card-canvas {
+  width: 260px;
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  background: #111;
+}
+
+.lyric-share-actions {
+  display: flex;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lyric-share-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.lyric-share-btn.primary {
+  background: #fff;
+  color: #000;
+}
+
+.lyric-share-btn.secondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.lyric-share-btn:hover {
+  transform: scale(1.02);
+}
+
+.lyric-share-btn:active {
+  transform: scale(0.97);
 }

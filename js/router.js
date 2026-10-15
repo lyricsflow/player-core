@@ -125,7 +125,7 @@ export async function bulkReplaceQueue(items) {
  */
 export async function getQueue() {
   const db = await openDB();
-  return new Promise((resolve, reject) => {
+  const queue = await new Promise((resolve, reject) => {
     const tx = db.transaction('tracks', 'readonly');
     const store = tx.objectStore('tracks');
     const index = store.index('sortOrder');
@@ -133,6 +133,21 @@ export async function getQueue() {
     request.onsuccess = () => resolve(request.result || []);
     request.onerror = () => reject(request.error);
   });
+
+  if (!queue || queue.length === 0) {
+    try {
+      const raw = localStorage.getItem('lyricsflow_persisted_queue');
+      if (raw) {
+        const persisted = JSON.parse(raw);
+        if (Array.isArray(persisted) && persisted.length > 0) {
+          await bulkReplaceQueue(persisted);
+          return await getQueue();
+        }
+      }
+    } catch (_) {}
+  }
+
+  return queue || [];
 }
 
 /**
@@ -218,7 +233,9 @@ export async function clearQueue() {
     tx.objectStore('tracks').clear();
     tx.objectStore('buffers').clear();
     tx.oncomplete = () => {
-      sessionStorage.removeItem('lyricsflow_current_index');
+      try { sessionStorage.removeItem('lyricsflow_current_index'); } catch (_) {}
+      try { localStorage.removeItem('lyricsflow_current_index'); } catch (_) {}
+      try { localStorage.removeItem('lyricsflow_persisted_queue'); } catch (_) {}
       resolve();
     };
     tx.onerror = (e) => reject(e.target.error);
@@ -228,16 +245,31 @@ export async function clearQueue() {
 // ── Legacy Compatibility / Current State Helpers ──
 
 export function getCurrentIndex() {
-  return parseInt(sessionStorage.getItem('lyricsflow_current_index') || '0', 10);
+  let val = null;
+  try { val = localStorage.getItem('lyricsflow_current_index'); } catch (_) {}
+  if (val === null || val === undefined) {
+    try { val = sessionStorage.getItem('lyricsflow_current_index'); } catch (_) {}
+  }
+  return parseInt(val || '0', 10);
 }
 
 export function setCurrentIndex(index) {
-  sessionStorage.setItem('lyricsflow_current_index', index.toString());
+  const str = index.toString();
+  try { sessionStorage.setItem('lyricsflow_current_index', str); } catch (_) {}
+  try { localStorage.setItem('lyricsflow_current_index', str); } catch (_) {}
 }
 
 export async function hasPlayerData() {
   const queue = await getQueue();
-  return queue.length > 0;
+  if (queue && queue.length > 0) return true;
+  try {
+    const raw = localStorage.getItem('lyricsflow_persisted_queue');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return true;
+    }
+  } catch (_) {}
+  return false;
 }
 
 export async function getAudioBlobUrl() {

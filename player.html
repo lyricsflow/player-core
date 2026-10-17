@@ -829,8 +829,9 @@
   </script>
 
   <div id="LyricsflowPage">
-    <!-- Dynamic Background -->
-    <div class="lyricsflow-dynamic-bg" id="dynamic-bg"></div>
+    <!-- Dynamic Background (Dual-buffered: active + dormant standby) -->
+    <div class="lyricsflow-dynamic-bg active" id="dynamic-bg"></div>
+    <div class="lyricsflow-dynamic-bg standby" id="dynamic-bg-standby" style="opacity: 0; visibility: hidden; pointer-events: none;"></div>
 
     <!-- PC Desktop Top Controls (AirPlay & Aero Volume Capsule + Apple Music Sing & Sync Offset Pill) -->
     <div class="pc-top-volume-bar" id="pc-top-volume-bar">
@@ -1174,7 +1175,7 @@
 
     import AudioPlayer from './js/audio-player.js';
     import { ffmpegAudioConverter } from './js/ffmpeg-converter.js';
-    import { applyDefaultBackground, applyLegacyBackground, extractColors, setKawarpPlaybackState, setKawarpVolume } from './js/dynamic-bg.js';
+    import { applyDefaultBackground, applyLegacyBackground, extractColors, setKawarpPlaybackState, setKawarpVolume, prepareStandbyBackground, swapToStandbyBackground, getStandbyImage } from './js/dynamic-bg.js';
     import { parseAudioMetadata } from './js/metadata-parser.js';
     import { retrieveTTML } from './js/ttml-retriever.js';
     import { GeniusService } from './js/genius-service.js';
@@ -1202,10 +1203,12 @@
     // ── Elements ──
     const lyricsContent = document.getElementById('lyrics-content');
     const lyricsNotice = document.getElementById('lyrics-notice');
+    const lyricsContainer = document.getElementById('lyrics-container');
     const songNameEl = document.getElementById('song-name');
     const artistsEl = document.getElementById('artists');
     const albumArt = document.getElementById('album-art');
-    const dynamicBg = document.getElementById('dynamic-bg');
+    let dynamicBg = document.getElementById('dynamic-bg');
+    let dynamicBgStandby = document.getElementById('dynamic-bg-standby');
 
     const btnPlayPause = document.getElementById('btn-play-pause');
     const btnBackward = document.getElementById('btn-backward');
@@ -1995,8 +1998,9 @@
       }
 
       function isMP4Buffer(buf) {
+        if (!buf || !(buf instanceof ArrayBuffer)) return false;
+        if (buf.byteLength < 12) return false;
         const view = new DataView(buf);
-        if (view.byteLength < 12) return false;
         if (view.getUint8(4) === 0x66 && view.getUint8(5) === 0x74 &&
           view.getUint8(6) === 0x79 && view.getUint8(7) === 0x70) return true;
         const limit = Math.min(256, view.byteLength - 4);
@@ -2005,6 +2009,21 @@
             view.getUint8(i + 2) === 0x79 && view.getUint8(i + 3) === 0x70) return true;
         }
         return false;
+      }
+
+      // Purge corrupt / non-audio buffers from IndexedDB (e.g. error JSON, 502/500 HTML)
+      if (track.buffer && !isMP4Buffer(track.buffer)) {
+        console.warn('[loadTrack] Stored buffer is not a valid audio container. Purging from cache for track:', track.id);
+        track.buffer = null;
+        try {
+          const db = await new Promise((res, rej) => {
+            const req = indexedDB.open('LyricsflowDB');
+            req.onsuccess = (e) => res(e.target.result);
+            req.onerror = (e) => rej(e.target.error);
+          });
+          const tx = db.transaction('buffers', 'readwrite');
+          tx.objectStore('buffers').delete(track.id);
+        } catch (_) {}
       }
 
       if (!track.buffer && track.amTrackId) {
@@ -2145,7 +2164,7 @@
           fetch(`${apiBase}/download?song=${track.amTrackId}&l=en-US`)
             .then(res => res.ok ? res.arrayBuffer() : null)
             .then(async (buf) => {
-              if (buf && buf.byteLength > 1000) {
+              if (buf && buf.byteLength > 1000 && isMP4Buffer(buf)) {
                 const db = await new Promise((res, rej) => {
                   const req = indexedDB.open('LyricsflowDB');
                   req.onsuccess = (e) => res(e.target.result);
@@ -2260,7 +2279,7 @@
           refreshQueue();
           queueForceScroll();
           preloadQueueTracks();
-          setTimeout(() => prefetchNextTrackAudio(index + 1), 1800);
+          prefetchNextTrackAudio(index + 1);
           return;
         } catch (e) {
           console.error("Failed to stream track:", e);
@@ -2278,12 +2297,11 @@
         if (sourceBadge) sourceBadge.textContent = '';
         showNotice(`⏳ ${t('player_loading_track')}`);
 
-        albumArt.innerHTML = '';
+        // Keep albumArt backgroundImage intact so updateMetadataUI can run cover slide animation
         albumArt.className = 'MediaImageContainer';
-        albumArt.style.backgroundImage = 'none';
 
         dynamicBg.innerHTML = '';
-        dynamicBg.className = 'lyricsflow-dynamic-bg';
+        dynamicBg.className = 'lyricsflow-dynamic-bg active';
       }
 
       const blob = new Blob([track.buffer], { type: track.type });
@@ -2364,6 +2382,7 @@
         hideTrackLoader();
         if (contentBox) contentBox.style.opacity = '1';
         preloadQueueTracks();
+        prefetchNextTrackAudio(index + 1);
       };
 
       return new Promise((resolve) => {
@@ -2381,10 +2400,31 @@
           resolve();
         };
 
+        const fallbackToStream = () => {
+          if (track.amTrackId) {
+            console.warn('[loadTrack] Local buffer decode failed, falling back to streaming:', track.amTrackId);
+            track.buffer = null;
+            try {
+              indexedDB.open('LyricsflowDB').onsuccess = (e) => {
+                const db = e.target.result;
+                const tx = db.transaction('buffers', 'readwrite');
+                tx.objectStore('buffers').delete(track.id);
+              };
+            } catch (_) {}
+            loadTrack(index, isCrossfade, autoPlay);
+            return true;
+          }
+          return false;
+        };
+
         player.onError = (err) => {
           if (settled) return;
           settled = true;
           cleanup();
+          if (fallbackToStream()) {
+            resolve();
+            return;
+          }
           console.error('[loadTrack] Audio decode failed:', err ? { code: err.code, message: err.message } : 'Unknown error');
           hideTrackLoader();
           showNotice(t('player_track_failed'));
@@ -2399,6 +2439,10 @@
           if (!settled) {
             settled = true;
             cleanup();
+            if (fallbackToStream()) {
+              resolve();
+              return;
+            }
             console.error('[loadTrack] loadedmetadata timeout — audio element failed to decode');
             hideTrackLoader();
             showNotice(t('player_track_failed'));
@@ -2419,6 +2463,12 @@
         } else {
           window._isCurrentTrackCrossfading = false;
           player.setSource(url);
+          if (autoPlay) {
+            player.play().catch(e => console.warn('[loadTrack] play error:', e));
+            updatePlayPauseIcon(true);
+          } else {
+            updatePlayPauseIcon(false);
+          }
         }
       });
     }
@@ -2432,20 +2482,54 @@
         const nextTrack = await getTrackData(nextTrackInfo.id);
         if (!nextTrack) return;
 
-        const apiBase = window.API_BASE || 'https://api.trylyricsflow.com';
+        // 1. Pre-warm dormant dybg backdrop with next track's artwork (0 CPU/GPU while hidden)
+        const nextArt = nextTrack.artUrl || nextTrackInfo.artUrl;
+        if (nextArt && dynamicBgStandby) {
+          const nextHighResArt = cleanArtworkUrl(nextArt, 1200, 1200);
+          prepareStandbyBackground(dynamicBgStandby, nextHighResArt).catch(e => {
+            console.warn('[dybg] Standby pre-warm error:', e);
+          });
+        }
 
-        // 1. If buffer is already in IndexedDB, preload blob URL instantly
-        if (nextTrack.buffer) {
+        // 2. If buffer is already in IndexedDB and valid, preload blob URL instantly
+        if (nextTrack.buffer && nextTrack.buffer.byteLength > 1000 && isMP4Buffer(nextTrack.buffer)) {
           const blob = new Blob([nextTrack.buffer], { type: nextTrack.type || 'audio/mp4' });
           const blobUrl = URL.createObjectURL(blob);
           player.preloadNext(blobUrl);
           return;
         }
 
-        // 2. Preload lightweight streaming URL directly without heavy binary downloads
+        // 3. Immediately preload stream URL so inactive channel is ready for instant crossfade / play
         if (nextTrack.amTrackId) {
+          const apiBase = window.API_BASE || 'https://api.trylyricsflow.com';
           const streamUrl = `${apiBase}/stream?song=${nextTrack.amTrackId}&codec=aac&fallback=false&l=${getCurrentLang()}`;
           player.preloadNext(streamUrl);
+
+          // 4. In background, attempt to download audio binary and cache in IndexedDB ONLY if valid MP4
+          const dlUrl = `${apiBase}/download?song=${nextTrack.amTrackId}&l=${getCurrentLang()}`;
+          fetch(dlUrl)
+            .then(res => res.ok ? res.arrayBuffer() : null)
+            .then(async (buf) => {
+              if (buf && buf.byteLength > 1000 && isMP4Buffer(buf)) {
+                const db = await new Promise((res, rej) => {
+                  const req = indexedDB.open('LyricsflowDB');
+                  req.onsuccess = (e) => res(e.target.result);
+                  req.onerror = (e) => rej(e.target.error);
+                });
+                await new Promise((res, rej) => {
+                  const tx = db.transaction('buffers', 'readwrite');
+                  const req = tx.objectStore('buffers').put(buf, nextTrack.id);
+                  req.onsuccess = () => res();
+                  req.onerror = () => rej(req.error);
+                });
+                nextTrack.buffer = buf;
+                const blob = new Blob([buf], { type: nextTrack.type || 'audio/mp4' });
+                const blobUrl = URL.createObjectURL(blob);
+                player.preloadNext(blobUrl);
+                console.log(`[CrossfadePrefetch] Successfully pre-cached next track: ${nextTrack.name || nextTrack.id}`);
+              }
+            })
+            .catch(() => {});
         }
       } catch (err) {
         console.warn('[CrossfadePrefetch] Failed to prefetch next track audio:', err);
@@ -2562,8 +2646,11 @@
           albumArt.appendChild(newSlide);
           albumArt.style.backgroundImage = 'none';
 
-          const outX = dir === 'next' ? '100%' : '-100%';
-          const inX = dir === 'next' ? '-100%' : '100%';
+          // Apple Music cover slide animation:
+          // Next track / song finish: current slides OUT left (-100%), new slides IN from right (100% -> 0)
+          // Previous track: current slides OUT right (100%), new slides IN from left (-100% -> 0)
+          const outX = dir === 'next' ? '-100%' : '100%';
+          const inX = dir === 'next' ? '100%' : '-100%';
 
           oldSlide.animate([
             { transform: 'translateX(0)', opacity: 1 },
@@ -2595,20 +2682,32 @@
         }
 
         extractColors(highResArt).then(async colors => {
-          if (window._isCurrentTrackCrossfading) {
-            dynamicBg.style.transition = `opacity ${crossfadeDur}s cubic-bezier(0.25, 1, 0.5, 1)`;
-            dynamicBg.style.opacity = '0.4';
-            await new Promise(r => setTimeout(r, 200));
-            dynamicBg.innerHTML = '';
-            dynamicBg.className = 'lyricsflow-dynamic-bg';
-            await applyLegacyBackground(dynamicBg, highResArt);
-            dynamicBg.style.opacity = '1';
-          } else {
-            dynamicBg.style.transition = '';
-            dynamicBg.style.opacity = '1';
-            dynamicBg.innerHTML = '';
-            dynamicBg.className = 'lyricsflow-dynamic-bg';
-            await applyLegacyBackground(dynamicBg, highResArt);
+          let swapped = false;
+          if (typeof getStandbyImage === 'function' && getStandbyImage() === highResArt && dynamicBgStandby) {
+            swapped = await swapToStandbyBackground(dynamicBg, dynamicBgStandby, 500);
+            if (swapped) {
+              const tmp = dynamicBg;
+              dynamicBg = dynamicBgStandby;
+              dynamicBgStandby = tmp;
+            }
+          }
+
+          if (!swapped) {
+            if (window._isCurrentTrackCrossfading) {
+              dynamicBg.style.transition = `opacity ${crossfadeDur}s cubic-bezier(0.25, 1, 0.5, 1)`;
+              dynamicBg.style.opacity = '0.4';
+              await new Promise(r => setTimeout(r, 200));
+              dynamicBg.innerHTML = '';
+              dynamicBg.className = 'lyricsflow-dynamic-bg active';
+              await applyLegacyBackground(dynamicBg, highResArt);
+              dynamicBg.style.opacity = '1';
+            } else {
+              dynamicBg.style.transition = '';
+              dynamicBg.style.opacity = '1';
+              dynamicBg.innerHTML = '';
+              dynamicBg.className = 'lyricsflow-dynamic-bg active';
+              await applyLegacyBackground(dynamicBg, highResArt);
+            }
           }
           setKawarpPlaybackState(!lyricsContainer.classList.contains('hidden'));
           if (colors.vibrant) document.documentElement.style.setProperty('--ArtworkGlowColor', colors.vibrant.join(', '));
@@ -2972,15 +3071,18 @@
     player.onCrossfadeTrigger = () => {
       const nextIdx = getCurrentIndex() + 1;
       if (nextIdx < currentQueue.length) {
-        loadTrack(nextIdx, true);
+        window._trackChangeDirection = 'next';
+        loadTrack(nextIdx, true, true);
       } else if (player.repeatMode === 1) {
-        loadTrack(0, true);
+        window._trackChangeDirection = 'next';
+        loadTrack(0, true, true);
       } else if (localStorage.getItem('lyricsflow_queue_autoplay') === 'true') {
         // AutoPlay: fetch recommendations and play immediately
         triggerAutoPlayRecommendations().then(() => {
           const freshIdx = getCurrentIndex() + 1;
           if (freshIdx < currentQueue.length) {
-            loadTrack(freshIdx, true);
+            window._trackChangeDirection = 'next';
+            loadTrack(freshIdx, true, true);
           }
         });
       }
@@ -3017,17 +3119,17 @@
       if (prevOnEnded) prevOnEnded();
       const nextIdx = getCurrentIndex() + 1;
       if (nextIdx < currentQueue.length) {
-        loadTrack(nextIdx);
-        player.play();
+        window._trackChangeDirection = 'next';
+        loadTrack(nextIdx, false, true);
       } else if (player.repeatMode === 1) {
-        loadTrack(0);
-        player.play();
+        window._trackChangeDirection = 'next';
+        loadTrack(0, false, true);
       } else if (localStorage.getItem('lyricsflow_queue_autoplay') === 'true') {
         triggerAutoPlayRecommendations().then(() => {
           const freshIdx = getCurrentIndex() + 1;
           if (freshIdx < currentQueue.length) {
-            loadTrack(freshIdx);
-            player.play();
+            window._trackChangeDirection = 'next';
+            loadTrack(freshIdx, false, true);
           } else {
             updatePlayPauseIcon(false);
           }
@@ -3044,48 +3146,83 @@
     }
 
     function goNextTrack() {
+      if (!currentQueue || currentQueue.length === 0) return;
       const next = getCurrentIndex() + 1;
       if (next < currentQueue.length) {
         window._trackChangeDirection = 'next';
-        loadTrack(next);
+        loadTrack(next, false, true);
+      } else if (player.repeatMode === 1 || currentQueue.length > 1) {
+        window._trackChangeDirection = 'next';
+        loadTrack(0, false, true);
+      } else if (localStorage.getItem('lyricsflow_queue_autoplay') === 'true') {
+        triggerAutoPlayRecommendations().then(() => {
+          const freshIdx = getCurrentIndex() + 1;
+          if (freshIdx < currentQueue.length) {
+            window._trackChangeDirection = 'next';
+            loadTrack(freshIdx, false, true);
+          }
+        });
       }
     }
 
     function goPrevTrack() {
-      const pos = player.getPosition();
+      const pos = player.getPosition ? player.getPosition() : 0;
       if (pos > 3000) {
         player.seek(0);
       } else {
         const prev = getCurrentIndex() - 1;
         if (prev >= 0) {
           window._trackChangeDirection = 'prev';
-          loadTrack(prev);
+          loadTrack(prev, false, true);
         }
       }
+    }
+
+    let _lastNavActionTime = 0;
+    const NAV_DEBOUNCE_MS = 250;
+
+    function handleNextTrackAction(e) {
+      if (e) {
+        if (e.type === 'click' && e.detail === 0 && e.pointerType === '') {
+          // Synthetic keyboard click
+        }
+      }
+      const now = Date.now();
+      if (now - _lastNavActionTime < NAV_DEBOUNCE_MS) return;
+      _lastNavActionTime = now;
+      const skipFwd = btnForward ? btnForward.querySelector('.aero-skip') : null;
+      if (skipFwd) playSkip(skipFwd);
+      goNextTrack();
+    }
+
+    function handlePrevTrackAction(e) {
+      const now = Date.now();
+      if (now - _lastNavActionTime < NAV_DEBOUNCE_MS) return;
+      _lastNavActionTime = now;
+      const skipBack = btnBackward ? btnBackward.querySelector('.aero-skip') : null;
+      if (skipBack) playSkip(skipBack);
+      goPrevTrack();
     }
 
     if (btnPlayPause) {
       initPlayerButton(btnPlayPause);
       setPlayerIcon(btnPlayPause, 'play');
       btnPlayPause.addEventListener('pressend', togglePlayback);
+      btnPlayPause.addEventListener('click', togglePlayback);
     }
     if (btnForward) {
       initPlayerButton(btnForward);
       const skipFwd = btnForward.querySelector('.aero-skip');
       if (skipFwd) initSkipLabel(skipFwd);
-      btnForward.addEventListener('pressend', () => {
-        if (skipFwd) playSkip(skipFwd);
-        goNextTrack();
-      });
+      btnForward.addEventListener('pressend', handleNextTrackAction);
+      btnForward.addEventListener('click', handleNextTrackAction);
     }
     if (btnBackward) {
       initPlayerButton(btnBackward);
       const skipBack = btnBackward.querySelector('.aero-skip');
       if (skipBack) initSkipLabel(skipBack);
-      btnBackward.addEventListener('pressend', () => {
-        if (skipBack) playSkip(skipBack);
-        goPrevTrack();
-      });
+      btnBackward.addEventListener('pressend', handlePrevTrackAction);
+      btnBackward.addEventListener('click', handlePrevTrackAction);
     }
 
     btnRepeat.onclick = () => {
@@ -3625,7 +3762,7 @@
     }
 
     const btnLyrics = document.getElementById('btn-lyrics');
-    const lyricsContainer = document.getElementById('lyrics-container');
+    // lyricsContainer declared at top of elements block
     const lyricsIcon = document.getElementById('lyrics-icon');
     const queueIcon = document.getElementById('queue-icon');
     const nowBar = document.getElementById('now-bar');

@@ -398,6 +398,7 @@ function parseMP4(view) {
 
   while (offset + 8 < end) {
     const size = view.getUint32(offset);
+    if (size < 8 || offset + size > end) break;
     const type = String.fromCharCode(
       view.getUint8(offset + 4), view.getUint8(offset + 5),
       view.getUint8(offset + 6), view.getUint8(offset + 7)

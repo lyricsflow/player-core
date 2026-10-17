@@ -13,6 +13,8 @@ let backdropVolume = 0;
 let volumeClock = -1;
 
 let _dybg = null;
+let _standbyDybg = null;
+let _standbyImg = null;
 let _videoUpdateTimer = null;
 
 // Hidden canvas for frame capture fallback
@@ -80,7 +82,9 @@ export async function applyLegacyBackground(bgContainer, img) {
   stopKawarp();
 
   bgContainer.innerHTML = "";
-  bgContainer.className = "lyricsflow-dynamic-bg";
+  bgContainer.className = "lyricsflow-dynamic-bg active";
+  bgContainer.style.visibility = "visible";
+  bgContainer.style.opacity = "1";
 
   // Create canvas matching index.html (#bgCanvas)
   const canvas = document.createElement('canvas');
@@ -146,11 +150,117 @@ export async function applyLegacyBackground(bgContainer, img) {
   }
 }
 
-export function stopKawarp() {
-  const bgContainer = document.querySelector('.lyricsflow-dynamic-bg');
-  if (bgContainer) {
-    bgContainer.classList.remove('loaded', 'active');
+/**
+ * Pre-warms a dormant duplicate dybg background with the next song's cover art.
+ * Immediately pauses animation and keeps it hidden so it consumes ZERO CPU/GPU resources.
+ */
+export async function prepareStandbyBackground(standbyContainer, img) {
+  if (!standbyContainer || !img) return;
+
+  if (_standbyDybg && _standbyImg === img) {
+    return;
   }
+
+  if (_standbyDybg) {
+    try {
+      if (typeof _standbyDybg.dispose === 'function') _standbyDybg.dispose();
+      else if (typeof _standbyDybg.destroy === 'function') _standbyDybg.destroy();
+    } catch (_) {}
+    _standbyDybg = null;
+    _standbyImg = null;
+  }
+
+  standbyContainer.innerHTML = '';
+  standbyContainer.className = 'lyricsflow-dynamic-bg standby';
+  standbyContainer.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;opacity:0;visibility:hidden;pointer-events:none;z-index:0;';
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 'lyricsflow-dybg-canvas';
+  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;';
+  standbyContainer.appendChild(canvas);
+
+  try {
+    const inst = new dybg(canvas);
+    if (typeof inst.setFlowSpeed === 'function') inst.setFlowSpeed(0.2);
+    if (typeof inst.setRenderScale === 'function') inst.setRenderScale(0.25);
+
+    if (typeof inst.setAlbum === 'function') {
+      await inst.setAlbum(img, img instanceof HTMLVideoElement);
+    } else if (typeof inst.setAlbumImage === 'function') {
+      await inst.setAlbumImage(img);
+    } else if (typeof inst.load === 'function') {
+      await inst.load(img);
+    }
+
+    // Halt render loop so zero CPU/GPU resources are consumed while dormant
+    if (typeof inst.pause === 'function') {
+      inst.pause();
+    }
+
+    _standbyDybg = inst;
+    _standbyImg = img;
+  } catch (err) {
+    console.warn('[dybg] Failed to prepare standby background:', err);
+  }
+}
+
+/**
+ * Seamlessly swaps the dormant standby backdrop to active with a smooth crossfade,
+ * and cleans up / deletes the old backdrop instance.
+ */
+export async function swapToStandbyBackground(activeContainer, standbyContainer, durationMs = 600) {
+  if (!_standbyDybg || !standbyContainer) {
+    return false;
+  }
+
+  const oldDybg = _dybg;
+  const newDybg = _standbyDybg;
+  _dybg = newDybg;
+  _standbyDybg = null;
+  _standbyImg = null;
+
+  // Wake up new backdrop rendering loop
+  if (typeof newDybg.resume === 'function') {
+    newDybg.resume();
+  } else if (typeof newDybg.play === 'function') {
+    newDybg.play();
+  }
+
+  standbyContainer.style.visibility = 'visible';
+  standbyContainer.style.pointerEvents = 'none';
+  standbyContainer.style.transition = `opacity ${durationMs}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+  standbyContainer.style.opacity = '1';
+
+  if (activeContainer) {
+    activeContainer.style.transition = `opacity ${durationMs}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+    activeContainer.style.opacity = '0';
+  }
+
+  setTimeout(() => {
+    if (oldDybg) {
+      try {
+        if (typeof oldDybg.dispose === 'function') oldDybg.dispose();
+        else if (typeof oldDybg.destroy === 'function') oldDybg.destroy();
+      } catch (_) {}
+    }
+    if (activeContainer) {
+      activeContainer.innerHTML = '';
+      activeContainer.style.visibility = 'hidden';
+      activeContainer.style.opacity = '0';
+      activeContainer.style.transition = '';
+    }
+  }, durationMs + 50);
+
+  return true;
+}
+
+export function getStandbyImage() {
+  return _standbyImg;
+}
+
+export function stopKawarp() {
+  const bgContainers = document.querySelectorAll('.lyricsflow-dynamic-bg');
+  bgContainers.forEach(c => c.classList.remove('loaded', 'active'));
   if (_videoUpdateTimer) {
     clearTimeout(_videoUpdateTimer);
     _videoUpdateTimer = null;
@@ -163,9 +273,22 @@ export function stopKawarp() {
         _dybg.destroy();
       }
     } catch (e) {
-      console.warn("[dybg] Error disposing:", e);
+      console.warn("[dybg] Error disposing active:", e);
     }
     _dybg = null;
+  }
+  if (_standbyDybg) {
+    try {
+      if (typeof _standbyDybg.dispose === 'function') {
+        _standbyDybg.dispose();
+      } else if (typeof _standbyDybg.destroy === 'function') {
+        _standbyDybg.destroy();
+      }
+    } catch (e) {
+      console.warn("[dybg] Error disposing standby:", e);
+    }
+    _standbyDybg = null;
+    _standbyImg = null;
   }
   backdropVolume = 0;
   volumeClock = -1;

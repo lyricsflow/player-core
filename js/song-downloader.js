@@ -10,6 +10,7 @@
 import { t, getCurrentLang } from './i18n.js';
 import { robustFetch } from './network-utils.js';
 import { TTMLDownloader } from './ttml-downloader.js';
+import { escapeHTML } from './security-utils.js';
 import { initDropdowns, closeMenu } from 'https://nurislamaibekuly.github.io/aeroui/src/components/dropdown/dropdown.js';
 
 const API_BASE = 'https://api.trylyricsflow.com';
@@ -222,6 +223,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const artUrl = rawArt ? rawArt.replace('{w}x{h}', '600x600').replace('{w}', '600').replace('{h}', '600').replace('{f}', 'jpg') : 'favicon.svg';
 
     const tracks = albumData.relationships?.tracks?.data || [];
+    const safeTitle = escapeHTML(title);
+    const safeArtist = escapeHTML(artist);
+    const safeReleaseYear = escapeHTML(releaseYear);
 
     targetViewEl.innerHTML = `
       <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 22px; margin-top: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
@@ -229,9 +233,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px;">
           <img src="${artUrl}" style="width: 100px; height: 100px; border-radius: 14px; object-fit: cover; box-shadow: 0 6px 18px rgba(0,0,0,0.5); flex-shrink: 0;" onerror="this.src='favicon.svg';">
           <div style="flex: 1; min-width: 0;">
-            <div style="font-size: 0.8rem; font-weight: 600; color: #fc576b; text-transform: uppercase; letter-spacing: 0.04em;">Album &bull; ${releaseYear}</div>
-            <h2 style="font-size: 1.35rem; font-weight: 750; color: #fff; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${title}</h2>
-            <div style="font-size: 0.9rem; color: #a0a0a6;">${artist} &bull; ${tracks.length} Songs</div>
+            <div style="font-size: 0.8rem; font-weight: 600; color: #fc576b; text-transform: uppercase; letter-spacing: 0.04em;">Album &bull; ${safeReleaseYear}</div>
+            <h2 style="font-size: 1.35rem; font-weight: 750; color: #fff; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${safeTitle}</h2>
+            <div style="font-size: 0.9rem; color: #a0a0a6;">${safeArtist} &bull; ${tracks.length} Songs</div>
           </div>
           <button id="dl-album-all-btn" style="padding: 10px 18px; border-radius: 12px; background: linear-gradient(135deg, #fc576b 0%, #ff6b8b 100%); color: #fff; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 7px; flex-shrink: 0; box-shadow: 0 4px 15px rgba(252,87,107,0.35);">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
@@ -247,19 +251,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const tId = tItem.id;
       const tDurMs = tAttr.durationInMillis || 0;
       const tDurStr = tDurMs ? `${Math.floor(tDurMs / 60000)}:${String(Math.floor((tDurMs % 60000) / 1000)).padStart(2, '0')}` : '';
+      const safeTName = escapeHTML(tName);
+      const safeTArtist = escapeHTML(artist);
+      const safeTDur = escapeHTML(tDurStr);
 
       return `
               <div class="dl-album-track-row" data-id="${tId}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,0.02); transition: background 0.15s ease;">
                 <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0;">
                   <span style="font-size: 0.85rem; color: #8e8e93; font-weight: 600; width: 20px; text-align: right;">${idx + 1}</span>
                   <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    <div style="font-size: 0.92rem; font-weight: 600; color: #fff;">${tName}</div>
-                    <div style="font-size: 0.78rem; color: #8e8e93;">${artist}</div>
+                    <div style="font-size: 0.92rem; font-weight: 600; color: #fff;">${safeTName}</div>
+                    <div style="font-size: 0.78rem; color: #8e8e93;">${safeTArtist}</div>
                   </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
-                  <span style="font-size: 0.8rem; color: #8e8e93;">${tDurStr}</span>
-                  <button class="dl-single-track-btn" data-id="${tId}" data-title="${tName}" data-artist="${artist}" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Download this track">
+                  <span style="font-size: 0.8rem; color: #8e8e93;">${safeTDur}</span>
+                  <button class="dl-single-track-btn" data-id="${tId}" data-title="${safeTName}" data-artist="${safeTArtist}" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Download this track">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                   </button>
                 </div>
@@ -387,15 +394,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const art = attr.artwork?.url ? attr.artwork.url.replace('{w}x{h}', '120x120').replace('{w}', '120').replace('{h}', '120').replace('{f}', 'jpg') : 'favicon.svg';
         const title = attr.name || 'Unknown';
         const artist = attr.artistName || '';
+        const safeTitle = escapeHTML(title);
+        const safeArtist = escapeHTML(artist);
 
         return `
           <div class="dl-search-item" data-id="${item.id}" data-type="${isAlbum ? 'album' : 'song'}" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06); transition: background 0.15s ease;">
             <img src="${art}" style="width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0;" onerror="this.src='favicon.svg';">
             <div style="flex: 1; min-width: 0;">
               <div style="font-size: 0.92rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${isAlbum ? '💿 ' : '🎵 '}${title}
+                ${isAlbum ? '💿 ' : '🎵 '}${safeTitle}
               </div>
-              <div style="font-size: 0.78rem; color: #8e8e93;">${isAlbum ? 'Album' : 'Song'} &bull; ${artist}</div>
+              <div style="font-size: 0.78rem; color: #8e8e93;">${isAlbum ? 'Album' : 'Song'} &bull; ${safeArtist}</div>
             </div>
             <button style="padding: 6px 14px; border-radius: 8px; background: rgba(255,255,255,0.08); border: none; color: #fff; font-size: 0.8rem; font-weight: 600;">
               ${isAlbum ? 'Open Album' : 'Download'}

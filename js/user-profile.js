@@ -845,6 +845,7 @@ function renderAuthWall() {
 
   // Listen for message from popup bridge
   window.addEventListener('message', (e) => {
+    if (e.origin !== window.location.origin) return;
     if (e.data && e.data.type === 'oauth_complete' && e.data.hash) {
       window.location.hash = e.data.hash;
       handleOAuthCallback();
@@ -1059,7 +1060,8 @@ function renderAuthWall() {
         throw new Error(text || `Server error (${resp.status})`);
       }
       if (!resp.ok) throw new Error(data.error || data.message || 'Invalid verification code');
-      const token = data.access_token ? `Bearer ${data.access_token}` : `Bearer lf_usr_${btoa(currentEmail).replace(/=/g, '')}`;
+      if (!data.access_token) throw new Error('No access token received from server');
+      const token = `Bearer ${data.access_token}`;
       setUserAuthSession(token, currentEmail, data.user_id || currentEmail.split('@')[0]);
       syncUserDataFromCloud();
       removeAuthLock();

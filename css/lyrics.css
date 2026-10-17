@@ -163,9 +163,17 @@
 }
 
 @keyframes lineTapPop {
-  0% { transform: translate3d(0, var(--ty, 0px), 0) scale(calc(var(--line-scale, 1) * 0.96)); }
-  50% { transform: translate3d(0, var(--ty, 0px), 0) scale(calc(var(--line-scale, 1) * 1.03)); }
-  100% { transform: translate3d(0, var(--ty, 0px), 0) scale(var(--line-scale, 1)); }
+  0% {
+    transform: translate3d(0, var(--ty, 0px), 0) scale(calc(var(--line-scale, 1) * 0.96));
+  }
+
+  50% {
+    transform: translate3d(0, var(--ty, 0px), 0) scale(calc(var(--line-scale, 1) * 1.03));
+  }
+
+  100% {
+    transform: translate3d(0, var(--ty, 0px), 0) scale(var(--line-scale, 1));
+  }
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent:has(.line:hover) .line {
@@ -210,7 +218,7 @@
   font-synthesis: none !important;
   font-variant-ligatures: normal !important;
   font-feature-settings: "liga" 1, "calt" 1, "kern" 1 !important;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.38));
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
 }
 
 /* GPU-promote only active and nearby lines to avoid 500+ compositing layers */
@@ -637,9 +645,9 @@
   user-select: none !important;
   -webkit-user-select: none !important;
   transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-              margin 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-              padding 0.35s ease,
-              opacity 0.35s ease;
+    margin 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.35s ease,
+    opacity 0.35s ease;
 }
 
 #LyricsflowPage .LyricsContainer .LyricsContent .line.musical-line .dotGroup {

@@ -290,15 +290,28 @@ export class PreviewPlayer {
       };
     }
 
+    if (this.container) {
+      this.container.addEventListener('click', (e) => {
+        if (e.target.closest('.am-preview-btn') || e.target.closest('#am-preview-progress-track')) return;
+        triggerZoomToPlayer(e);
+      });
+    }
+
     if (this.playBtn) {
       try {
         initPlayerButton(this.playBtn);
         setPlayerIcon(this.playBtn, 'play');
       } catch (_) { }
-      this.playBtn.addEventListener('pressend', (e) => {
-        e.stopPropagation();
+      let lastPlayToggle = 0;
+      const doTogglePlay = (e) => {
+        if (e) e.stopPropagation();
+        const now = Date.now();
+        if (now - lastPlayToggle < 250) return;
+        lastPlayToggle = now;
         this.togglePlay();
-      });
+      };
+      this.playBtn.addEventListener('pressend', doTogglePlay);
+      this.playBtn.addEventListener('click', doTogglePlay);
     }
 
     if (this.prevBtn) {
@@ -321,12 +334,20 @@ export class PreviewPlayer {
         const skipFwd = this.nextBtn.querySelector('.aero-skip');
         if (skipFwd) initSkipLabel(skipFwd);
       } catch (_) { }
-      this.nextBtn.addEventListener('pressend', (e) => {
-        e.stopPropagation();
+      let lastNextClick = 0;
+      const doNext = (e) => {
+        if (e) e.stopPropagation();
+        const now = Date.now();
+        if (now - lastNextClick < 250) return;
+        lastNextClick = now;
         const skipFwd = this.nextBtn.querySelector('.aero-skip');
-        if (skipFwd) playSkip(skipFwd);
+        if (skipFwd) {
+          try { playSkip(skipFwd); } catch (_) { }
+        }
         this.next();
-      });
+      };
+      this.nextBtn.addEventListener('pressend', doNext);
+      this.nextBtn.addEventListener('click', doNext);
     }
 
     if (this.shuffleBtn) {
@@ -528,8 +549,8 @@ export class PreviewPlayer {
   _syncPresenceWithRealPosition(posSec, durSec, force = false) {
     const isRpcDisabled = (settingsManager && settingsManager.get("discordRpc") === false) ||
       (typeof localStorage !== 'undefined' && localStorage.getItem('lyricsflow_discord_rpc') === 'false');
+    const api = window.wave || window.lyricsflow || (typeof window.parent !== 'undefined' && (window.parent.wave || window.parent.lyricsflow));
     if (isRpcDisabled) {
-      const api = window.wave || window.lyricsflow;
       if (api?.clearDiscordPresence) {
         api.clearDiscordPresence();
       }
@@ -538,7 +559,6 @@ export class PreviewPlayer {
     const track = this.queue && this.queue[this.currentIndex];
     if (!track && !this.albumTitle) return;
     const audioQuality = this._currentAudioQuality || this._resolveAudioQuality(track);
-    const api = window.wave || window.lyricsflow;
     if (api?.updateDiscordPresence) {
       api.updateDiscordPresence({
         title: track?.title || this.titleEl?.textContent || 'Track',

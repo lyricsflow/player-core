@@ -86,8 +86,8 @@ export class MediaSessionManager {
       return true;
     };
 
-    if (window.wave?.updateDiscordPresence || window.lyricsflow?.updateDiscordPresence) {
-      const api = window.wave || window.lyricsflow;
+    const api = window.wave || window.lyricsflow || (typeof window.parent !== 'undefined' && (window.parent.wave || window.parent.lyricsflow));
+    if (api?.updateDiscordPresence) {
       if (!isDiscordRpcEnabled()) {
         if (api?.clearDiscordPresence) api.clearDiscordPresence();
       } else {
@@ -136,8 +136,8 @@ export class MediaSessionManager {
       return true;
     };
 
-    if (window.wave?.updateDiscordPresence || window.lyricsflow?.updateDiscordPresence) {
-      const api = window.wave || window.lyricsflow;
+    const api = window.wave || window.lyricsflow || (typeof window.parent !== 'undefined' && (window.parent.wave || window.parent.lyricsflow));
+    if (api?.updateDiscordPresence) {
       if (!isDiscordRpcEnabled()) {
         if (api?.clearDiscordPresence) api.clearDiscordPresence();
       } else {

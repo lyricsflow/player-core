@@ -9,6 +9,12 @@
     content="default-src 'self' 'unsafe-inline' https: data: blob:; script-src 'self' 'unsafe-inline' https://nurislamaibekuly.github.io https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://nurislamaibekuly.github.io; font-src 'self' data: https:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: data: blob: ws: wss: https://unpkg.com; worker-src 'self' blob: https://unpkg.com;">
   <title>LyricsFlow — Web Lyrics Player</title>
   <script>
+    if (!window.wave && window.parent && window.parent !== window) {
+      try {
+        window.wave = window.parent.wave || window.parent.lyricsflow;
+        window.lyricsflow = window.wave;
+      } catch (_) { }
+    }
     const isElectron = !!(window.wave?.windowControls || window.lyricsflow?.windowControls || (window.parent && (window.parent.wave || window.parent.lyricsflow)) || /electron/i.test(navigator.userAgent));
     const isInsideIframe = window.parent && window.parent !== window;
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);

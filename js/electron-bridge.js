@@ -26,6 +26,48 @@
       timestamp: 0
     };
 
+    // In-browser arRPC bridge (talks directly to Discord Desktop on ws://127.0.0.1:6463/rpc)
+    let arRpcWs = null;
+    let arRpcConnected = false;
+    let arRpcReconnectTimer = null;
+
+    function initArRpc() {
+      if (typeof WebSocket === 'undefined') return;
+      try {
+        if (arRpcWs) {
+          try { arRpcWs.close(); } catch (_) { }
+        }
+        arRpcWs = new WebSocket('ws://127.0.0.1:6463/rpc?v=1&client_id=1505997500341944380');
+        arRpcWs.onopen = () => {
+          arRpcConnected = true;
+          console.log('[Web Discord RPC] Connected to local Discord desktop via arRPC');
+        };
+        arRpcWs.onclose = () => {
+          arRpcConnected = false;
+          clearTimeout(arRpcReconnectTimer);
+          arRpcReconnectTimer = setTimeout(initArRpc, 15000);
+        };
+        arRpcWs.onerror = () => {
+          arRpcConnected = false;
+        };
+      } catch (_) { }
+    }
+    initArRpc();
+
+    function sendArRpcActivity(activity) {
+      if (!arRpcConnected || !arRpcWs || arRpcWs.readyState !== WebSocket.OPEN) return;
+      try {
+        arRpcWs.send(JSON.stringify({
+          cmd: 'SET_ACTIVITY',
+          args: {
+            pid: 1000,
+            activity: activity
+          },
+          nonce: crypto.randomUUID?.() || String(Math.random())
+        }));
+      } catch (_) { }
+    }
+
     const webBridge = {
       platform: 'web',
       isWeb: true,
@@ -106,7 +148,44 @@
           timestamp: now
         };
 
+        // 3. Dispatch to local Discord Desktop via in-browser arRPC WebSocket
+        const cleanTitle = (data.title || '').slice(0, 128);
+        const cleanArtist = (data.artist || 'Unknown Artist').slice(0, 128);
+        const songId = data.songId ? String(data.songId).trim() : '';
+        const largeImg = songId && songId.match(/^\d+$/)
+          ? `https://api.trylyricsflow.com/animatedart/gif?song=${songId}`
+          : (data.artUrl || 'https://spicyamll.online/images/icon.png');
+
+        const buttons = [];
+        if (songId && songId.match(/^\d+$/)) {
+          buttons.push({ label: 'Listen on LyricsFlow', url: `https://spicyamll.online/song/${songId}` });
+          buttons.push({ label: 'Play on Apple Music', url: `https://music.apple.com/song/${songId}` });
+        } else {
+          buttons.push({ label: 'Get LyricsFlow', url: 'https://spicyamll.online' });
+        }
+
+        const localActivity = isPlaying ? {
+          type: 2,
+          details: cleanTitle,
+          state: cleanArtist,
+          assets: {
+            large_image: largeImg,
+            large_text: (data.album || cleanTitle).slice(0, 128),
+            small_image: 'https://spicyamll.online/images/icon.png',
+            small_text: 'LyricsFlow'
+          },
+          buttons: buttons.slice(0, 2),
+          timestamps: durSec > 0 ? {
+            start: Math.floor(now - (posSec * 1000)),
+            end: Math.floor(now - (posSec * 1000) + (durSec * 1000))
+          } : undefined
+        } : null;
+
+        sendArRpcActivity(localActivity);
+
+        // 4. Dispatch to Cloud Gateway API
         try {
+          const discordToken = localStorage.getItem('discord_rpc_token') || localStorage.getItem('lyricsflow_discord_token') || '';
           await fetch(`${getApiBase()}/v1/rpc/presence`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -120,7 +199,8 @@
               audioQuality: data.audioQuality || '',
               position: posSec,
               duration: durSec,
-              isPlaying: isPlaying
+              isPlaying: isPlaying,
+              discord_token: discordToken
             })
           });
         } catch (_) { }
@@ -134,13 +214,17 @@
           durSec: 0,
           timestamp: 0
         };
+        sendArRpcActivity(null);
         try {
           document.body.removeAttribute('data-track-title');
           document.body.removeAttribute('data-track-artist');
           document.body.setAttribute('data-is-playing', 'false');
+          const discordToken = localStorage.getItem('discord_rpc_token') || localStorage.getItem('lyricsflow_discord_token') || '';
           await fetch(`${getApiBase()}/v1/rpc/clear`, {
             method: 'POST',
-            credentials: 'include'
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ discord_token: discordToken })
           });
         } catch (_) { }
       },
@@ -166,6 +250,10 @@
       },
       onMiniAction(callback) {
         window.addEventListener('message', (e) => {
+          const drawerIframe = document.getElementById('player-drawer-iframe');
+          if (drawerIframe?.contentWindow && e.source !== drawerIframe.contentWindow && e.origin !== window.location.origin) {
+            return;
+          }
           if (e.data && e.data.action) {
             callback({ command: e.data.action, data: e.data });
           }
@@ -181,6 +269,19 @@
 
     window.wave = webBridge;
     window.lyricsflow = webBridge;
+    try {
+      const syncToDrawer = () => {
+        const drawerIframe = document.getElementById('player-drawer-iframe');
+        if (drawerIframe?.contentWindow) {
+          try {
+            drawerIframe.contentWindow.wave = webBridge;
+            drawerIframe.contentWindow.lyricsflow = webBridge;
+          } catch (_) { }
+        }
+      };
+      syncToDrawer();
+      window.addEventListener('DOMContentLoaded', syncToDrawer);
+    } catch (_) { }
   }
 
   const api = window.wave || window.lyricsflow;
@@ -284,6 +385,10 @@
   // Handle windowControl and mini player messages from child iframe (e.g. player.html drawer)
   window.addEventListener('message', (e) => {
     if (!e.data) return;
+    const drawerIframe = document.getElementById('player-drawer-iframe');
+    if (drawerIframe?.contentWindow && e.source !== drawerIframe.contentWindow && e.origin !== window.location.origin) {
+      return;
+    }
     if (e.data.action === 'windowControl' && e.data.control) {
       if (api.windowControls) {
         api.windowControls(e.data.control);
